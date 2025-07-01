@@ -1,6 +1,6 @@
 // frontend/src/hooks/useClasses.js
 import { useState, useEffect } from 'react';
-import ApiService from '../services/api';
+import ClassService from '../services/ClassService';
 
 export const useClasses = () => {
     const [classes, setClasses] = useState([]);
@@ -13,7 +13,7 @@ export const useClasses = () => {
             setLoading(true);
             setError(null);
 
-            const response = await ApiService.getClasses();
+            const response = await ClassService.getClasses();
             setClasses(response.data || []);
 
         } catch (err) {
@@ -27,7 +27,7 @@ export const useClasses = () => {
     // Ajouter une classe
     const addClass = async (classData) => {
         try {
-            const response = await ApiService.createClass(classData);
+            const response = await ClassService.createClass(classData);
             setClasses(prev => [...prev, response.data]);
             return response.data;
         } catch (err) {
@@ -39,7 +39,7 @@ export const useClasses = () => {
     // Modifier une classe
     const updateClass = async (id, classData) => {
         try {
-            const response = await ApiService.updateClass(id, classData);
+            const response = await ClassService.updateClass(id, classData);
             setClasses(prev => prev.map(cls =>
                 cls.id === id ? response.data : cls
             ));
@@ -53,7 +53,7 @@ export const useClasses = () => {
     // Supprimer une classe
     const removeClass = async (id) => {
         try {
-            await ApiService.deleteClass(id);
+            await ClassService.deleteClass(id);
             setClasses(prev => prev.filter(cls => cls.id !== id));
         } catch (err) {
             setError(err.message);

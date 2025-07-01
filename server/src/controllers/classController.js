@@ -6,21 +6,16 @@ class ClassController {
     // Récupérer toutes les classes
     static async getAllClasses(req, res) {
         try {
-            console.log('📚 Récupération des classes...');
-
             const connection = await pool.getConnection();
             const [rows] = await connection.execute(`
                 SELECT 
                   id,
                   name,
-                  name as level,
-                  FLOOR(RAND() * 15 + 20) as students,
-                  'Matière générale' as subject
+                  students,
+                  lesson as subject
                 FROM CLASS 
                 ORDER BY name
             `);
-
-            console.log(`✅ ${rows.length} classes trouvées`);
 
             res.json({
                 success: true,
@@ -82,7 +77,9 @@ class ClassController {
     // Créer une nouvelle classe
     static async createClass(req, res) {
         try {
-            const { name } = req.body;
+            const { name, students, subject} = req.body;
+
+            const lesson = subject;
 
             if (!name || name.trim() === '') {
                 return res.status(400).json({
@@ -110,21 +107,21 @@ class ClassController {
 
             // Créer la classe
             const [result] = await connection.execute(
-                'INSERT INTO CLASS (name) VALUES (?)',
-                [name.trim()]
+                'INSERT INTO CLASS (name, students, lesson) VALUES (?, ?, ?)',
+                [name.trim(), students, lesson]
             );
 
             // Récupérer la classe créée
             const [newClass] = await connection.execute(
-                'SELECT id, name FROM CLASS WHERE id = ?',
+                'SELECT id, name, students, lesson as subject FROM CLASS WHERE id = ?',
                 [result.insertId]
             );
 
             const responseData = {
                 ...newClass[0],
                 level: newClass[0].name,
-                students: 0,
-                subject: 'Matière générale'
+                students: newClass[0].students || 0,
+                subject: newClass[0].subject
             };
 
             console.log('✅ Classe créée avec succès');

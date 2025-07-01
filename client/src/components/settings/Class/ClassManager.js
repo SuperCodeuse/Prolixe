@@ -8,20 +8,17 @@ const ClassesManager = () => {
     const [editingClass, setEditingClass] = useState(null); // Stocke l'objet classe en cours de modification
     const [formData, setFormData] = useState({
         name: '',
-        level: '',
         students: '',
         subject: '',
     });
 
     // Données fictives pour les niveaux et les matières - à remplacer par les données réelles de votre backend si disponibles
-    const levels = ['Maternelle', 'CP', 'CE1', 'CE2', 'CM1', 'CM2', '6ème', '5ème', '4ème', '3ème', 'Seconde', 'Première', 'Terminale'];
-    const subjects = ['Mathématiques', 'Français', 'Histoire-Géographie', 'Sciences', 'Anglais', 'Physique-Chimie', 'SVT', 'Espagnol', 'Allemand', 'Arts Plastiques', 'Musique', 'EPS'];
+    const lesson = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
 
     // Réinitialiser les champs du formulaire et fermer la modale
     const resetForm = () => {
         setFormData({
             name: '',
-            level: '',
             students: '',
             subject: '',
         });
@@ -32,7 +29,7 @@ const ClassesManager = () => {
     // Gérer la soumission du formulaire pour ajouter ou modifier une classe
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.name.trim() || !formData.level || !formData.students || !formData.subject) {
+        if (!formData.name.trim() || !formData.students || !formData.subject) {
             alert('Veuillez remplir tous les champs.');
             return;
         }
@@ -58,9 +55,8 @@ const ClassesManager = () => {
         setEditingClass(classItem);
         setFormData({
             name: classItem.name,
-            level: classItem.level,
             students: classItem.students,
-            subject: classItem.subject,
+            subject: classItem.subject
         });
         setShowAddForm(true);
     };
@@ -76,6 +72,7 @@ const ClassesManager = () => {
             }
         }
     };
+
 
     if (loading) {
         return (
@@ -139,19 +136,6 @@ const ClassesManager = () => {
                             </div>
 
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label>Niveau</label>
-                                    <select
-                                        value={formData.level}
-                                        onChange={(e) => setFormData({...formData, level: e.target.value})}
-                                        required
-                                    >
-                                        <option value="">Sélectionner</option>
-                                        {levels.map(level => (
-                                            <option key={level} value={level}>{level}</option>
-                                        ))}
-                                    </select>
-                                </div>
 
                                 <div className="form-group">
                                     <label>Nombre d'élèves</label>
@@ -175,7 +159,7 @@ const ClassesManager = () => {
                                     required
                                 >
                                     <option value="">Sélectionner</option>
-                                    {subjects.map(subject => (
+                                    {lesson.map(subject => (
                                         <option key={subject} value={subject}>{subject}</option>
                                     ))}
                                 </select>
@@ -225,10 +209,6 @@ const ClassesManager = () => {
                             </div>
 
                             <div className="class-info">
-                                <div className="info-item">
-                                    <span className="info-label">Niveau:</span>
-                                    <span className="info-value">{classItem.level}</span>
-                                </div>
                                 <div className="info-item">
                                     <span className="info-label">Élèves:</span>
                                     <span className="info-value">{classItem.students}</span>

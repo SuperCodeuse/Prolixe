@@ -1,5 +1,4 @@
 // client/src/services/api.js
-import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -32,34 +31,6 @@ class ApiService {
             throw error;
         }
     }
-
-static async getClasses() {
-    return this.request('/classes');
-}
-
-static async getClass(id) {
-    return this.request(`/classes/${id}`);
-}
-
-static async createClass(classData) {
-    return this.request('/classes', {
-        method: 'POST',
-        body: JSON.stringify(classData),
-    });
-}
-
-static async updateClass(id, classData) {
-    return this.request(`/classes/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(classData),
-    });
-}
-
-static async deleteClass(id) {
-    return this.request(`/classes/${id}`, {
-        method: 'DELETE',
-    });
-}
 }
 
 export default ApiService;
