@@ -1,260 +1,442 @@
 const mysql = require('mysql2/promise');
-
 const pool = require('../../config/database');
 
 class ClassController {
-    // Récupérer toutes les classes
+    /**
+     * Méthode utilitaire pour acquérir et libérer une connexion de pool.
+     * Gère automatiquement la connexion et la libération.
+     * @param {function(Connection): Promise<any>} operation - Fonction asynchrone qui prend la connexion en paramètre.
+     * @returns {Promise<any>} Le résultat de l'opération.
+     * @throws {Error} Toute erreur survenant pendant l'opération ou l'acquisition/libération de la connexion.
+     */
+    static async withConnection(operation) {
+        let connection;
+        try {
+            // Ici, 'pool' est maintenant l'instance directe du pool mysql2
+            connection = await pool.getConnection(); // Ceci fonctionnera maintenant
+            // ... (le reste de la méthode withConnection reste inchangé)
+            if (typeof connection.release !== 'function') {
+                console.error("DEBUG: L'objet de connexion n'a pas la méthode .release(). Vérifiez la configuration du pool.");
+                throw new Error("L'objet de connexion obtenu du pool n'est pas valide pour être relâché.");
+            }
+            return await operation(connection);
+        } catch (error) {
+            console.error('Erreur SQL dans withConnection:', error.message);
+            throw error;
+        } finally {
+            if (connection) {
+                if (typeof connection.release === 'function') {
+                    connection.release();
+                } else {
+                    console.warn("Avertissement: Impossible de libérer la connexion car la méthode 'release' est manquante.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Gère et standardise les réponses d'erreur HTTP.
+     * @param {Response} res - L'objet réponse Express.
+     * @param {Error} error - L'objet erreur.
+     * @param {string} defaultMessage - Message d'erreur par défaut pour l'utilisateur.
+     * @param {number} statusCode - Code de statut HTTP de l'erreur.
+     * @param {object} customErrors - Erreurs spécifiques à renvoyer (ex: validation).
+     */
+    static handleError(res, error, defaultMessage = 'Erreur serveur', statusCode = 500, customErrors = {}) {
+        const errorMessage = process.env.NODE_ENV === 'development' ? error.message : defaultMessage;
+        console.error(`❌ Erreur dans ClassController: ${defaultMessage}`, error);
+
+        res.status(statusCode).json({
+            success: false,
+            message: defaultMessage,
+            error: errorMessage,
+            errors: customErrors // Pour les erreurs de validation, etc.
+        });
+    }
+
+    /**
+     * Valide les données d'entrée pour la création ou la mise à jour d'une classe.
+     * @param {object} data - Les données de la classe (name, students, subject).
+     * @param {boolean} isUpdate - Indique si la validation est pour une mise à jour (certains champs peuvent être optionnels).
+     * @returns {object} Un objet contenant les erreurs de validation par champ.
+     */
+    static validateClassData(data, isUpdate = false) {
+        const errors = {};
+
+        // Validation du nom
+        if (!isUpdate || data.name !== undefined) {
+            if (!data.name || typeof data.name !== 'string' || !data.name.trim()) {
+                errors.name = 'Le nom de la classe est requis.';
+            } else if (data.name.trim().length < 2) {
+                errors.name = 'Le nom de la classe doit contenir au moins 2 caractères.';
+            } else if (data.name.trim().length > 100) {
+                errors.name = 'Le nom de la classe ne peut pas dépasser 100 caractères.';
+            }
+        }
+
+        // Validation du nombre d'étudiants
+        if (!isUpdate || data.students !== undefined) {
+            const studentsNum = parseInt(data.students);
+            if (isNaN(studentsNum) || studentsNum < 0) {
+                errors.students = 'Le nombre d\'étudiants doit être un nombre entier positif ou zéro.';
+            } else if (studentsNum > 1000) {
+                errors.students = 'Le nombre d\'étudiants ne peut pas dépasser 1000.';
+            }
+        }
+
+        // Validation de la matière
+        if (!isUpdate || data.subject !== undefined) {
+            if (!data.subject || typeof data.subject !== 'string' || !data.subject.trim()) {
+                errors.subject = 'La matière est requise.';
+            } else if (data.subject.trim().length > 100) {
+                errors.subject = 'La matière ne peut pas dépasser 100 caractères.';
+            }
+        }
+
+        return errors;
+    }
+
+    /**
+     * Récupère toutes les classes.
+     * @param {Request} req - L'objet requête Express.
+     * @param {Response} res - L'objet réponse Express.
+     */
     static async getAllClasses(req, res) {
         try {
-            const connection = await pool.getConnection();
-            const [rows] = await connection.execute(`
-                SELECT 
-                  id,
-                  name,
-                  students,
-                  lesson as subject
-                FROM CLASS 
-                ORDER BY name
-            `);
+            const data = await ClassController.withConnection(async (connection) => {
+                const [rows] = await connection.execute(`
+                    SELECT 
+                        id,
+                        name,
+                        students,
+                        lesson AS subject
+                    FROM CLASS 
+                    ORDER BY name ASC
+                `);
+                return rows;
+            });
 
+            console.log(`✅ ${data.length} classe(s) récupérée(s).`);
             res.json({
                 success: true,
-                data: rows,
-                count: rows.length
+                data: data,
+                count: data.length,
+                message: data.length === 0 ? 'Aucune classe trouvée.' : `${data.length} classe(s) récupérée(s).`
             });
-
         } catch (error) {
-            console.error('❌ Erreur récupération classes:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la récupération des classes',
-                error: error.message
-            });
+            ClassController.handleError(res, error, 'Erreur lors de la récupération des classes.');
         }
     }
 
-    // Récupérer une classe par ID
+    /**
+     * Récupère une classe par son ID.
+     * @param {Request} req - L'objet requête Express (contient req.params.id).
+     * @param {Response} res - L'objet réponse Express.
+     */
     static async getClassById(req, res) {
+        const { id } = req.params;
+
+        // Validation de l'ID
+        if (!id || isNaN(parseInt(id))) {
+            return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
+        }
+
         try {
-            const { id } = req.params;
-            console.log(`🔍 Récupération classe ID: ${id}`);
+            console.log(`🔍 Tentative de récupération de la classe ID: ${id}`);
+            const classData = await ClassController.withConnection(async (connection) => {
+                const [rows] = await connection.execute(`
+                    SELECT 
+                        id,
+                        name,
+                        students,
+                        lesson AS subject
+                    FROM CLASS 
+                    WHERE id = ?
+                `, [parseInt(id)]);
+                return rows[0] || null;
+            });
 
-            const connection = await pool.getConnection();
-            const [rows] = await connection.execute(`
-                SELECT 
-                  id,
-                  name,
-                  name as level,
-                  FLOOR(RAND() * 15 + 20) as students,
-                  'Matière générale' as subject
-                FROM CLASS 
-                WHERE id = ?
-            `, [id]);
-
-            if (rows.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Classe non trouvée'
-                });
+            if (!classData) {
+                return ClassController.handleError(res, new Error('Classe non trouvée'), 'Classe non trouvée.', 404);
             }
 
-            console.log('✅ Classe trouvée');
+            console.log(`✅ Classe trouvée: ${classData.name} (ID: ${classData.id})`);
             res.json({
                 success: true,
-                data: rows[0]
+                data: classData,
+                message: 'Classe récupérée avec succès.'
             });
-
         } catch (error) {
-            console.error('❌ Erreur récupération classe:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la récupération de la classe',
-                error: error.message
-            });
+            ClassController.handleError(res, error, 'Erreur lors de la récupération de la classe.');
         }
     }
 
-    // Créer une nouvelle classe
+    /**
+     * Crée une nouvelle classe.
+     * @param {Request} req - L'objet requête Express (contient req.body).
+     * @param {Response} res - L'objet réponse Express.
+     */
     static async createClass(req, res) {
+        const { name, students, subject } = req.body;
+
+        // Validation des données
+        const validationErrors = ClassController.validateClassData({ name, students, subject });
+        if (Object.keys(validationErrors).length > 0) {
+            return ClassController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
+        }
+
         try {
-            const { name, students, subject} = req.body;
+            console.log(`➕ Tentative de création de la classe: ${name.trim()}`);
+            const newClass = await ClassController.withConnection(async (connection) => {
+                // Vérifier l'unicité du nom
+                const [existing] = await connection.execute(
+                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?)',
+                    [name.trim()]
+                );
 
-            const lesson = subject;
+                if (existing.length > 0) {
+                    const err = new Error('Une classe avec ce nom existe déjà.');
+                    err.name = 'DUPLICATE_NAME'; // Nommer l'erreur pour la gestion spécifique
+                    throw err;
+                }
 
-            if (!name || name.trim() === '') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Le nom de la classe est requis'
-                });
-            }
+                // Créer la classe
+                const [result] = await connection.execute(
+                    'INSERT INTO CLASS (name, students, lesson) VALUES (?, ?, ?)',
+                    [name.trim(), parseInt(students), subject.trim()]
+                );
 
-            console.log(`➕ Création classe: ${name}`);
+                // Récupérer la classe créée avec toutes ses propriétés (y compris l'ID auto-incrémenté)
+                const [newClassData] = await connection.execute(
+                    'SELECT id, name, students, lesson AS subject FROM CLASS WHERE id = ?',
+                    [result.insertId]
+                );
 
-            const connection = await pool.getConnection();
+                return newClassData[0];
+            });
 
-            // Vérifier si la classe existe déjà
-            const [existingClass] = await connection.execute(
-                'SELECT id FROM CLASS WHERE name = ?',
-                [name.trim()]
-            );
-
-            if (existingClass.length > 0) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'Une classe avec ce nom existe déjà'
-                });
-            }
-
-            // Créer la classe
-            const [result] = await connection.execute(
-                'INSERT INTO CLASS (name, students, lesson) VALUES (?, ?, ?)',
-                [name.trim(), students, lesson]
-            );
-
-            // Récupérer la classe créée
-            const [newClass] = await connection.execute(
-                'SELECT id, name, students, lesson as subject FROM CLASS WHERE id = ?',
-                [result.insertId]
-            );
-
-            const responseData = {
-                ...newClass[0],
-                level: newClass[0].name,
-                students: newClass[0].students || 0,
-                subject: newClass[0].subject
-            };
-
-            console.log('✅ Classe créée avec succès');
+            console.log(`✅ Classe créée avec succès: ${newClass.name} (ID: ${newClass.id})`);
             res.status(201).json({
                 success: true,
-                data: responseData,
-                message: 'Classe créée avec succès'
+                data: newClass,
+                message: 'Classe créée avec succès.'
             });
 
         } catch (error) {
-            console.error('❌ Erreur création classe:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la création de la classe',
-                error: error.message
-            });
+            if (error.name === 'DUPLICATE_NAME') {
+                return ClassController.handleError(res, error, error.message, 409, { name: error.message });
+            }
+            ClassController.handleError(res, error, 'Erreur lors de la création de la classe.');
         }
     }
 
-    // Mettre à jour une classe
+    /**
+     * Met à jour une classe existante par son ID.
+     * @param {Request} req - L'objet requête Express (contient req.params.id et req.body).
+     * @param {Response} res - L'objet réponse Express.
+     */
     static async updateClass(req, res) {
+        const { id } = req.params;
+        const updateData = req.body; // Peut contenir name, students, subject
+
+        // Validation de l'ID
+        if (!id || isNaN(parseInt(id))) {
+            return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
+        }
+
+        // Validation des données (mode update, les champs sont optionnels)
+        const validationErrors = ClassController.validateClassData(updateData, true);
+        if (Object.keys(validationErrors).length > 0) {
+            return ClassController.handleError(res, new Error('Données de validation invalides'), 'Données invalides pour la mise à jour.', 400, validationErrors);
+        }
+
         try {
-            const { id } = req.params;
-            const { name } = req.body;
+            console.log(`📝 Tentative de mise à jour de la classe ID: ${id}`);
+            const updatedClass = await ClassController.withConnection(async (connection) => {
+                // Vérifier que la classe existe
+                const [existing] = await connection.execute(
+                    'SELECT id, name FROM CLASS WHERE id = ?',
+                    [parseInt(id)]
+                );
 
-            if (!name || name.trim() === '') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Le nom de la classe est requis'
-                });
-            }
+                if (existing.length === 0) {
+                    const err = new Error('Classe non trouvée.');
+                    err.name = 'CLASS_NOT_FOUND';
+                    throw err;
+                }
 
-            console.log(`📝 Mise à jour classe ID: ${id}`);
+                const fieldsToUpdate = [];
+                const values = [];
 
-            const connection = await pool.getConnection();
+                if (updateData.name !== undefined) {
+                    const trimmedName = updateData.name.trim();
+                    // Vérifier l'unicité du nom (sauf pour la classe actuelle)
+                    const [duplicate] = await connection.execute(
+                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ?',
+                        [trimmedName, parseInt(id)]
+                    );
 
-            // Vérifier si une autre classe a déjà ce nom
-            const [existingClass] = await connection.execute(
-                'SELECT id FROM CLASS WHERE name = ? AND id != ?',
-                [name.trim(), id]
-            );
+                    if (duplicate.length > 0) {
+                        const err = new Error('Une autre classe avec ce nom existe déjà.');
+                        err.name = 'DUPLICATE_NAME';
+                        throw err;
+                    }
+                    fieldsToUpdate.push('name = ?');
+                    values.push(trimmedName);
+                }
 
-            if (existingClass.length > 0) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'Une autre classe avec ce nom existe déjà'
-                });
-            }
+                if (updateData.students !== undefined) {
+                    fieldsToUpdate.push('students = ?');
+                    values.push(parseInt(updateData.students));
+                }
 
-            // Mettre à jour
-            const [result] = await connection.execute(
-                'UPDATE CLASS SET name = ? WHERE id = ?',
-                [name.trim(), id]
-            );
+                if (updateData.subject !== undefined) {
+                    fieldsToUpdate.push('lesson = ?'); // Assurez-vous que 'lesson' est le nom de la colonne
+                    values.push(updateData.subject.trim());
+                }
 
-            if (result.affectedRows === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Classe non trouvée'
-                });
-            }
+                if (fieldsToUpdate.length === 0) {
+                    const err = new Error('Aucune donnée à mettre à jour.');
+                    err.name = 'NO_UPDATE_DATA';
+                    throw err;
+                }
 
-            // Récupérer la classe mise à jour
-            const [updatedClass] = await connection.execute(
-                'SELECT id, name FROM CLASS WHERE id = ?',
-                [id]
-            );
+                // Ajouter l'ID à la fin des valeurs pour la clause WHERE
+                values.push(parseInt(id));
 
-            const responseData = {
-                ...updatedClass[0],
-                level: updatedClass[0].name,
-                students: 0,
-                subject: 'Matière générale'
-            };
+                await connection.execute(
+                    `UPDATE CLASS SET ${fieldsToUpdate.join(', ')} WHERE id = ?`,
+                    values
+                );
 
-            console.log('✅ Classe mise à jour');
+                // Récupérer la classe mise à jour pour renvoyer les données complètes
+                const [updatedData] = await connection.execute(
+                    'SELECT id, name, students, lesson AS subject FROM CLASS WHERE id = ?',
+                    [parseInt(id)]
+                );
+
+                return updatedData[0];
+            });
+
+            console.log(`✅ Classe ID: ${id} mise à jour avec succès.`);
             res.json({
                 success: true,
-                data: responseData,
-                message: 'Classe mise à jour avec succès'
+                data: updatedClass,
+                message: 'Classe mise à jour avec succès.'
             });
 
         } catch (error) {
-            console.error('❌ Erreur mise à jour classe:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la mise à jour de la classe',
-                error: error.message
-            });
+            if (error.name === 'CLASS_NOT_FOUND') {
+                return ClassController.handleError(res, error, 'Classe non trouvée.', 404);
+            }
+            if (error.name === 'DUPLICATE_NAME') {
+                return ClassController.handleError(res, error, error.message, 409, { name: error.message });
+            }
+            if (error.name === 'NO_UPDATE_DATA') {
+                return ClassController.handleError(res, error, 'Aucune donnée à mettre à jour.', 400);
+            }
+            ClassController.handleError(res, error, 'Erreur lors de la mise à jour de la classe.');
         }
     }
 
-    // Supprimer une classe
+    /**
+     * Supprime une classe par son ID.
+     * @param {Request} req - L'objet requête Express (contient req.params.id).
+     * @param {Response} res - L'objet réponse Express.
+     */
     static async deleteClass(req, res) {
+        const { id } = req.params;
+
+        // Validation de l'ID
+        if (!id || isNaN(parseInt(id))) {
+            return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
+        }
+
         try {
-            const { id } = req.params;
-            console.log(`🗑️ Suppression classe ID: ${id}`);
+            console.log(`🗑️ Tentative de suppression de la classe ID: ${id}`);
+            const deletedClassInfo = await ClassController.withConnection(async (connection) => {
+                // Récupérer les infos de la classe avant suppression
+                const [classToDelete] = await connection.execute(
+                    'SELECT id, name FROM CLASS WHERE id = ?',
+                    [parseInt(id)]
+                );
 
-            const connection = await pool.getConnection();
+                if (classToDelete.length === 0) {
+                    const err = new Error('Classe non trouvée.');
+                    err.name = 'CLASS_NOT_FOUND';
+                    throw err;
+                }
 
-            // Récupérer les infos avant suppression
-            const [classToDelete] = await connection.execute(
-                'SELECT id, name FROM CLASS WHERE id = ?',
-                [id]
-            );
+                // TODO: Vérifier les contraintes de clés étrangères (décommenter et adapter si nécessaire)
+                // Par exemple, s'il y a des étudiants associés à cette classe
+                // const [relatedData] = await connection.execute(
+                //     'SELECT COUNT(*) as count FROM students WHERE class_id = ?',
+                //     [parseInt(id)]
+                // );
+                // if (relatedData[0].count > 0) {
+                //     const err = new Error('Impossible de supprimer cette classe car elle contient des étudiants.');
+                //     err.name = 'CLASS_HAS_DEPENDENCIES';
+                //     throw err;
+                // }
 
-            if (classToDelete.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Classe non trouvée'
-                });
-            }
+                await connection.execute('DELETE FROM CLASS WHERE id = ?', [parseInt(id)]);
+                return classToDelete[0]; // Retourne les infos de la classe supprimée
+            });
 
-            // Supprimer la classe
-            const [result] = await connection.execute(
-                'DELETE FROM CLASS WHERE id = ?',
-                [id]
-            );
-
-            console.log('✅ Classe supprimée');
+            console.log(`✅ Classe supprimée avec succès: ${deletedClassInfo.name} (ID: ${deletedClassInfo.id})`);
             res.json({
                 success: true,
-                message: 'Classe supprimée avec succès',
-                data: classToDelete[0]
+                message: 'Classe supprimée avec succès.',
+                data: {
+                    id: deletedClassInfo.id,
+                    name: deletedClassInfo.name
+                }
             });
 
         } catch (error) {
-            console.error('❌ Erreur suppression classe:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la suppression de la classe',
-                error: error.message
+            if (error.name === 'CLASS_NOT_FOUND') {
+                return ClassController.handleError(res, error, 'Classe non trouvée.', 404);
+            }
+            if (error.name === 'CLASS_HAS_DEPENDENCIES') {
+                return ClassController.handleError(res, error, error.message, 409);
+            }
+            ClassController.handleError(res, error, 'Erreur lors de la suppression de la classe.');
+        }
+    }
+
+    /**
+     * Récupère les statistiques agrégées des classes.
+     * @param {Request} req - L'objet requête Express.
+     * @param {Response} res - L'objet réponse Express.
+     */
+    static async getClassesStats(req, res) {
+        try {
+            const stats = await ClassController.withConnection(async (connection) => {
+                const [result] = await connection.execute(`
+                    SELECT 
+                        COUNT(*) as total_classes,
+                        SUM(students) as total_students,
+                        AVG(students) as avg_students_per_class,
+                        COUNT(DISTINCT lesson) as unique_subjects
+                    FROM CLASS
+                `);
+                return result[0];
             });
+
+            console.log('✅ Statistiques des classes récupérées.');
+            res.json({
+                success: true,
+                data: {
+                    totalClasses: stats.total_classes || 0,
+                    totalStudents: stats.total_students || 0,
+                    averageStudentsPerClass: Math.round(stats.avg_students_per_class || 0),
+                    uniqueSubjects: stats.unique_subjects || 0
+                },
+                message: 'Statistiques récupérées avec succès.'
+            });
+
+        } catch (error) {
+            ClassController.handleError(res, error, 'Erreur lors de la récupération des statistiques des classes.');
         }
     }
 }

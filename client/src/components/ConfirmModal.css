@@ -1,0 +1,100 @@
+/* client/src/components/ConfirmModal.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    animation: scaleIn 0.2s ease-out;
+}
+
+.confirm-modal-header {
+    padding: 20px 20px 0;
+}
+
+.confirm-modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.confirm-modal-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.confirm-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.confirm-message {
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.confirm-modal-actions {
+    padding: 0 20px 20px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

@@ -1,19 +1,50 @@
-// frontend/src/components/Settings/ClassesManager.jsx - MISE À JOUR
+// frontend/src/components/Settings/ClassesManager.jsx
 import React, { useState } from 'react';
 import { useClasses } from '../../../hooks/useClasses';
+import Toast from '../../Toast';
+import ConfirmModal from '../../ConfirmModal';
+import { useToast } from '../../../hooks/useToast';
 
 const ClassesManager = () => {
     const { classes, loading, error, addClass, updateClass, removeClass } = useClasses();
+    const { toasts, removeToast, success, error: showError, warning } = useToast();
+
     const [showAddForm, setShowAddForm] = useState(false);
-    const [editingClass, setEditingClass] = useState(null); // Stocke l'objet classe en cours de modification
+    const [editingClass, setEditingClass] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         students: '',
         subject: '',
     });
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null
+    });
 
-    // Données fictives pour les niveaux et les matières - à remplacer par les données réelles de votre backend si disponibles
+    // Données fictives pour les matières
     const lesson = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
+
+    // Fonction pour afficher la modal de confirmation
+    const showConfirmModal = (title, message, onConfirm) => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            onConfirm
+        });
+    };
+
+    // Fermer la modal de confirmation
+    const closeConfirmModal = () => {
+        setConfirmModal({
+            isOpen: false,
+            title: '',
+            message: '',
+            onConfirm: null
+        });
+    };
 
     // Réinitialiser les champs du formulaire et fermer la modale
     const resetForm = () => {
@@ -26,54 +57,142 @@ const ClassesManager = () => {
         setShowAddForm(false);
     };
 
-    // Gérer la soumission du formulaire pour ajouter ou modifier une classe
+    // Validation du formulaire avec messages d'erreur détaillés
+    const validateForm = () => {
+        const errors = [];
+
+        if (!formData.name.trim()) {
+            errors.push('Le nom de la classe est requis');
+        } else if (formData.name.trim().length < 2) {
+            errors.push('Le nom de la classe doit contenir au moins 2 caractères');
+        }
+
+        if (!formData.students) {
+            errors.push('Le nombre d\'élèves est requis');
+        } else if (isNaN(formData.students) || parseInt(formData.students) <= 0) {
+            errors.push('Le nombre d\'élèves doit être un nombre positif');
+        } else if (parseInt(formData.students) > 50) {
+            errors.push('Le nombre d\'élèves ne peut pas dépasser 50');
+        }
+
+        if (!formData.subject) {
+            errors.push('La matière principale est requise');
+        }
+
+        // Vérification des doublons (uniquement pour l'ajout ou si le nom a changé)
+        const isDuplicate = classes.some(cls =>
+            cls.name.toLowerCase().trim() === formData.name.toLowerCase().trim() &&
+            (!editingClass || cls.id !== editingClass.id)
+        );
+
+        if (isDuplicate) {
+            errors.push(`Une classe avec le nom "${formData.name}" existe déjà`);
+        }
+
+        if (errors.length > 0) {
+            errors.forEach(errorMsg => {
+                showError(errorMsg, 4000);
+            });
+            return false;
+        }
+
+        return true;
+    };
+
+    // Validation en temps réel des champs
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+
+        // Validation en temps réel pour le nombre d'élèves
+        if (field === 'students' && value) {
+            if (isNaN(value) || parseInt(value) <= 0) {
+                warning('Le nombre d\'élèves doit être un nombre positif');
+            } else if (parseInt(value) > 50) {
+                warning('Attention : nombre d\'élèves très élevé (max recommandé: 50)');
+            }
+        }
+    };
+
+    // Gérer la soumission du formulaire
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.name.trim() || !formData.students || !formData.subject) {
-            alert('Veuillez remplir tous les champs.');
+
+        if (!validateForm()) {
             return;
         }
 
         try {
             if (editingClass) {
-                // Mettre à jour une classe existante
                 await updateClass(editingClass.id, formData);
-                alert('Classe modifiée avec succès !');
+                success(`Classe "${formData.name}" modifiée avec succès !`);
             } else {
-                // Ajouter une nouvelle classe
                 await addClass(formData);
-                alert('Classe ajoutée avec succès !');
+                success(`Classe "${formData.name}" ajoutée avec succès !`);
             }
             resetForm();
-        } catch (error) {
-            alert(`Erreur: ${error.message}`);
+        } catch (err) {
+            console.error('Erreur:', err);
+            showError(`Erreur lors de ${editingClass ? 'la modification' : 'l\'ajout'} de la classe: ${err.message}`);
         }
     };
 
-    // Gérer la modification d'une classe : ouvrir la modale et pré-remplir le formulaire
+    // Gérer la modification d'une classe
     const handleEdit = (classItem) => {
         setEditingClass(classItem);
         setFormData({
-            name: classItem.name,
-            students: classItem.students,
-            subject: classItem.subject
+            name: classItem.name || '',
+            students: classItem.students || '',
+            subject: classItem.subject || classItem.lesson || ''
         });
         setShowAddForm(true);
     };
 
-    // Gérer la suppression d'une classe
-    const handleDelete = async (id, className) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer la classe "${className}" ?`)) {
-            try {
-                await removeClass(id);
-                alert('Classe supprimée avec succès !');
-            } catch (error) {
-                alert(`Erreur: ${error.message}`);
-            }
+    // Gérer l'annulation avec confirmation si formulaire modifié
+    const handleCancelForm = () => {
+        const isFormDirty = formData.name.trim() || formData.students || formData.subject;
+
+        if (isFormDirty) {
+            showConfirmModal(
+                'Annuler les modifications',
+                'Vous avez des modifications non sauvegardées. Êtes-vous sûr de vouloir annuler ?',
+                () => {
+                    resetForm();
+                    closeConfirmModal();
+                }
+            );
+        } else {
+            resetForm();
         }
     };
 
+    // Gérer la suppression avec confirmation
+    const handleDelete = (classItem) => {
+        const studentCount = classItem.students;
+        const warningMessage = studentCount > 0
+            ? `Cette classe contient ${studentCount} élève${studentCount > 1 ? 's' : ''}.\n\n`
+            : '';
 
+        showConfirmModal(
+            'Supprimer la classe',
+            `${warningMessage}Êtes-vous sûr de vouloir supprimer définitivement la classe "${classItem.name}" ?\n\nCette action est irréversible.`,
+            () => performDelete(classItem.id, classItem.name)
+        );
+    };
+
+    // Effectuer la suppression
+    const performDelete = async (id, className) => {
+        try {
+            await removeClass(id);
+            success(`Classe "${className}" supprimée avec succès !`);
+            closeConfirmModal();
+        } catch (err) {
+            console.error('Erreur suppression:', err);
+            showError(`Erreur lors de la suppression: ${err.message}`);
+            closeConfirmModal();
+        }
+    };
+
+    // Gestion des états de chargement et d'erreur
     if (loading) {
         return (
             <div className="classes-manager">
@@ -95,6 +214,18 @@ const ClassesManager = () => {
                         Réessayer
                     </button>
                 </div>
+                {/* Toasts même en cas d'erreur */}
+                <div className="toast-container">
+                    {toasts.map(toast => (
+                        <Toast
+                            key={toast.id}
+                            message={toast.message}
+                            type={toast.type}
+                            duration={toast.duration}
+                            onClose={() => removeToast(toast.id)}
+                        />
+                    ))}
+                </div>
             </div>
         );
     }
@@ -106,7 +237,7 @@ const ClassesManager = () => {
                 <button
                     className="btn-primary"
                     onClick={() => {
-                        resetForm(); // S'assurer que le formulaire est vide lors de l'ajout
+                        resetForm();
                         setShowAddForm(true);
                     }}
                 >
@@ -119,7 +250,7 @@ const ClassesManager = () => {
                     <div className="modal">
                         <div className="modal-header">
                             <h3>{editingClass ? 'Modifier la classe' : 'Ajouter une nouvelle classe'}</h3>
-                            <button className="modal-close" onClick={resetForm}>✕</button>
+                            <button className="modal-close" onClick={handleCancelForm}>✕</button>
                         </div>
 
                         <form onSubmit={handleSubmit} className="class-form">
@@ -128,26 +259,32 @@ const ClassesManager = () => {
                                 <input
                                     type="text"
                                     value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    onChange={(e) => handleInputChange('name', e.target.value)}
                                     placeholder="Ex: 6ème A"
                                     required
                                     autoFocus
+                                    maxLength={50}
                                 />
+                                <small className="form-hint">
+                                    {formData.name.length}/50 caractères
+                                </small>
                             </div>
 
                             <div className="form-row">
-
                                 <div className="form-group">
                                     <label>Nombre d'élèves</label>
                                     <input
                                         type="number"
                                         value={formData.students}
-                                        onChange={(e) => setFormData({...formData, students: e.target.value})}
+                                        onChange={(e) => handleInputChange('students', e.target.value)}
                                         placeholder="25"
                                         min="1"
-                                        max="40"
+                                        max="50"
                                         required
                                     />
+                                    <small className="form-hint">
+                                        Entre 1 et 50 élèves
+                                    </small>
                                 </div>
                             </div>
 
@@ -155,10 +292,10 @@ const ClassesManager = () => {
                                 <label>Matière principale</label>
                                 <select
                                     value={formData.subject}
-                                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                                    onChange={(e) => handleInputChange('subject', e.target.value)}
                                     required
                                 >
-                                    <option value="">Sélectionner</option>
+                                    <option value="">Sélectionner une matière</option>
                                     {lesson.map(subject => (
                                         <option key={subject} value={subject}>{subject}</option>
                                     ))}
@@ -166,11 +303,15 @@ const ClassesManager = () => {
                             </div>
 
                             <div className="form-actions">
-                                <button type="button" className="btn-secondary" onClick={resetForm}>
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={handleCancelForm}
+                                >
                                     Annuler
                                 </button>
                                 <button type="submit" className="btn-primary">
-                                    {editingClass ? 'Modifier' : 'Ajouter'}
+                                    {editingClass ? '✏️ Modifier' : '➕ Ajouter'}
                                 </button>
                             </div>
                         </form>
@@ -184,6 +325,12 @@ const ClassesManager = () => {
                         <span className="empty-icon">🏫</span>
                         <h3>Aucune classe</h3>
                         <p>Commencez par ajouter vos premières classes !</p>
+                        <button
+                            className="btn-primary"
+                            onClick={() => setShowAddForm(true)}
+                        >
+                            ➕ Ajouter ma première classe
+                        </button>
                     </div>
                 ) : (
                     classes.map(classItem => (
@@ -194,14 +341,14 @@ const ClassesManager = () => {
                                     <button
                                         className="btn-edit"
                                         onClick={() => handleEdit(classItem)}
-                                        title="Modifier"
+                                        title="Modifier la classe"
                                     >
                                         ✏️
                                     </button>
                                     <button
                                         className="btn-delete"
-                                        onClick={() => handleDelete(classItem.id, classItem.name)}
-                                        title="Supprimer"
+                                        onClick={() => handleDelete(classItem)}
+                                        title="Supprimer la classe"
                                     >
                                         🗑️
                                     </button>
@@ -210,18 +357,43 @@ const ClassesManager = () => {
 
                             <div className="class-info">
                                 <div className="info-item">
-                                    <span className="info-label">Élèves:</span>
+                                    <span className="info-label">👥 Élèves:</span>
                                     <span className="info-value">{classItem.students}</span>
                                 </div>
                                 <div className="info-item">
-                                    <span className="info-label">Matière:</span>
-                                    <span className="info-value">{classItem.subject}</span>
+                                    <span className="info-label">📚 Matière:</span>
+                                    <span className="info-value">{classItem.subject || classItem.lesson}</span>
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
             </div>
+
+            {/* Affichage des toasts */}
+            <div className="toast-container">
+                {toasts.map(toast => (
+                    <Toast
+                        key={toast.id}
+                        message={toast.message}
+                        type={toast.type}
+                        duration={toast.duration}
+                        onClose={() => removeToast(toast.id)}
+                    />
+                ))}
+            </div>
+
+            {/* Modal de confirmation */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                confirmText="Confirmer"
+                cancelText="Annuler"
+                type="danger"
+            />
         </div>
     );
 };

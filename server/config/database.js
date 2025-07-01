@@ -1,4 +1,4 @@
-// backend/config/database.js
+// backend/config/database.js - MISE À JOUR
 const mysql = require('mysql2/promise');
 
 const config = {
@@ -18,23 +18,18 @@ const config = {
     timeout: 60000
 };
 
-let pool = null;
+// Créez le pool directement ici et exportez-le
+const pool = mysql.createPool(config);
+console.log('✅ Pool MySQL créé');
+console.log(`📍 Serveur: ${config.host}:${config.port}`);
+console.log(`🗄️ Base de données: ${config.database}`);
 
-const getConnection = () => {
-    if (!pool) {
-        pool = mysql.createPool(config);
-        console.log('✅ Pool MySQL créé');
-        console.log(`📍 Serveur: ${config.host}:${config.port}`);
-        console.log(`🗄️ Base de données: ${config.database}`);
-    }
-    return pool;
-};
-
-// Test de connexion au démarrage
+// Test de connexion au démarrage (peut rester une fonction séparée si vous le souhaitez)
 const testConnection = async () => {
     try {
-        const connection = await getConnection();
+        const connection = await pool.getConnection(); // Utilise le pool créé
         const [rows] = await connection.execute('SELECT 1 as test');
+        connection.release(); // Libérer la connexion après le test
         console.log('🔍 Test de connexion réussi:', rows);
         return true;
     } catch (error) {
@@ -43,7 +38,7 @@ const testConnection = async () => {
     }
 };
 
-module.exports = {
-    getConnection,
-    testConnection
-};
+module.exports = pool; // <-- EXPORTEZ DIRECTEMENT LE POOL
+// Vous pouvez exporter testConnection aussi si vous en avez besoin ailleurs, par exemple :
+// module.exports = { pool, testConnection };
+// Mais pour ClassController, juste 'pool' est suffisant si vous changez l'import.
