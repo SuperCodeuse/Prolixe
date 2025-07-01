@@ -66,6 +66,8 @@ const upload = multer({ dest: 'uploads/' });
 
 // Routes
 app.use('/api/classes', require('./routes/classRoutes'));
+app.use('/api/hours', require('./routes/scheduleHours'));
+
 
 // Route de test
 app.get('/api/test', async (req, res) => {

@@ -1,8 +1,13 @@
 // Horaire.jsx
 import React, { useState } from 'react';
 import './Horaire.css';
+import {useClasses} from "../../hooks/useClasses";
+import {useScheduleHours} from "../../hooks/useScheduleHours";
 
 const Horaire = () => {
+    const { classes} = useClasses();
+    const { hours, getSortedHours } = useScheduleHours();
+
     // Liste des matières disponibles
     const subjects = ['Programmation', 'Informatique', 'Ex.Logiciels', 'Base de données'];
 
@@ -12,7 +17,6 @@ const Horaire = () => {
         return classes ? JSON.parse(classes) : [];
     };
 
-    const [classes] = useState(getClasses());
     const [schedule, setSchedule] = useState(() => {
         const saved = localStorage.getItem('schedule');
         return saved ? JSON.parse(saved) : {};
@@ -27,6 +31,7 @@ const Horaire = () => {
     });
 
     // Configuration des créneaux horaires
+    /*
     const timeSlots = [
         '08:25-09:15',
         '09:15-10:05',
@@ -36,7 +41,9 @@ const Horaire = () => {
         '13:35-14:20',
         '14:30-15:15',
         '15:15-16:05',
-    ];
+    ];*/
+
+    const timeSlots = getSortedHours().map(hour => hour.libelle);
 
     const daysOfWeek = [
         { key: 'monday', label: 'Lundi' },
@@ -222,7 +229,7 @@ const Horaire = () => {
                                     <option value="">Sélectionnez une classe</option>
                                     {classes.map(cls => (
                                         <option key={cls.id} value={cls.id}>
-                                            {cls.name} ({cls.level})
+                                            {cls.name}
                                         </option>
                                     ))}
                                 </select>

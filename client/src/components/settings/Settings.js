@@ -1,6 +1,7 @@
 // Settings.jsx
 import React, { useState } from 'react';
 import ClassesManager from "./Class/ClassManager";
+import ScheduleManager from "./Schedule/ScheduleManager";
 import './Settings.css';
 
 const Settings = () => {
@@ -14,9 +15,10 @@ const Settings = () => {
             component: ClassesManager
         },
         {
-            id: 'profile',
-            label: 'Profil',
-            icon: '👤'
+            id: 'schedule',
+            label: 'Horaire',
+            icon: '⏰',
+            component: ScheduleManager
         },
         {
             id: 'preferences',
@@ -41,8 +43,8 @@ const Settings = () => {
         switch (activeTab) {
             case 'classes':
                 return <ClassesManager />;
-            case 'profile':
-                return <ProfileSettings />;
+            case 'schedule':
+                return <ScheduleManager />;
             case 'preferences':
                 return <PreferencesSettings />;
             case 'notifications':
@@ -84,15 +86,6 @@ const Settings = () => {
         </div>
     );
 };
-
-
-// Composants placeholder pour les autres tabs
-const ProfileSettings = () => (
-    <div className="settings-section">
-        <h2>👤 Profil</h2>
-        <p>Gestion du profil utilisateur - À développer</p>
-    </div>
-);
 
 const PreferencesSettings = () => (
     <div className="settings-section">
