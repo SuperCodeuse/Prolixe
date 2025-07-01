@@ -1,53 +1,41 @@
 // backend/config/database.js
-const sql = require('mssql');
+const mysql = require('mysql2/promise');
 
 const config = {
+    host: process.env.DB_SERVER,
+    port: parseInt(process.env.DB_PORT) || 3306,
+    database: process.env.DB_DATABASE,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
-    database: process.env.DB_NAME,
-    port: parseInt(process.env.DB_PORT) || 1433,
-    options: {
-        encrypt: true, // Important pour les connexions distantes
-        trustServerCertificate: false, // Pour les serveurs hébergés
-        enableArithAbort: true,
-        connectTimeout: 30000,
-        requestTimeout: 30000
+    ssl: {
+        rejectUnauthorized: false
     },
-    pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000
-    }
+    connectTimeout: 30000,
+    connectionLimit: 10,
+    queueLimit: 0,
+    idleTimeout: 300000,
+    acquireTimeout: 60000,
+    timeout: 60000
 };
 
-let poolPromise = null;
+let pool = null;
 
 const getConnection = () => {
-    if (!poolPromise) {
-        poolPromise = new sql.ConnectionPool(config)
-            .connect()
-            .then(pool => {
-                console.log('✅ Connecté à SQL Server hébergé');
-                console.log(`📍 Serveur: ${config.server}:${config.port}`);
-                console.log(`🗄️ Base de données: ${config.database}`);
-                return pool;
-            })
-            .catch(err => {
-                console.error('❌ Erreur de connexion à la base de données:', err);
-                poolPromise = null;
-                throw err;
-            });
+    if (!pool) {
+        pool = mysql.createPool(config);
+        console.log('✅ Pool MySQL créé');
+        console.log(`📍 Serveur: ${config.host}:${config.port}`);
+        console.log(`🗄️ Base de données: ${config.database}`);
     }
-    return poolPromise;
+    return pool;
 };
 
 // Test de connexion au démarrage
 const testConnection = async () => {
     try {
-        const pool = await getConnection();
-        const result = await pool.request().query('SELECT 1 as test');
-        console.log('🔍 Test de connexion réussi:', result.recordset);
+        const connection = await getConnection();
+        const [rows] = await connection.execute('SELECT 1 as test');
+        console.log('🔍 Test de connexion réussi:', rows);
         return true;
     } catch (error) {
         console.error('❌ Test de connexion échoué:', error);
@@ -56,7 +44,6 @@ const testConnection = async () => {
 };
 
 module.exports = {
-    sql,
     getConnection,
     testConnection
 };

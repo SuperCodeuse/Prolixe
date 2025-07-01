@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 
 // Configuration de la base de données à partir des variables d'environnement
 const config = {
-    host: process.env.DB_HOST || process.env.DB_SERVER,
-    port: parseInt(process.env.DB_PORT) || 3306,
+    host: process.env.DB_SERVER,
+    port: parseInt(process.env.DB_PORT),
     database: process.env.DB_DATABASE,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -12,12 +12,9 @@ const config = {
         rejectUnauthorized: false // Pour les certificats auto-signés
     },
     connectTimeout: 30000,
-    acquireTimeout: 30000,
     connectionLimit: 10,
     queueLimit: 0,
-    reconnect: true,
-    idleTimeout: 300000,
-    timeout: 60000
+    idleTimeout: 300000
 };
 
 
@@ -47,29 +44,16 @@ async function testConnection() {
 
         // Test d'une requête simple
         console.log('⏳ Test d\'une requête simple...');
-        const [versionResult] = await connection.execute('SELECT VERSION() as version, NOW() as current_time');
-
-        console.log('✅ Requête exécutée avec succès !');
-        console.log('📋 Informations du serveur:');
-        console.log(`   Version: ${versionResult[0].version}`);
-        console.log(`   Heure actuelle: ${versionResult[0].current_time}`);
-
-        // Test d'informations sur la base de données
-        const [dbInfo] = await connection.execute(`
+        const [versionResult] = await connection.execute(`
             SELECT 
-                DATABASE() as database_name,
-                USER() as current_user,
-                @@hostname as server_name,
-                @@port as server_port
+                VERSION() as mysql_version, 
+                NOW() as server_time
         `);
 
-        console.log('🔍 Informations de connexion:');
-        console.log(`   Base de données: ${dbInfo[0].database_name}`);
-        console.log(`   Utilisateur connecté: ${dbInfo[0].current_user}`);
-        console.log(`   Nom du serveur: ${dbInfo[0].server_name}`);
-        console.log(`   Port du serveur: ${dbInfo[0].server_port}`);
 
-        // Test optionnel: afficher les tables disponibles
+        console.log('✅ Requête exécutée avec succès !');
+
+
         console.log('⏳ Récupération de la liste des tables...');
         const [tables] = await connection.execute('SHOW TABLES');
 
