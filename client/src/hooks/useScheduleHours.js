@@ -1,6 +1,6 @@
 // frontend/src/hooks/useScheduleHours.js
-import { useState, useEffect } from 'react';
-import ScheduleService from '../services/ScheduleService';
+import {useState, useEffect, useCallback} from 'react';
+import ScheduleHoursService from '../services/ScheduleHoursService';
 
 export const useScheduleHours = () => {
     const [hours, setHours] = useState([]);
@@ -13,7 +13,7 @@ export const useScheduleHours = () => {
             setLoading(true);
             setError(null);
 
-            const response = await ScheduleService.getHours();
+            const response = await ScheduleHoursService.getHours();
             setHours(response.data || []);
 
         } catch (err) {
@@ -27,7 +27,7 @@ export const useScheduleHours = () => {
     // Ajouter un créneau horaire
     const addHour = async (hourData) => {
         try {
-            const response = await ScheduleService.createHour(hourData);
+            const response = await ScheduleHoursService.createHour(hourData);
             setHours(prev => [...prev, response.data]);
             return response.data;
         } catch (err) {
@@ -39,7 +39,7 @@ export const useScheduleHours = () => {
     // Modifier un créneau horaire
     const updateHour = async (id, hourData) => {
         try {
-            const response = await ScheduleService.updateHour(id, hourData);
+            const response = await ScheduleHoursService.updateHour(id, hourData);
             setHours(prev => prev.map(hour =>
                 hour.id === id ? response.data : hour
             ));
@@ -53,7 +53,7 @@ export const useScheduleHours = () => {
     // Supprimer un créneau horaire
     const removeHour = async (id) => {
         try {
-            await ScheduleService.deleteHour(id);
+            await ScheduleHoursService.deleteHour(id);
             setHours(prev => prev.filter(hour => hour.id !== id));
         } catch (err) {
             setError(err.message);
@@ -118,6 +118,11 @@ export const useScheduleHours = () => {
         }));
     };
 
+    const getHourIdByLibelle = useCallback((libelle) => {
+        const hour = hours.find(h => h.libelle === libelle);
+        return hour ? hour.id : null;
+    }, [hours]);
+
     // Charger les créneaux au montage du composant
     useEffect(() => {
         loadHours().then(r =>
@@ -144,6 +149,7 @@ export const useScheduleHours = () => {
         validateTimeSlot,
         createTimeSlotLabel,
         getSortedHours,
-        getHoursForSchedule
+        getHoursForSchedule,
+        getHourIdByLibelle
     };
 };

@@ -1,7 +1,7 @@
 // server/src/routes/sessions.js
 const express = require('express');
 const router = express.Router();
-const importController = require('../controllers/importController');
+const importController = require('../../controllers/importController');
 
 // GET /api/sessions - Récupérer les sessions avec filtres
 router.get('/', importController.getSessions);

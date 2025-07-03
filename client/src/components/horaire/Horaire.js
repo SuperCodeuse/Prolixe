@@ -1,31 +1,33 @@
 // Horaire.jsx
-import React, { useState } from 'react';
-import './Horaire.scss'; // Assurez-vous que ce chemin est correct
+import React, { useState, useEffect } from 'react';
+import './Horaire.scss';
 import { useClasses } from "../../hooks/useClasses";
 import { useScheduleHours } from "../../hooks/useScheduleHours";
 import { useToast } from '../../hooks/useToast';
 import Toast from "../Toast";
 import ConfirmModal from '../ConfirmModal';
+import { useSchedule } from '../../hooks/useSchedule'; // <-- CORRECTION ICI : useSchedule au lieu de useShedule
 
 const Horaire = () => {
     const { classes, getClassColor } = useClasses();
-    const { hours, getSortedHours } = useScheduleHours();
+    const { hours, getSortedHours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { success, error: showError, toasts, removeToast } = useToast();
 
-    const subjects = ['Programmation', 'Informatique', 'Exp.logiciels', 'Database'];
+    const {
+        schedule,
+        loading: loadingSchedule,
+        error: errorSchedule,
+        upsertCourse,
+        deleteCourse: deleteCourseFromHook,
+        getCourseBySlotKey
+    } = useSchedule();
 
-    const [schedule, setSchedule] = useState(() => {
-        const saved = localStorage.getItem('schedule');
-        return saved ? JSON.parse(saved) : {};
-    });
     const [showModal, setShowModal] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
-
-    // MODIFICATION 1 : Supprimer 'room: '21'' de l'état initial
     const [courseForm, setCourseForm] = useState({
         subject: '',
         classId: '',
-        room: '', // Laissez ceci vide, la logique de '21' sera dans handleSlotClick
+        room: '',
         notes: ''
     });
 
@@ -36,6 +38,7 @@ const Horaire = () => {
         onConfirm: null
     });
 
+    const subjects = ['Programmation', 'Informatique', 'Exp.logiciels', 'Database'];
     const timeSlots = getSortedHours().map(hour => hour.libelle);
 
     const daysOfWeek = [
@@ -47,53 +50,44 @@ const Horaire = () => {
         { key: 'saturday', label: 'Samedi' }
     ];
 
-    const saveSchedule = (newSchedule) => {
-        localStorage.setItem('schedule', JSON.stringify(newSchedule));
-        setSchedule(newSchedule);
-    };
+    const handleSlotClick = (day, time_libelle) => {
+        const slotKey = `${day}-${time_libelle}`;
+        setSelectedSlot({ day, time_libelle, key: slotKey });
 
-    const handleSlotClick = (day, time) => {
-        const slotKey = `${day}-${time}`;
-        setSelectedSlot({ day, time, key: slotKey });
-
-        const existingCourse = schedule[slotKey];
+        const existingCourse = getCourseBySlotKey(slotKey);
         if (existingCourse) {
-            // Si un cours existe, pré-remplir avec ses données
-            setCourseForm(existingCourse);
+            setCourseForm({
+                subject: existingCourse.subject,
+                classId: existingCourse.classId,
+                room: existingCourse.room,
+                notes: existingCourse.notes || ''
+            });
         } else {
-            // MODIFICATION 2 : Définir 'room: '21'' ici UNIQUMENT pour les NOUVEAUX créneaux
             setCourseForm({
                 subject: '',
                 classId: '',
-                room: '21', // <-- C'est l'unique endroit où '21' est défini par défaut pour un NOUVEAU formulaire
+                room: '21',
                 notes: ''
             });
         }
         setShowModal(true);
     };
 
-    const handleSaveCourse = () => {
+    const handleSaveCourse = async () => {
         if (!courseForm.subject || !courseForm.classId || !courseForm.room) {
             showError('Veuillez remplir tous les champs obligatoires (Matière, Classe, Local).', 3000);
             return;
         }
 
-        const newSchedule = {
-            ...schedule,
-            [selectedSlot.key]: courseForm
-        };
-
-        saveSchedule(newSchedule);
-        success('Cours enregistré avec succès !', 3000);
-        setShowModal(false);
-        // MODIFICATION 3 : Réinitialiser le formulaire à un état vide après sauvegarde
-        // Cela inclut 'room' pour qu'il ne garde pas '21' en mémoire pour le prochain ajout
-        setCourseForm({
-            subject: '',
-            classId: '',
-            room: '',
-            notes: ''
-        });
+        try {
+            await upsertCourse(selectedSlot.day, selectedSlot.time_libelle, courseForm);
+            success('Cours enregistré avec succès !', 3000);
+            setShowModal(false);
+            setCourseForm({ subject: '', classId: '', room: '', notes: '' });
+        } catch (err) {
+            console.error("Erreur lors de la sauvegarde du cours:", err);
+            showError(`Erreur lors de l'enregistrement: ${(err && err.message) || String(err)}`, 5000); // Amélioration message erreur
+        }
     };
 
     const showConfirmModal = (title, message, onConfirm) => {
@@ -114,31 +108,55 @@ const Horaire = () => {
         });
     };
 
-    const handleDeleteCourse = () => {
-        const course = schedule[selectedSlot?.key];
+    const handleDeleteCourseConfirmation = () => {
+        const course = getCourseBySlotKey(selectedSlot?.key);
         const classInfo = course ? getClassInfo(course.classId) : null;
         const className = classInfo?.name || 'inconnue';
         const courseSubject = course?.subject || 'ce cours';
 
         showConfirmModal(
             'Supprimer ce cours',
-            `Êtes-vous sûr de vouloir supprimer le cours de "${courseSubject}" pour la classe "${className}" (${selectedSlot?.time}) ?\n\nCette action est irréversible.`,
+            `Êtes-vous sûr de vouloir supprimer le cours de "${courseSubject}" pour la classe "${className}" (${selectedSlot?.time_libelle}) ?\n\nCette action est irréversible.`,
             () => performDeleteCourse()
         );
     };
 
-    const performDeleteCourse = () => {
-        const newSchedule = { ...schedule };
-        delete newSchedule[selectedSlot.key];
-        saveSchedule(newSchedule);
-        success('Cours supprimé avec succès !', 3000);
-        setShowModal(false);
-        closeConfirmModal();
+    const performDeleteCourse = async () => {
+        try {
+            await deleteCourseFromHook(selectedSlot.day, selectedSlot.time_libelle);
+            success('Cours supprimé avec succès !', 3000);
+            setShowModal(false);
+            closeConfirmModal();
+            setCourseForm({ subject: '', classId: '', room: '', notes: '' });
+        } catch (err) {
+            console.error("Erreur lors de la suppression du cours:", err);
+            showError(`Erreur lors de la suppression: ${(err && err.message) || String(err)}`, 5000); // Amélioration message erreur
+        }
     };
 
     const getClassInfo = (classId) => {
         return classes.find(cls => cls.id == classId);
     };
+
+    if (loadingHours || loadingSchedule) {
+        return (
+            <div className="horaire">
+                <div className="loading-message">
+                    Chargement de l'emploi du temps...
+                </div>
+            </div>
+        );
+    }
+
+    if (errorHours || errorSchedule) {
+        return (
+            <div className="horaire">
+                <div className="error-message">
+                    Erreur de chargement: {(errorHours && errorHours.message) || (errorSchedule && errorSchedule.message) || "Une erreur inconnue est survenue."}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="horaire">
@@ -156,18 +174,18 @@ const Horaire = () => {
                         </div>
                     ))}
 
-                    {timeSlots.map(time => (
-                        <React.Fragment key={time}>
-                            <div className="time-slot-label">{time}</div>
+                    {timeSlots.map(time_libelle => (
+                        <React.Fragment key={time_libelle}>
+                            <div className="time-slot-label">{time_libelle}</div>
                             {daysOfWeek.map(day => {
-                                const slotKey = `${day.key}-${time}`;
-                                const course = schedule[slotKey];
+                                const slotKey = `${day.key}-${time_libelle}`;
+                                const course = getCourseBySlotKey(slotKey);
                                 const classInfo = course ? getClassInfo(course.classId) : null;
                                 return (
                                     <div
                                         key={slotKey}
                                         className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
-                                        onClick={() => handleSlotClick(day.key, time)}
+                                        onClick={() => handleSlotClick(day.key, time_libelle)}
                                         style={{
                                             backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
                                             borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
@@ -198,7 +216,7 @@ const Horaire = () => {
                     <div className="modal">
                         <div className="modal-header">
                             <h3>
-                                {schedule[selectedSlot?.key] ? 'Modifier le cours' : 'Ajouter un cours'}
+                                {getCourseBySlotKey(selectedSlot?.key) ? 'Modifier le cours' : 'Ajouter un cours'}
                             </h3>
                             <button
                                 className="modal-close"
@@ -212,7 +230,7 @@ const Horaire = () => {
                             <div className="modal-body-content">
                                 <div className="slot-info">
                                     <strong>
-                                        {daysOfWeek.find(d => d.key === selectedSlot?.day)?.label} - {selectedSlot?.time}
+                                        {daysOfWeek.find(d => d.key === selectedSlot?.day)?.label} - {selectedSlot?.time_libelle}
                                     </strong>
                                 </div>
 
@@ -275,11 +293,11 @@ const Horaire = () => {
                                 >
                                     Annuler
                                 </button>
-                                {schedule[selectedSlot?.key] && (
+                                {getCourseBySlotKey(selectedSlot?.key) && (
                                     <button
                                         type="button"
                                         className="btn-danger"
-                                        onClick={handleDeleteCourse}
+                                        onClick={handleDeleteCourseConfirmation}
                                     >
                                         Supprimer
                                     </button>
