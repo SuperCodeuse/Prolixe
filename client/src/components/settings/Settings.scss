@@ -3,7 +3,6 @@
 
 .settings-page {
     @include page-container-base;
-    background: var(--bg-dark-secondary); /* Override pour un fond légèrement différent */
 }
 
 .settings-header {
