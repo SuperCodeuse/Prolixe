@@ -8,7 +8,7 @@ import Journal from './components/Journal';
 import Horaire from './components/Horaire';
 import Skore from './components/Skore';*/
 
-import './App.css';
+import './App.scss';
 import Horaire from "./components/horaire/Horaire";
 
 const App = () => {

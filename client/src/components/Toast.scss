@@ -1,4 +1,6 @@
-/* client/src/components/Toast.css */
+/* Toast.scss - Styles spécifiques aux notifications Toast (Thème Clair) */
+@import '../App';
+
 .toast {
     position: fixed;
     top: 20px;
@@ -12,28 +14,28 @@
     gap: 12px;
     z-index: 1000;
     min-width: 300px;
-    animation: slideIn 0.3s ease-out;
+    animation: slideInRight 0.3s ease-out; /* Utilise l'animation de util.scss */
     border-left: 4px solid;
 }
 
 .toast-success {
-    border-left-color: #10b981;
-    background: #f0fdf4;
+    border-left-color: var(--accent-green);
+    background: var(--success-light);
 }
 
 .toast-error {
-    border-left-color: #ef4444;
-    background: #fef2f2;
+    border-left-color: var(--red-danger);
+    background: var(--error-light);
 }
 
 .toast-warning {
-    border-left-color: #f59e0b;
-    background: #fffbeb;
+    border-left-color: var(--accent-orange);
+    background: var(--warning-light);
 }
 
 .toast-info {
-    border-left-color: #3b82f6;
-    background: #eff6ff;
+    border-left-color: var(--accent-blue);
+    background: var(--info-light);
 }
 
 .toast-icon {
@@ -43,7 +45,7 @@
 
 .toast-message {
     flex: 1;
-    color: #374151;
+    color: var(--text-dark-secondary);
     font-weight: 500;
 }
 
@@ -64,17 +66,6 @@
 }
 
 .toast-close:hover {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+    background: var(--gray-light);
+    color: var(--text-dark-secondary);
 }

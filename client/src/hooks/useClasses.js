@@ -1,6 +1,7 @@
 // frontend/src/hooks/useClasses.js (mise à jour)
 import { useState, useEffect } from 'react';
 import ClassService from '../services/ClassService';
+import {darken} from "@mui/material";
 
 export const useClasses = () => {
     const [classes, setClasses] = useState([]);
@@ -61,24 +62,60 @@ export const useClasses = () => {
         }
     };
 
-    // NOUVELLES FONCTIONS UTILITAIRES POUR L'HORAIRE
     // Générer une couleur basée sur la matière
-    const getClassColor = (subject) => {
-        const colors = {
-            'Informatique': '#3B82F6',      // Bleu
-            'Exp.logiciels': '#10B981',     // Vert
-            'Programmation': '#8B5CF6',     // Violet
-            'Database': '#F59E0B',          // Orange
-            'Mathématiques': '#EF4444',     // Rouge
-            'Français': '#14B8A6',          // Teal
-            'Anglais': '#F97316',           // Orange foncé
-            'Histoire': '#8B5CF6',          // Violet
-            'default': '#6B7280'            // Gris par défaut
+    const getClassColor = (subject, level) => {
+        // Palette étendue avec des couleurs plus distinctes par niveau et matière.
+        // L'objectif est une différenciation rapide et claire.
+        const extendedColors = {
+            'Informatique_3': '#93C5FD', // Bleu clair
+            'Informatique_4': '#1D4ED8', // Bleu foncé
+            'Informatique_5': '#1E3A8A', // Bleu très foncé
+            'Informatique_6': '#0F172A', // Bleu marine
+
+            // Exp.logiciels - Gamme d'oranges
+            'Ex.Logiciels_3': '#FDBA74', // Orange clair
+            'Ex.Logiciels_4': '#D97706', // Orange foncé
+            'Ex.Logiciels_5': '#B45309', // Orange très foncé
+            'Ex.Logiciels_6': '#78350F', // Orange brun
+
+            // Programmation - Gamme de violets
+            'Programmation_3': '#C4B5FD', // Violet clair
+            'Programmation_4': '#7C3AED', // Violet foncé
+            'Programmation_5': '#5B21B6', // Violet très foncé
+            'Programmation_6': '#3C1363', // Violet profond
+
+            // Database - Gamme de verts
+            'Database_3': '#86EFAC', // Vert clair
+            'Database_4': '#059669', // Vert foncé
+            'Database_5': '#047857', // Vert très foncé
+            'Database_6': '#064E3B', // Vert profond
+
+            // Couleur par défaut si la matière ou le niveau ne correspondent pas
+            'default': '#475569' // Un gris légèrement plus foncé pour un meilleur contraste par défaut
         };
-        return colors[subject] || colors.default;
+
+        // Construire la clé de combinaison (ex: "Informatique_3")
+        const combinationKey = `${subject}_${level}`;
+
+        // Tenter de trouver la couleur spécifique à la combinaison matière_niveau
+        if (extendedColors[combinationKey]) {
+            return extendedColors[combinationKey];
+        }
+
+
+        const baseSubjectColorsFallback = {
+            'Informatique': '#3B82F6',
+            'Exp.logiciels': '#F59E0B',
+            'Programmation': '#8B5CF6',
+            'Database': '#10B981'
+        };
+        if (baseSubjectColorsFallback[subject]) {
+            return baseSubjectColorsFallback[subject];
+        }
+
+        return extendedColors.default; // Fallback final
     };
 
-    // Générer un nom court pour l'affichage dans l'horaire
     const getClassShortName = (name) => {
         // Exemple: "Classe 1A" -> "1A", "BTS SIO 1" -> "SIO1"
         const words = name.split(' ');
@@ -100,7 +137,7 @@ export const useClasses = () => {
     const getClassesForSchedule = () => {
         return classes.map(cls => ({
             ...cls,
-            color: getClassColor(cls.subject),
+            color: getClassColor(cls.subject, cls.level),
             shortName: getClassShortName(cls.name)
         }));
     };
@@ -125,7 +162,6 @@ export const useClasses = () => {
         addClass,
         updateClass,
         removeClass,
-        // Nouvelles fonctions pour l'horaire
         getClassesForSchedule,
         getClassColor,
         getClassShortName,

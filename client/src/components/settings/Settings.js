@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ClassesManager from "./Class/ClassManager";
 import ScheduleManager from "./Schedule/ScheduleManager";
-import './Settings.css';
+import './Settings.scss';
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('classes');

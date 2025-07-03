@@ -1,42 +1,32 @@
-/* Dashboard.css */
+/* Dashboard.scss - Styles spécifiques au tableau de bord */
+@import '../../App';
+
 .dashboard {
-    padding-left: 20rem; /* Décalage pour le SideMenu */
-    padding-right: 2rem;
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-    background-color: #0f172a;
-    min-height: 100vh;
-    color: #ffffff;
+    @include page-container-base;
 }
 
 /* Header */
 .dashboard-header {
-    display: flex;
+    @include page-header-base;
+    display: flex; /* Override pour le flexbox spécifique au dashboard */
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-radius: 1rem;
-    border: 1px solid #334155;
+    text-align: left; /* Override pour le texte non centré */
 }
 
 .header-content h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
+    @include section-title-h1;
+    font-size: 2.5rem; /* Re-spécifié si la taille est différente */
     margin: 0 0 0.5rem 0;
-    color: #ffffff;
 }
 
 .header-content p {
-    font-size: 1.1rem;
-    color: #94a3b8;
-    margin: 0;
+    @include section-paragraph;
 }
 
 .header-date {
     text-align: right;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 1rem;
     font-weight: 500;
 }
@@ -50,18 +40,9 @@
 }
 
 .stat-card {
-    background: #1e293b;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    border: 1px solid #334155;
-    transition: all 0.3s ease;
+    @include card-base;
     position: relative;
     overflow: hidden;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
 .stat-card::before {
@@ -71,24 +52,24 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-dark-blue)); /* Valeur générique */
     border-radius: 1rem 1rem 0 0;
 }
 
 .stat-card.primary::before {
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-dark-blue));
 }
 
 .stat-card.info::before {
-    background: linear-gradient(90deg, #06b6d4, #0891b2);
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-dark-cyan));
 }
 
 .stat-card.warning::before {
-    background: linear-gradient(90deg, #f59e0b, #d97706);
+    background: linear-gradient(90deg, var(--accent-orange), var(--accent-dark-orange));
 }
 
 .stat-card.success::before {
-    background: linear-gradient(90deg, #10b981, #059669);
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-dark-green));
 }
 
 .stat-header {
@@ -100,15 +81,15 @@
 
 .stat-icon {
     font-size: 2rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--white-transparent-md);
     padding: 0.5rem;
     border-radius: 0.5rem;
 }
 
 .stat-trend {
     font-size: 0.8rem;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    background: var(--white-transparent-sm);
     padding: 0.25rem 0.5rem;
     border-radius: 0.5rem;
 }
@@ -117,11 +98,11 @@
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
-    color: #ffffff;
+    color: var(--text-light);
 }
 
 .stat-content p {
-    color: #94a3b8;
+    color: var(--text-muted);
     margin: 0.5rem 0 0 0;
     font-size: 1rem;
 }
@@ -134,30 +115,30 @@
 }
 
 .dashboard-section {
-    background: #1e293b;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    border: 1px solid #334155;
+    @include card-base;
 }
 
-.section-header {
+.section-header { /* Utilise pour le h2 interne des sections du dashboard */
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
+    padding: 0; /* Override car déjà dans la .dashboard-section */
+    background: none; /* Override */
+    border: none; /* Override */
 }
 
 .section-header h2 {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--text-light);
     margin: 0;
 }
 
 .view-all-btn {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: var(--blue-transparent-sm);
+    color: var(--accent-blue);
+    border: 1px solid var(--blue-transparent-lg);
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     cursor: pointer;
@@ -166,7 +147,7 @@
 }
 
 .view-all-btn:hover {
-    background: rgba(59, 130, 246, 0.2);
+    background: var(--blue-transparent-lg);
 }
 
 /* Schedule List */
@@ -181,22 +162,22 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--white-transparent-sm);
     border-radius: 0.5rem;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid var(--accent-blue);
 }
 
 .schedule-item.tp {
-    border-left-color: #8b5cf6;
+    border-left-color: #8b5cf6; /* Couleur spécifique */
 }
 
 .schedule-item.evaluation {
-    border-left-color: #f59e0b;
+    border-left-color: var(--accent-orange);
 }
 
 .schedule-time {
     font-weight: 600;
-    color: #3b82f6;
+    color: var(--accent-blue);
     font-size: 1.1rem;
     min-width: 60px;
 }
@@ -207,13 +188,13 @@
 
 .schedule-details h4 {
     margin: 0 0 0.25rem 0;
-    color: #ffffff;
+    color: var(--text-light);
     font-size: 1.1rem;
 }
 
 .schedule-details p {
     margin: 0;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
 
@@ -233,13 +214,13 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--white-transparent-sm);
     border-radius: 0.5rem;
     transition: all 0.3s ease;
 }
 
 .task-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--white-transparent-md);
 }
 
 .task-item.completed {
@@ -253,7 +234,7 @@
 .task-checkbox input {
     width: 18px;
     height: 18px;
-    accent-color: #10b981;
+    accent-color: var(--accent-green);
 }
 
 .task-content {
@@ -262,13 +243,13 @@
 
 .task-content h4 {
     margin: 0 0 0.25rem 0;
-    color: #ffffff;
+    color: var(--text-light);
     font-size: 1rem;
 }
 
 .task-content p {
     margin: 0;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
 
@@ -276,12 +257,8 @@
     font-size: 1.2rem;
 }
 
-/* Responsive Design */
+/* Responsive Design (reste spécifique au dashboard) */
 @media (max-width: 1024px) {
-    .dashboard {
-        padding-left: 2rem;
-    }
-
     .dashboard-content {
         grid-template-columns: 1fr;
     }
@@ -292,20 +269,6 @@
 }
 
 @media (max-width: 768px) {
-    .dashboard {
-        padding: 1rem;
-    }
-
-    .dashboard-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .header-content h1 {
-        font-size: 2rem;
-    }
-
     .stats-grid {
         grid-template-columns: 1fr;
     }

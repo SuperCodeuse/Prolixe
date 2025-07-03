@@ -1,16 +1,18 @@
-/* client/src/components/ConfirmModal.css */
-.modal-overlay {
+/* ConfirmModal.scss - Styles spécifiques à la modale de confirmation (Thème Clair) */
+@import '../App';
+
+.confirm-modal-overlay { /* Renommée pour éviter conflit avec .modal-overlay de util.scss */
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5); /* Thème clair */
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.2s ease-out;
+    animation: fadeIn 0.2s ease-out; /* Utilise l'animation de util.scss */
 }
 
 .confirm-modal {
@@ -19,7 +21,7 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     max-width: 400px;
     width: 90%;
-    animation: scaleIn 0.2s ease-out;
+    animation: scaleIn 0.2s ease-out; /* Utilise l'animation de util.scss */
 }
 
 .confirm-modal-header {
@@ -30,7 +32,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #111827;
+    color: var(--text-dark);
 }
 
 .confirm-modal-body {
@@ -56,7 +58,8 @@
     justify-content: flex-end;
 }
 
-.btn {
+/* Boutons pour la modale de confirmation (thème clair) */
+.confirm-modal-actions .btn {
     padding: 10px 20px;
     border: none;
     border-radius: 6px;
@@ -65,36 +68,20 @@
     transition: all 0.2s;
 }
 
-.btn-secondary {
-    background: #f3f4f6;
-    color: #374151;
+.confirm-modal-actions .btn-secondary {
+    background: var(--gray-light);
+    color: var(--text-dark-secondary);
 }
 
-.btn-secondary:hover {
-    background: #e5e7eb;
+.confirm-modal-actions .btn-secondary:hover {
+    background: var(--gray-medium);
 }
 
-.btn-danger {
-    background: #ef4444;
+.confirm-modal-actions .btn-danger {
+    background: var(--red-danger);
     color: white;
 }
 
-.btn-danger:hover {
-    background: #dc2626;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+.confirm-modal-actions .btn-danger:hover {
+    background: var(--red-dark-danger);
 }

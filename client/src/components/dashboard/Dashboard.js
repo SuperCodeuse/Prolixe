@@ -1,6 +1,7 @@
 // dashboard.jsx
 import React from 'react';
-import './dashboard.css';
+import '../../App.scss';
+import './dashboard.scss';
 
 const Dashboard = () => {
     // Données d'exemple pour les statistiques

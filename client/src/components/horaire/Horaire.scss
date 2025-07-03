@@ -1,0 +1,201 @@
+/* Horaire.scss - Styles spécifiques à l'horaire */
+@import '../../App';
+
+.horaire {
+    @include page-container-base;
+
+    .horaire-header {
+        @include page-header-base;
+    }
+
+    .horaire-header h1 {
+        @include section-title-h1;
+    }
+
+    .horaire-header p {
+        @include section-paragraph;
+    }
+
+    /* Schedule Container */
+    .schedule-container {
+        @include card-base;
+        padding: 1rem; /* Re-spécifié si différent du padding par défaut */
+        overflow-x: auto;
+    }
+
+    // Styles pour la grille de l'horaire et ses éléments internes
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: 120px repeat(6, 1fr);
+        gap: 1px;
+        background: var(--border-color);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        min-width: 800px;
+    }
+
+    /* Headers de la grille (jours et heures) */
+    .time-header,
+    .day-header {
+        background: #475569; /* Couleur spécifique pour les en-têtes de grille */
+        color: var(--text-light);
+        padding: 1rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .time-header {
+        font-size: 0.9rem;
+    }
+
+    .day-header {
+        font-size: 1rem;
+    }
+
+    /* Libellés des créneaux horaires */
+    .time-slot-label {
+        background: #374151; /* Couleur spécifique */
+        color: var(--text-secondary);
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid #4b5563; /* Couleur spécifique */
+    }
+
+    /* Créneaux horaires individuels */
+    .schedule-slot {
+        background: var(--bg-dark-secondary);
+        border: 1px solid var(--border-color);
+        min-height: 60px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+    }
+
+    .schedule-slot:hover {
+        background: var(--border-color); /* Couleur de hover spécifique */
+        transform: scale(1.02);
+    }
+
+    .schedule-slot.has-course {
+        border-width: 2px;
+        background: var(--white-transparent-sm);
+    }
+
+    .schedule-slot.has-course:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Informations sur le cours dans un créneau */
+    .course-info {
+        text-align: center;
+        width: 100%;
+    }
+
+    .course-subject {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin-bottom: 0.25rem;
+    }
+
+    .course-class {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+
+    .course-room {
+        font-size: 0.7rem;
+        color: var(--text-gray);
+        font-weight: 500;
+    }
+
+    /* Créneau vide */
+    .empty-slot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        color: var(--text-gray);
+        font-size: 1.5rem;
+        font-weight: 300;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .schedule-slot.empty:hover .empty-slot {
+        opacity: 1;
+    }
+
+    /* Modal (utilisant les styles de mixin de util.scss) */
+    .modal-overlay {
+        @include modal-overlay-base;
+    }
+
+    .modal {
+        @include modal-base;
+        padding: 2.5rem; /* Padding légèrement augmenté pour un meilleur espacement */
+    }
+
+    .modal-header {
+        @include modal-header-base;
+    }
+
+    .modal-close {
+        @include modal-close-btn-base;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .slot-info {
+        background: var(--border-color);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--accent-blue);
+        text-align: center;
+    }
+
+    /* Formulaires dans la modal (utilisent les styles de mixin de formulaire de util.scss) */
+    .modal .form-group {
+        @include form-group-base;
+    }
+
+    .modal-footer {
+        @include form-actions-base;
+        padding: 1.5rem; /* Re-spécifié si différent du padding par défaut */
+    }
+
+    /* Boutons de la modal (utilisent les styles de mixin de bouton de util.scss) */
+    .modal .btn-primary {
+        @include btn-primary-base;
+    }
+
+    .modal .btn-secondary {
+        @include btn-secondary-base;
+    }
+
+    .modal .btn-danger {
+        @include btn-danger-base;
+    }
+
+    /* Responsive (reste spécifique à l'horaire) */
+    @media (max-width: 768px) {
+        .schedule-grid {
+            grid-template-columns: 100px repeat(6, minmax(120px, 1fr));
+        }
+    }
+}

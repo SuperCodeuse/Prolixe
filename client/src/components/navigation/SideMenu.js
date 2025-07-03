@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './SideMenu.css';
+import './SideMenu.scss';
 
 const SideMenu = ({ currentPage, onPageChange }) => {
     const menuItems = [

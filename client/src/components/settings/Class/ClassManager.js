@@ -15,6 +15,7 @@ const ClassesManager = () => {
         name: '',
         students: '',
         subject: '',
+        level: '', // <-- NOUVEAU : champ level
     });
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
@@ -25,6 +26,8 @@ const ClassesManager = () => {
 
     // Données fictives pour les matières
     const lesson = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
+    // NOUVEAU : Données fictives pour les niveaux
+    const levels = [3, 4, 5, 6];
 
     // Fonction pour afficher la modal de confirmation
     const showConfirmModal = (title, message, onConfirm) => {
@@ -52,6 +55,7 @@ const ClassesManager = () => {
             name: '',
             students: '',
             subject: '',
+            level: '', // <-- NOUVEAU : réinitialiser level
         });
         setEditingClass(null);
         setShowAddForm(false);
@@ -77,6 +81,13 @@ const ClassesManager = () => {
 
         if (!formData.subject) {
             errors.push('La matière principale est requise');
+        }
+
+        // <-- NOUVELLE VALIDATION POUR LE NIVEAU
+        if (!formData.level) {
+            errors.push('Le niveau est requis');
+        } else if (!levels.includes(parseInt(formData.level))) {
+            errors.push('Le niveau sélectionné est invalide');
         }
 
         // Vérification des doublons (uniquement pour l'ajout ou si le nom a changé)
@@ -105,9 +116,10 @@ const ClassesManager = () => {
 
         // Validation en temps réel pour le nombre d'élèves
         if (field === 'students' && value) {
-            if (isNaN(value) || parseInt(value) <= 0) {
+            const numStudents = parseInt(value);
+            if (isNaN(numStudents) || numStudents <= 0) {
                 warning('Le nombre d\'élèves doit être un nombre positif');
-            } else if (parseInt(value) > 50) {
+            } else if (numStudents > 50) {
                 warning('Attention : nombre d\'élèves très élevé (max recommandé: 50)');
             }
         }
@@ -142,14 +154,15 @@ const ClassesManager = () => {
         setFormData({
             name: classItem.name || '',
             students: classItem.students || '',
-            subject: classItem.subject || classItem.lesson || ''
+            subject: classItem.subject || classItem.lesson || '',
+            level: classItem.level || '', // <-- NOUVEAU : récupérer le niveau
         });
         setShowAddForm(true);
     };
 
     // Gérer l'annulation avec confirmation si formulaire modifié
     const handleCancelForm = () => {
-        const isFormDirty = formData.name.trim() || formData.students || formData.subject;
+        const isFormDirty = formData.name.trim() || formData.students || formData.subject || formData.level; // <-- NOUVEAU : inclure level
 
         if (isFormDirty) {
             showConfirmModal(
@@ -286,6 +299,21 @@ const ClassesManager = () => {
                                         Entre 1 et 50 élèves
                                     </small>
                                 </div>
+
+                                {/* NOUVEAU : Champ pour le niveau */}
+                                <div className="form-group">
+                                    <label>Niveau</label>
+                                    <select
+                                        value={formData.level}
+                                        onChange={(e) => handleInputChange('level', e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Sélectionner un niveau</option>
+                                        {levels.map(level => (
+                                            <option key={level} value={level}>{level}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="form-group">
@@ -360,9 +388,15 @@ const ClassesManager = () => {
                                     <span className="info-label">👥 Élèves:</span>
                                     <span className="info-value">{classItem.students}</span>
                                 </div>
+
+                                <div className="info-item">
+                                    <span className="info-label">🎓 Niveau:</span>
+                                    <span className="info-value">{classItem.level}</span>
+                                </div>
+
                                 <div className="info-item">
                                     <span className="info-label">📚 Matière:</span>
-                                    <span className="info-value">{classItem.subject || classItem.lesson}</span>
+                                    <span className="info-value">{classItem.subject}</span>
                                 </div>
                             </div>
                         </div>

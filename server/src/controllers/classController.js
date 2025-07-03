@@ -14,7 +14,8 @@ class ClassController {
         try {
             // Ici, 'pool' est maintenant l'instance directe du pool mysql2
             connection = await pool.getConnection(); // Ceci fonctionnera maintenant
-            // ... (le reste de la méthode withConnection reste inchangé)
+
+            // Cette vérification est utile pour le débogage si le pool est mal configuré
             if (typeof connection.release !== 'function') {
                 console.error("DEBUG: L'objet de connexion n'a pas la méthode .release(). Vérifiez la configuration du pool.");
                 throw new Error("L'objet de connexion obtenu du pool n'est pas valide pour être relâché.");
@@ -25,6 +26,7 @@ class ClassController {
             throw error;
         } finally {
             if (connection) {
+                // S'assurer que connection.release est bien une fonction avant de l'appeler
                 if (typeof connection.release === 'function') {
                     connection.release();
                 } else {
@@ -56,12 +58,13 @@ class ClassController {
 
     /**
      * Valide les données d'entrée pour la création ou la mise à jour d'une classe.
-     * @param {object} data - Les données de la classe (name, students, subject).
+     * @param {object} data - Les données de la classe (name, students, subject, level).
      * @param {boolean} isUpdate - Indique si la validation est pour une mise à jour (certains champs peuvent être optionnels).
      * @returns {object} Un objet contenant les erreurs de validation par champ.
      */
     static validateClassData(data, isUpdate = false) {
         const errors = {};
+        const validLevels = [3, 4, 5, 6]; // Niveaux autorisés
 
         // Validation du nom
         if (!isUpdate || data.name !== undefined) {
@@ -77,9 +80,9 @@ class ClassController {
         // Validation du nombre d'étudiants
         if (!isUpdate || data.students !== undefined) {
             const studentsNum = parseInt(data.students);
-            if (isNaN(studentsNum) || studentsNum < 0) {
+            if (isNaN(studentsNum) || studentsNum < 0) { // On autorise 0 étudiants
                 errors.students = 'Le nombre d\'étudiants doit être un nombre entier positif ou zéro.';
-            } else if (studentsNum > 1000) {
+            } else if (studentsNum > 1000) { // Limite haute
                 errors.students = 'Le nombre d\'étudiants ne peut pas dépasser 1000.';
             }
         }
@@ -90,6 +93,14 @@ class ClassController {
                 errors.subject = 'La matière est requise.';
             } else if (data.subject.trim().length > 100) {
                 errors.subject = 'La matière ne peut pas dépasser 100 caractères.';
+            }
+        }
+
+        // NOUVEAU: Validation du niveau
+        if (!isUpdate || data.level !== undefined) {
+            const levelNum = parseInt(data.level);
+            if (isNaN(levelNum) || !validLevels.includes(levelNum)) {
+                errors.level = `Le niveau est requis et doit être l'une des valeurs suivantes : ${validLevels.join(', ')}.`;
             }
         }
 
@@ -105,12 +116,13 @@ class ClassController {
         try {
             const data = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT 
+                    SELECT
                         id,
                         name,
                         students,
+                        level,         -- Inclure 'level'
                         lesson AS subject
-                    FROM CLASS 
+                    FROM CLASS
                     ORDER BY name ASC
                 `);
                 return rows;
@@ -145,12 +157,13 @@ class ClassController {
             console.log(`🔍 Tentative de récupération de la classe ID: ${id}`);
             const classData = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT 
+                    SELECT
                         id,
                         name,
                         students,
+                        level,          -- Inclure 'level'
                         lesson AS subject
-                    FROM CLASS 
+                    FROM CLASS
                     WHERE id = ?
                 `, [parseInt(id)]);
                 return rows[0] || null;
@@ -177,10 +190,11 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async createClass(req, res) {
-        const { name, students, subject } = req.body;
+        // Inclure 'level' dans la déstructuration
+        const { name, students, subject, level } = req.body;
 
-        // Validation des données
-        const validationErrors = ClassController.validateClassData({ name, students, subject });
+        // Validation des données (maintenant incluant 'level')
+        const validationErrors = ClassController.validateClassData({ name, students, subject, level });
         if (Object.keys(validationErrors).length > 0) {
             return ClassController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
         }
@@ -200,15 +214,21 @@ class ClassController {
                     throw err;
                 }
 
-                // Créer la classe
+                // Corriger l'ordre des valeurs pour correspondre aux colonnes de l'INSERT
+                // 'INSERT INTO CLASS (name, students, lesson, level) VALUES (?, ?, ?, ?)'
+                // Il semble que votre base de données ait une colonne 'lesson' et non 'subject' pour la matière.
+                // Donc 'lesson' recevra 'subject.trim()'.
+                // 'level' recevra 'parseInt(level)'.
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, lesson) VALUES (?, ?, ?)',
-                    [name.trim(), parseInt(students), subject.trim()]
+                    'INSERT INTO CLASS (name, students, lesson, level) VALUES (?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), subject.trim(), parseInt(level)] // Ordre corrigé
                 );
 
                 // Récupérer la classe créée avec toutes ses propriétés (y compris l'ID auto-incrémenté)
+                // L'alias 'level AS subject' est incorrect ici. La colonne est 'level' et la matière est 'lesson'.
+                // On doit récupérer les deux correctement.
                 const [newClassData] = await connection.execute(
-                    'SELECT id, name, students, lesson AS subject FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
                     [result.insertId]
                 );
 
@@ -237,7 +257,7 @@ class ClassController {
      */
     static async updateClass(req, res) {
         const { id } = req.params;
-        const updateData = req.body; // Peut contenir name, students, subject
+        const updateData = req.body; // Peut contenir name, students, subject, level
 
         // Validation de l'ID
         if (!id || isNaN(parseInt(id))) {
@@ -245,6 +265,7 @@ class ClassController {
         }
 
         // Validation des données (mode update, les champs sont optionnels)
+        // Passer toutes les données reçues, la validation s'occupera des champs undefined
         const validationErrors = ClassController.validateClassData(updateData, true);
         if (Object.keys(validationErrors).length > 0) {
             return ClassController.handleError(res, new Error('Données de validation invalides'), 'Données invalides pour la mise à jour.', 400, validationErrors);
@@ -255,7 +276,7 @@ class ClassController {
             const updatedClass = await ClassController.withConnection(async (connection) => {
                 // Vérifier que la classe existe
                 const [existing] = await connection.execute(
-                    'SELECT id, name FROM CLASS WHERE id = ?',
+                    'SELECT id, name, level, students FROM CLASS WHERE id = ?',
                     [parseInt(id)]
                 );
 
@@ -291,8 +312,14 @@ class ClassController {
                 }
 
                 if (updateData.subject !== undefined) {
-                    fieldsToUpdate.push('lesson = ?'); // Assurez-vous que 'lesson' est le nom de la colonne
+                    fieldsToUpdate.push('lesson = ?'); // 'lesson' est le nom de la colonne de la DB pour la matière
                     values.push(updateData.subject.trim());
+                }
+
+                // NOUVEAU: Ajouter la mise à jour du level
+                if (updateData.level !== undefined) {
+                    fieldsToUpdate.push('level = ?');
+                    values.push(parseInt(updateData.level));
                 }
 
                 if (fieldsToUpdate.length === 0) {
@@ -310,8 +337,9 @@ class ClassController {
                 );
 
                 // Récupérer la classe mise à jour pour renvoyer les données complètes
+                // L'alias 'level AS subject' est incorrect. Récupérer 'lesson' et 'level' séparément.
                 const [updatedData] = await connection.execute(
-                    'SELECT id, name, students, lesson AS subject FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
                     [parseInt(id)]
                 );
 
@@ -367,18 +395,6 @@ class ClassController {
                     throw err;
                 }
 
-                // TODO: Vérifier les contraintes de clés étrangères (décommenter et adapter si nécessaire)
-                // Par exemple, s'il y a des étudiants associés à cette classe
-                // const [relatedData] = await connection.execute(
-                //     'SELECT COUNT(*) as count FROM students WHERE class_id = ?',
-                //     [parseInt(id)]
-                // );
-                // if (relatedData[0].count > 0) {
-                //     const err = new Error('Impossible de supprimer cette classe car elle contient des étudiants.');
-                //     err.name = 'CLASS_HAS_DEPENDENCIES';
-                //     throw err;
-                // }
-
                 await connection.execute('DELETE FROM CLASS WHERE id = ?', [parseInt(id)]);
                 return classToDelete[0]; // Retourne les infos de la classe supprimée
             });
@@ -398,6 +414,9 @@ class ClassController {
                 return ClassController.handleError(res, error, 'Classe non trouvée.', 404);
             }
             if (error.name === 'CLASS_HAS_DEPENDENCIES') {
+                // Si vous avez des contraintes de clé étrangère, cette erreur pourrait être déclenchée.
+                // Assurez-vous que votre base de données gère bien la suppression en cascade si c'est ce que vous voulez,
+                // ou gérez l'erreur de contrainte d'intégrité ici.
                 return ClassController.handleError(res, error, error.message, 409);
             }
             ClassController.handleError(res, error, 'Erreur lors de la suppression de la classe.');
@@ -413,11 +432,12 @@ class ClassController {
         try {
             const stats = await ClassController.withConnection(async (connection) => {
                 const [result] = await connection.execute(`
-                    SELECT 
+                    SELECT
                         COUNT(*) as total_classes,
                         SUM(students) as total_students,
                         AVG(students) as avg_students_per_class,
                         COUNT(DISTINCT lesson) as unique_subjects
+                        -- Ajoutez SUM(CASE WHEN level = X THEN 1 ELSE 0 END) pour des stats par niveau si besoin
                     FROM CLASS
                 `);
                 return result[0];

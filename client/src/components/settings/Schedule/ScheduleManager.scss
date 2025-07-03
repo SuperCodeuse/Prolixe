@@ -1,0 +1,304 @@
+/* frontend/src/components/ScheduleManager.scss */
+@import '../../../App';
+
+.schedule-manager {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-top: 20px;
+
+    // Rendre les règles plus spécifiques en les préfixant
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--light-border);
+
+        h3 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 1.2em;
+        }
+    }
+
+    .btn { /* Boutons de ScheduleManager, utilisent une base light */
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-primary { /* Couleur primaire spécifique pour ScheduleManager */
+        background: #4299e1;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #3182ce;
+    }
+
+    .btn-secondary { /* Couleur secondaire spécifique pour ScheduleManager */
+        background: var(--light-border);
+        color: var(--text-dark-tertiary);
+    }
+
+    .btn-secondary:hover {
+        background: var(--light-border-hover);
+    }
+
+    .btn-edit {
+        background: #fbd38d;
+        color: #744210;
+        padding: 6px 8px;
+    }
+
+    .btn-edit:hover {
+        background: #f6ad55;
+    }
+
+    .btn-delete {
+        background: var(--error-light);
+        color: var(--red-danger);
+        padding: 6px 8px;
+    }
+
+    .btn-delete:hover {
+        background: #feb2b2;
+    }
+
+    .schedule-grid {
+        display: grid;
+        gap: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .schedule-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background: var(--light-bg-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--light-border);
+        transition: all 0.2s;
+    }
+
+    .schedule-item:hover {
+        background: var(--light-bg-tertiary);
+        border-color: var(--light-border-hover);
+    }
+
+    .schedule-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .schedule-number {
+        background: #4299e1; /* Couleur spécifique */
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+
+    .schedule-details {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .schedule-time {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 1.1em;
+    }
+
+    .schedule-duration {
+        color: #718096;
+        font-size: 0.9em;
+    }
+
+    .schedule-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px 20px;
+        color: #718096;
+
+        p {
+            margin: 8px 0;
+        }
+    }
+
+    /* Modal styles (pour ScheduleManager, thème clair) */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5); /* Re-spécifié pour être plus clair */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid var(--light-border);
+
+        h3 {
+            margin: 0;
+            color: var(--text-dark);
+        }
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: #718096;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            color: var(--text-dark-tertiary);
+        }
+    }
+
+    form {
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--light-border);
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border-color 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: #4299e1;
+                box-shadow: 0 0 0 1px #4299e1;
+            }
+
+            &.error {
+                border-color: var(--red-danger);
+            }
+        }
+    }
+
+    .required {
+        color: var(--red-danger);
+    }
+
+    .input-help {
+        font-size: 0.9em;
+        color: #718096;
+        margin-top: 5px;
+    }
+
+    .validation-error {
+        background: var(--error-light);
+        color: var(--red-danger);
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 0.9em;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 15px;
+        border-top: 1px solid var(--light-border);
+    }
+
+    .loading-message {
+        text-align: center;
+        padding: 20px;
+        color: #718096;
+    }
+
+    .error-message {
+        background: var(--error-light);
+        color: var(--red-danger);
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    /* Responsive (spécifique au ScheduleManager) */
+    @media (max-width: 768px) {
+        .section-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+        }
+
+        .schedule-item {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+        }
+
+        .schedule-actions {
+            justify-content: center;
+        }
+
+        .modal {
+            width: 95%;
+            margin: 20px;
+        }
+    }
+}
+

@@ -1,21 +1,18 @@
 // Horaire.jsx
 import React, { useState } from 'react';
-import './Horaire.css';
-import {useClasses} from "../../hooks/useClasses";
-import {useScheduleHours} from "../../hooks/useScheduleHours";
+import './Horaire.scss'; // Assurez-vous que ce chemin est correct
+import { useClasses } from "../../hooks/useClasses";
+import { useScheduleHours } from "../../hooks/useScheduleHours";
+import { useToast } from '../../hooks/useToast';
+import Toast from "../Toast";
+import ConfirmModal from '../ConfirmModal';
 
 const Horaire = () => {
-    const { classes} = useClasses();
+    const { classes, getClassColor } = useClasses();
     const { hours, getSortedHours } = useScheduleHours();
+    const { success, error: showError, toasts, removeToast } = useToast();
 
-    // Liste des matières disponibles
-    const subjects = ['Programmation', 'Informatique', 'Ex.Logiciels', 'Base de données'];
-
-    // Récupérer les classes depuis le localStorage
-    const getClasses = () => {
-        const classes = localStorage.getItem('classes');
-        return classes ? JSON.parse(classes) : [];
-    };
+    const subjects = ['Programmation', 'Informatique', 'Exp.logiciels', 'Database'];
 
     const [schedule, setSchedule] = useState(() => {
         const saved = localStorage.getItem('schedule');
@@ -23,25 +20,21 @@ const Horaire = () => {
     });
     const [showModal, setShowModal] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
+
+    // MODIFICATION 1 : Supprimer 'room: '21'' de l'état initial
     const [courseForm, setCourseForm] = useState({
         subject: '',
         classId: '',
-        room: '',
+        room: '', // Laissez ceci vide, la logique de '21' sera dans handleSlotClick
         notes: ''
     });
 
-    // Configuration des créneaux horaires
-    /*
-    const timeSlots = [
-        '08:25-09:15',
-        '09:15-10:05',
-        '10:20-11:10',
-        '11:10-12:00',
-        '12:45-13:35',
-        '13:35-14:20',
-        '14:30-15:15',
-        '15:15-16:05',
-    ];*/
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null
+    });
 
     const timeSlots = getSortedHours().map(hour => hour.libelle);
 
@@ -54,36 +47,34 @@ const Horaire = () => {
         { key: 'saturday', label: 'Samedi' }
     ];
 
-    // Sauvegarder dans localStorage
     const saveSchedule = (newSchedule) => {
         localStorage.setItem('schedule', JSON.stringify(newSchedule));
         setSchedule(newSchedule);
     };
 
-    // Ouvrir le modal pour ajouter/modifier un cours
     const handleSlotClick = (day, time) => {
         const slotKey = `${day}-${time}`;
         setSelectedSlot({ day, time, key: slotKey });
 
-        // Pré-remplir le formulaire si le cours existe
         const existingCourse = schedule[slotKey];
         if (existingCourse) {
+            // Si un cours existe, pré-remplir avec ses données
             setCourseForm(existingCourse);
         } else {
+            // MODIFICATION 2 : Définir 'room: '21'' ici UNIQUMENT pour les NOUVEAUX créneaux
             setCourseForm({
                 subject: '',
                 classId: '',
-                room: '',
+                room: '21', // <-- C'est l'unique endroit où '21' est défini par défaut pour un NOUVEAU formulaire
                 notes: ''
             });
         }
         setShowModal(true);
     };
 
-    // Sauvegarder le cours
     const handleSaveCourse = () => {
         if (!courseForm.subject || !courseForm.classId || !courseForm.room) {
-            alert('Veuillez remplir tous les champs obligatoires');
+            showError('Veuillez remplir tous les champs obligatoires (Matière, Classe, Local).', 3000);
             return;
         }
 
@@ -93,7 +84,10 @@ const Horaire = () => {
         };
 
         saveSchedule(newSchedule);
+        success('Cours enregistré avec succès !', 3000);
         setShowModal(false);
+        // MODIFICATION 3 : Réinitialiser le formulaire à un état vide après sauvegarde
+        // Cela inclut 'room' pour qu'il ne garde pas '21' en mémoire pour le prochain ajout
         setCourseForm({
             subject: '',
             classId: '',
@@ -102,28 +96,48 @@ const Horaire = () => {
         });
     };
 
-    // Supprimer un cours
+    const showConfirmModal = (title, message, onConfirm) => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            onConfirm
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal({
+            isOpen: false,
+            title: '',
+            message: '',
+            onConfirm: null
+        });
+    };
+
     const handleDeleteCourse = () => {
+        const course = schedule[selectedSlot?.key];
+        const classInfo = course ? getClassInfo(course.classId) : null;
+        const className = classInfo?.name || 'inconnue';
+        const courseSubject = course?.subject || 'ce cours';
+
+        showConfirmModal(
+            'Supprimer ce cours',
+            `Êtes-vous sûr de vouloir supprimer le cours de "${courseSubject}" pour la classe "${className}" (${selectedSlot?.time}) ?\n\nCette action est irréversible.`,
+            () => performDeleteCourse()
+        );
+    };
+
+    const performDeleteCourse = () => {
         const newSchedule = { ...schedule };
         delete newSchedule[selectedSlot.key];
         saveSchedule(newSchedule);
+        success('Cours supprimé avec succès !', 3000);
         setShowModal(false);
+        closeConfirmModal();
     };
 
-    // Obtenir les informations d'une classe
     const getClassInfo = (classId) => {
-        return classes.find(cls => cls.id === classId);
-    };
-
-    // Obtenir la couleur d'une matière
-    const getSubjectColor = (subject) => {
-        const colors = {
-            'Programmation': '#3b82f6',
-            'Informatique': '#10b981',
-            'Ex.Logiciels': '#f59e0b',
-            'Base de données': '#8b5cf6'
-        };
-        return colors[subject] || '#64748b';
+        return classes.find(cls => cls.id == classId);
     };
 
     return (
@@ -135,7 +149,6 @@ const Horaire = () => {
 
             <div className="schedule-container">
                 <div className="schedule-grid">
-                    {/* En-tête avec les heures */}
                     <div className="time-header">Horaires</div>
                     {daysOfWeek.map(day => (
                         <div key={day.key} className="day-header">
@@ -143,7 +156,6 @@ const Horaire = () => {
                         </div>
                     ))}
 
-                    {/* Créneaux horaires */}
                     {timeSlots.map(time => (
                         <React.Fragment key={time}>
                             <div className="time-slot-label">{time}</div>
@@ -151,15 +163,14 @@ const Horaire = () => {
                                 const slotKey = `${day.key}-${time}`;
                                 const course = schedule[slotKey];
                                 const classInfo = course ? getClassInfo(course.classId) : null;
-
                                 return (
                                     <div
                                         key={slotKey}
                                         className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
                                         onClick={() => handleSlotClick(day.key, time)}
                                         style={{
-                                            backgroundColor: course ? `${getSubjectColor(course.subject)}20` : 'transparent',
-                                            borderColor: course ? getSubjectColor(course.subject) : '#334155'
+                                            backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
+                                            borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
                                         }}
                                     >
                                         {course && (
@@ -182,105 +193,134 @@ const Horaire = () => {
                 </div>
             </div>
 
-            {/* Modal pour ajouter/modifier un cours */}
             {showModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content">
+                    <div className="modal">
                         <div className="modal-header">
                             <h3>
                                 {schedule[selectedSlot?.key] ? 'Modifier le cours' : 'Ajouter un cours'}
                             </h3>
                             <button
-                                className="close-btn"
+                                className="modal-close"
                                 onClick={() => setShowModal(false)}
                             >
                                 ×
                             </button>
                         </div>
 
-                        <div className="modal-body">
-                            <div className="slot-info">
-                                <strong>
-                                    {daysOfWeek.find(d => d.key === selectedSlot?.day)?.label} - {selectedSlot?.time}
-                                </strong>
+                        <form className="modal-form">
+                            <div className="modal-body-content">
+                                <div className="slot-info">
+                                    <strong>
+                                        {daysOfWeek.find(d => d.key === selectedSlot?.day)?.label} - {selectedSlot?.time}
+                                    </strong>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Matière *</label>
+                                    <select
+                                        value={courseForm.subject}
+                                        onChange={(e) => setCourseForm({...courseForm, subject: e.target.value})}
+                                    >
+                                        <option value="">Sélectionnez une matière</option>
+                                        {subjects.map(subject => (
+                                            <option key={subject} value={subject}>
+                                                {subject}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Classe *</label>
+                                    <select
+                                        value={courseForm.classId}
+                                        onChange={(e) => setCourseForm({...courseForm, classId: e.target.value})}
+                                    >
+                                        <option value="">Sélectionnez une classe</option>
+                                        {classes.map(cls => (
+                                            <option key={cls.id} value={cls.id}>
+                                                {cls.name} (Niveau: {cls.level})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Local *</label>
+                                    <input
+                                        type="text"
+                                        value={courseForm.room}
+                                        onChange={(e) => setCourseForm({...courseForm, room: e.target.value})}
+                                        placeholder="Ex: Salle 101"
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Notes</label>
+                                    <textarea
+                                        value={courseForm.notes}
+                                        onChange={(e) => setCourseForm({...courseForm, notes: e.target.value})}
+                                        placeholder="Notes supplémentaires..."
+                                        rows="3"
+                                    />
+                                </div>
                             </div>
 
-                            <div className="form-group">
-                                <label>Matière *</label>
-                                <select
-                                    value={courseForm.subject}
-                                    onChange={(e) => setCourseForm({...courseForm, subject: e.target.value})}
-                                >
-                                    <option value="">Sélectionnez une matière</option>
-                                    {subjects.map(subject => (
-                                        <option key={subject} value={subject}>
-                                            {subject}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Classe *</label>
-                                <select
-                                    value={courseForm.classId}
-                                    onChange={(e) => setCourseForm({...courseForm, classId: e.target.value})}
-                                >
-                                    <option value="">Sélectionnez une classe</option>
-                                    {classes.map(cls => (
-                                        <option key={cls.id} value={cls.id}>
-                                            {cls.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Local *</label>
-                                <input
-                                    type="text"
-                                    value={courseForm.room}
-                                    onChange={(e) => setCourseForm({...courseForm, room: e.target.value})}
-                                    placeholder="Ex: Salle 101"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label>Notes</label>
-                                <textarea
-                                    value={courseForm.notes}
-                                    onChange={(e) => setCourseForm({...courseForm, notes: e.target.value})}
-                                    placeholder="Notes supplémentaires..."
-                                    rows="3"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="modal-footer">
-                            <button
-                                className="btn-secondary"
-                                onClick={() => setShowModal(false)}
-                            >
-                                Annuler
-                            </button>
-                            {schedule[selectedSlot?.key] && (
+                            <div className="modal-footer">
                                 <button
-                                    className="btn-danger"
-                                    onClick={handleDeleteCourse}
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={() => setShowModal(false)}
                                 >
-                                    Supprimer
+                                    Annuler
                                 </button>
-                            )}
-                            <button
-                                className="btn-primary"
-                                onClick={handleSaveCourse}
-                            >
-                                Sauvegarder
-                            </button>
-                        </div>
+                                {schedule[selectedSlot?.key] && (
+                                    <button
+                                        type="button"
+                                        className="btn-danger"
+                                        onClick={handleDeleteCourse}
+                                    >
+                                        Supprimer
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={handleSaveCourse}
+                                >
+                                    Sauvegarder
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
+
+            {/* Affichage des toasts */}
+            <div className="toast-container">
+                {toasts.map(toast => (
+                    <Toast
+                        key={toast.id}
+                        message={toast.message}
+                        type={toast.type}
+                        duration={toast.duration}
+                        onClose={() => removeToast(toast.id)}
+                    />
+                ))}
+            </div>
+
+            {/* Modal de confirmation */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                confirmText="Supprimer"
+                cancelText="Annuler"
+                type="danger"
+            />
         </div>
     );
 };

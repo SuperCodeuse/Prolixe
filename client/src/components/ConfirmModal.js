@@ -1,6 +1,6 @@
 // client/src/components/ConfirmModal.js
 import React from 'react';
-import './ConfirmModal.css';
+import './ConfirmModal.scss';
 
 const ConfirmModal = ({
                           isOpen,
