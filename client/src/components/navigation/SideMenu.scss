@@ -41,6 +41,8 @@
 
     /* État 'open' (ouvert) appliqué via JS */
     &.open {
+        display: flex;
+        flex-direction: column;
         transform: translateX(0); /* Affiche le menu */
         visibility: visible; /* Rend le menu visible immédiatement */
         // Redonne les propriétés d'un menu ouvert (pour mobile)

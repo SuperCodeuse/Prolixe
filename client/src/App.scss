@@ -417,7 +417,8 @@
 /* Styles pour le menu latéral */
 .sidemenu {
   width: 280px; /* Largeur fixe du menu */
-  height: 100vh; /* Prend toute la hauteur de la fenêtre */
+  min-height: 100vh; /* Prend toute la hauteur de la fenêtre */
+  height: auto;
   flex-shrink: 0; /* Empêche le menu de rétrécir */
   background: var(--bg-dark-secondary);
   border-right: 1px solid var(--border-color); /* Utilise la variable */
