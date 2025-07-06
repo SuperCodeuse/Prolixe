@@ -162,6 +162,7 @@ const Journal = () => {
 
 
     const getClassInfo = useCallback((classId) => {
+        console.log("classeId : ", classId)
         return classes.find(cls => cls.id === classId);
     }, [classes]);
 
@@ -367,7 +368,7 @@ const Journal = () => {
                                                 </div>
                                             ) : (
                                                 coursesForThisDay.map(courseInSchedule => {
-                                                    const classInfo = getClassInfo(courseInSchedule.class_id);
+                                                    const classInfo = getClassInfo(courseInSchedule.classId);
                                                     const backgroundColor = `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`;
                                                     const borderColor = getClassColor(courseInSchedule.subject, classInfo?.level);
                                                     const hasJournalEntry = getJournalEntry(courseInSchedule.id, day.key);
