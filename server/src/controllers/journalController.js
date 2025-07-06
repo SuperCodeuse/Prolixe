@@ -112,8 +112,13 @@ class JournalController {
                     JOIN CLASS c ON s.class_id = c.id
                     WHERE je.id = ?
                 `, [result.id]);
-                return rows[0];
+                return rows;
             });
+
+            if (!entry) {
+                return JournalController.handleError(res, new Error('Entrée non trouvée après upsert'), 'Impossible de retrouver l\'entrée après sauvegarde.', 404);
+            }
+
             res.status(id ? 200 : 201).json({ success: true, message: `Entrée de journal ${id ? 'mise à jour' : 'créée'} avec succès.`, data: entry });
         } catch (error) {
             if (error.code === 'ER_DUP_ENTRY') {

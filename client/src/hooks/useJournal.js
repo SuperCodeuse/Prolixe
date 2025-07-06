@@ -18,11 +18,11 @@ export const useJournal = () => {
         setError(null);
         try {
             const response = await JournalService.getJournalEntries(startDate, endDate);
-            // Formatter les entrées pour un accès facile par jour-time_libelle-date
             const formattedEntries = {};
             response.data.forEach(entry => {
                 const slotKey = `${entry.day}-${entry.time_slot_libelle}-${entry.date}`; // Utilise time_slot_libelle
                 formattedEntries[slotKey] = entry;
+
             });
             setJournalEntries(formattedEntries);
         } catch (err) {

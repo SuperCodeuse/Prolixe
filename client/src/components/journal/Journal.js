@@ -120,18 +120,22 @@ const Journal = () => {
     }, [schedule, hours]); // Dépend de schedule et hours pour le tri
 
 
-    const getJournalEntry = useCallback((scheduleId, dateKey) => { // scheduleId est course.id, dateKey est YYYY-MM-DD
+    const getJournalEntry = useCallback((scheduleId) => {
         for (const key in journalEntries) {
             const entry = journalEntries[key];
-            if (entry.schedule_id === scheduleId && entry.date === dateKey) {
-                return entry;
+
+            if (entry.schedule_id === scheduleId) {
+                    return entry;
             }
         }
         return null;
     }, [journalEntries]); // Dépend de journalEntries
 
 
+// frontend/src/components/Journal/Journal.jsx
+
     const handleJournalEntryChange = useCallback(async (entryData, field, value) => {
+        // La logique de debounce reste la même...
         const updatedEntryData = { ...entryData, [field]: value };
         const keyForDebounce = `${updatedEntryData.schedule_id}-${updatedEntryData.date}`;
 
@@ -141,7 +145,15 @@ const Journal = () => {
 
         const timeoutId = setTimeout(async () => {
             try {
-                await upsertJournalEntry(updatedEntryData);
+                // --- MODIFICATION CLÉ ---
+                // 1. Capturez l'entrée retournée par la fonction upsert
+                const savedEntry = await upsertJournalEntry(updatedEntryData);
+
+                // 2. Si un nouvel ID a été retourné, mettez à jour l'état local du composant
+                if (savedEntry && savedEntry.id) {
+                    setCurrentJournalEntryId(savedEntry.id);
+                }
+
             } catch (err) {
                 console.error('Erreur sauvegarde journal (débounce):', err);
                 showError('Erreur lors de la sauvegarde du journal', 3000);
@@ -152,22 +164,24 @@ const Journal = () => {
                     return newState;
                 });
             }
-        }, 1000);
+        }, 1000); // 1 seconde de debounce
 
         setJournalDebounce(prev => ({
             ...prev,
             [keyForDebounce]: timeoutId
         }));
-    }, [upsertJournalEntry, showError, journalDebounce]);
-
+    }, [
+        upsertJournalEntry,
+        showError,
+        journalDebounce,
+        // Assurez-vous d'inclure setCurrentJournalEntryId dans les dépendances
+        setCurrentJournalEntryId
+    ]);
 
     const getClassInfo = useCallback((classId) => {
-        console.log("classeId : ", classId)
         return classes.find(cls => cls.id === classId);
     }, [classes]);
-
-
-    const navigateWeek = useCallback((direction) => {
+            const navigateWeek = useCallback((direction) => {
         setCurrentWeekStart(prev => addDays(prev, direction * 7));
     }, []);
 
@@ -249,7 +263,7 @@ const Journal = () => {
         setSelectedCourseForJournal(course);
         setSelectedDayForJournal(day);
 
-        const entry = getJournalEntry(course.id, day.key);
+        const entry = getJournalEntry(course.id);
         setJournalForm({
             planned_work: entry?.planned_work || '',
             actual_work: entry?.actual_work || '',
@@ -326,6 +340,7 @@ const Journal = () => {
 
     // --- 6. RENDU DU COMPOSANT ---
 
+
     return (
         <div className="journal-page">
             <div className="journal-header">
@@ -371,7 +386,20 @@ const Journal = () => {
                                                     const classInfo = getClassInfo(courseInSchedule.classId);
                                                     const backgroundColor = `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`;
                                                     const borderColor = getClassColor(courseInSchedule.subject, classInfo?.level);
-                                                    const hasJournalEntry = getJournalEntry(courseInSchedule.id, day.key);
+
+                                                    const journalEntry = getJournalEntry(courseInSchedule.id);
+                                                    let journalPreview = { text: null, className: '' };
+
+                                                    if (journalEntry) {
+                                                        if (journalEntry.actual_work) {
+                                                            journalPreview.text = journalEntry.actual_work;
+                                                            journalPreview.className = 'actual-work'; // Classe pour le travail effectué
+                                                        } else if (journalEntry.planned_work) {
+                                                            journalPreview.text = journalEntry.planned_work;
+                                                            journalPreview.className = 'planned-work'; // Classe pour le travail prévu
+                                                        }
+                                                    }
+
 
                                                     return (
                                                         <div
@@ -393,9 +421,9 @@ const Journal = () => {
                                                                         {courseInSchedule.room}
                                                                     </div>
                                                                 </div>
-                                                                {hasJournalEntry && (
-                                                                    <div className="journal-entry-indicator">
-                                                                        📝 Notes
+                                                                {journalPreview.text && (
+                                                                    <div className={`journal-entry-preview ${journalPreview.className}`}>
+                                                                        <p className="preview-text">{journalPreview.text}</p>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -464,7 +492,7 @@ const Journal = () => {
                         </div>
                         <form className="modal-form">
                             <div className="modal-body-content">
-                                <div className="form-group">
+                                    <div className="form-group">
                                     <label>Classe *</label>
                                     <select
                                         value={assignmentForm.class_id}
@@ -601,13 +629,27 @@ const Journal = () => {
                             <button className="modal-close" onClick={handleCloseJournalModal}>×</button>
                         </div>
                         <div className="modal-body-content">
-                            <div className="slot-info">
-                                <strong>
-                                    {selectedCourseForJournal.time_slot_libelle} -{' '}
-                                    {selectedCourseForJournal.room}
-                                </strong>
-                                <p>Classe: {getClassInfo(selectedCourseForJournal.class_id)?.name || 'Inconnue'}</p>
-                            </div>
+                            {(() => {
+                                const classInfo = getClassInfo(selectedCourseForJournal.classId);
+                                const courseColor = getClassColor(selectedCourseForJournal.subject, classInfo?.level);
+                                const slotInfoStyle = {
+                                    borderLeft: `5px solid ${courseColor || '#cccccc'}`,
+                                    color:"#fff"
+                                };
+
+                                return (
+                                    <div className="slot-info" style={slotInfoStyle}>
+                                        <strong>
+                                            {selectedCourseForJournal.time_slot_libelle} -{' '}
+                                            {selectedCourseForJournal.room}
+                                        </strong>
+                                        <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>
+                                            Classe: {classInfo?.name || 'Inconnue'}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
+
                             <div className="form-group">
                                 <label>Travail Prévu:</label>
                                 <textarea
@@ -651,7 +693,7 @@ const Journal = () => {
                                         );
                                     }}
                                     placeholder="Décrivez le travail effectué..."
-                                    rows="3"
+                                    rows="8"
                                 />
                             </div>
                             <div className="form-group">
@@ -674,7 +716,7 @@ const Journal = () => {
                                         );
                                     }}
                                     placeholder="Ajoutez des notes ici..."
-                                    rows="3"
+                                    rows="2"
                                 />
                             </div>
                         </div>

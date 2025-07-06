@@ -318,8 +318,15 @@
 
   /* Modals (Journal Entry & Assignment) */
   .modal-overlay { @include modal-overlay-base; }
-  .modal { @include modal-base; }
-  .modal-header { @include modal-header-base; }
+  .modal {
+    @include modal-base;
+    padding-inline: 1rem !important;
+    max-height: 100vh;
+  }
+  .modal-header {
+    @include modal-header-base;
+    border-bottom: 0;
+  }
   .modal-close { @include modal-close-btn-base; }
   .modal-form {
     padding: 0 1.5rem 1.5rem;
@@ -327,13 +334,16 @@
   }
   .modal-body-content { /* */ }
   .slot-info {
-    background: var(--border-color);
-    padding: 1rem;
+    background: var(--bg-dark-blue);
+    padding: 1px;
     border-radius: 0.5rem;
     margin-bottom: 1.5rem;
-    color: var(--accent-blue);
+    //color: var(--accent-blue);
+    color:white;
     text-align: center;
+    border: 1px solid var(--border-color);
   }
+
   .form-group { @include modal-form-group-base; }
   .modal-footer {
     @include modal-form-actions-base;
@@ -378,4 +388,45 @@
     font-size: 1.1rem;
     //grid-column: 1 / -1; /* Permet au message de prendre toute la largeur de la grille */
   }
+}
+
+// Dans Journal.scss
+
+.journal-entry-preview {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+  // Style de base pour le paragraphe
+  .preview-text {
+    margin: 0;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    // --- Logique pour tronquer le texte après 3 lignes ---
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Style spécifique pour le travail PRÉVU
+  &.planned-work .preview-text {
+    color: var(--text-gray); // Texte plus discret
+    font-style: italic;
+  }
+
+  // Style spécifique pour le travail EFFECTUÉ
+  &.actual-work .preview-text {
+    color: var(--accent-green);
+    accent-color: var(--accent-green);
+    font-weight: 500;
+  }
+}
+
+textarea {
+  padding: 0.2rem !important;
+  background: var(--border-color) !important;
 }
