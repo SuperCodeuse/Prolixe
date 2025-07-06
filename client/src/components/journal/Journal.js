@@ -344,48 +344,6 @@ const Journal = () => {
             </div>
 
             <div className="journal-content">
-                {/* Section des assignations */}
-                <div className="assignments-section">
-                    <h2>Assignations & Évaluations</h2>
-                    <button className="btn-primary" onClick={handleAddAssignment}>
-                        + Nouvelle Assignation
-                    </button>
-                    {assignments.length === 0 ? (
-                        <p>Aucune assignation prévue cette semaine.</p>
-                    ) : (
-                        <div className="assignment-list">
-                            {assignments.map(assign => {
-                                const assignClass = getClassInfo(assign.class_id);
-                                return (
-                                    <div key={assign.id} className="assignment-item">
-                                        <input
-                                            type="checkbox"
-                                            checked={assign.is_completed}
-                                            onChange={() => upsertAssignment({
-                                                ...assign,
-                                                is_completed: !assign.is_completed
-                                            })}
-                                        />
-                                        <div className="assignment-details">
-                                            <h4>{assign.title} ({assign.type})</h4>
-                                            <p>
-                                                Pour le: {format(parseISO(assign.due_date), 'dd/MM', { locale: fr })} - {' '}
-                                                {assignClass?.name} ({assignClass?.level ? `Niveau ${assignClass.level}` : 'Classe inconnue'})
-                                            </p>
-                                        </div>
-                                        <button
-                                            className="btn-edit"
-                                            onClick={() => handleEditAssignment(assign)}
-                                        >
-                                            ✏️
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
                 {/* Section journal des cours - NOUVELLE STRUCTURE */}
                 <div className="weekly-agenda-section">
                     <h2>Journal des cours</h2>
@@ -451,6 +409,48 @@ const Journal = () => {
                         </div>
                     )}
                 </div> {/* Fin de .weekly-agenda-section */}
+
+                {/* Section des assignations */}
+                <div className="assignments-section">
+                    <h2>Assignations & Évaluations</h2>
+                    <button className="btn-primary" onClick={handleAddAssignment}>
+                        + Nouvelle Assignation
+                    </button>
+                    {assignments.length === 0 ? (
+                        <p>Aucune assignation prévue cette semaine.</p>
+                    ) : (
+                        <div className="assignment-list">
+                            {assignments.map(assign => {
+                                const assignClass = getClassInfo(assign.class_id);
+                                return (
+                                    <div key={assign.id} className="assignment-item">
+                                        <input
+                                            type="checkbox"
+                                            checked={assign.is_completed}
+                                            onChange={() => upsertAssignment({
+                                                ...assign,
+                                                is_completed: !assign.is_completed
+                                            })}
+                                        />
+                                        <div className="assignment-details">
+                                            <h4>{assign.title} ({assign.type})</h4>
+                                            <p>
+                                                Pour le: {format(parseISO(assign.due_date), 'dd/MM', { locale: fr })} - {' '}
+                                                {assignClass?.name} ({assignClass?.level ? `Niveau ${assignClass.level}` : 'Classe inconnue'})
+                                            </p>
+                                        </div>
+                                        <button
+                                            className="btn-edit"
+                                            onClick={() => handleEditAssignment(assign)}
+                                        >
+                                            ✏️
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div> {/* Fin de .journal-content */}
 
             {/* Modal assignations */}

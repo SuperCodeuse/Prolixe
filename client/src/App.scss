@@ -58,21 +58,13 @@
 /* Mixins pour les styles réutilisables */
 
 @mixin page-container-base {
-  padding-left: 20rem; /* Décalage pour le SideMenu */
+  /* Le padding-left sera géré par le .main-content */
   padding-right: 2rem;
   padding-top: 2rem;
   padding-bottom: 2rem;
   background-color: var(--bg-dark-blue);
   min-height: 100vh;
   color: var(--text-light);
-
-  @media (max-width: 1024px) {
-    padding-left: 2rem;
-  }
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-  }
 }
 
 @mixin page-header-base {
@@ -81,7 +73,7 @@
   background: linear-gradient(135deg, var(--bg-dark-secondary) 0%, var(--border-color) 100%);
   border-radius: 1rem;
   border: 1px solid var(--border-color);
-  text-align: center; /* Par défaut centré, peut être ajusté */
+  text-align: center;
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -193,127 +185,8 @@
   textarea {
     width: 100%;
     padding: 0.75rem;
-    background: #374151; /* Plus clair que bg-dark-secondary pour les inputs */
-    border: 1px solid #4b5563; /* Bordure un peu plus claire */
-    border-radius: 0.5rem;
-    color: var(--text-light);
-    font-size: 1rem;
-    transition: all 0.3s ease;
-
-    &:focus {
-      outline: none;
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 3px var(--blue-transparent-sm);
-    }
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-}
-
-@mixin form-actions-base {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
-}
-
-// Mixins pour les modales (thème sombre)
-@mixin modal-overlay-base {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7); /* Fond sombre et semi-transparent */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px); /* Effet de flou derrière la modale */
-  animation: fadeIn 0.2s ease-out; /* Animation d'apparition */
-}
-
-@mixin modal-base { /* C'est celui-ci qui définit le style général de la boîte modale */
-  padding: 1.5rem; /* Padding légèrement augmenté pour un meilleur espacement */
-  background: var(--bg-dark-secondary); /* Utilisation de la couleur de fond sombre */
-  border-radius: 1rem; /* Rayon de bordure plus prononcé */
-  border: 1px solid var(--border-color); /* Bordure adaptée au thème sombre */
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); /* Ombre plus prononcée */
-  overflow-y: auto; /* Défilement si le contenu est trop grand */
-  animation: scaleIn 0.2s ease-out; /* Animation d'agrandissement */
-
-  @media (max-width: 768px) {
-    width: 95%;
-  }
-}
-
-@mixin modal-header-base {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 0; /* Padding horizontal pour aligner avec le contenu de la modale */
-  border-bottom: 1px solid var(--border-color); /* Bordure adaptée */
-
-  h3 {
-    margin: 0;
-    color: var(--text-light); /* Texte blanc pour le thème sombre */
-    font-size: 1.3rem;
-    font-weight: 600; /* Un peu plus gras */
-  }
-}
-
-@mixin modal-close-btn-base {
-  background: none;
-  border: none;
-  color: var(--text-muted); /* Couleur du texte muet */
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: var(--border-color); /* Fond au survol */
-    color: var(--text-light); /* Texte blanc au survol */
-  }
-}
-
-// Mixin pour les boutons de formulaire dans les modales
-@mixin modal-form-btn-base {
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none; /* Par défaut pour les boutons modaux */
-}
-
-@mixin modal-form-group-base {
-  margin-bottom: 1.5rem;
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: var(--text-secondary); /* Couleur pour les labels */
-    font-weight: 500;
-    font-size: 0.95rem; /* Légèrement plus petit */
-  }
-
-  input,
-  select,
-  textarea {
-    width: 100%;
-    padding: 0.85rem; /* Padding légèrement augmenté */
-    background: var(--bg-dark-tertiary); /* Fond plus foncé pour les inputs */
-    border: 1px solid var(--border-color); /* Bordure adaptée */
+    background: #374151;
+    border: 1px solid #4b5563;
     border-radius: 0.5rem;
     color: var(--text-light);
     font-size: 1rem;
@@ -326,7 +199,129 @@
     }
 
     &.error {
-      border-color: var(--red-danger); /* Bordure d'erreur */
+      border-color: var(--red-danger);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+}
+
+@mixin form-actions-base {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+// Mixins pour les modales (thème sombre)
+@mixin modal-overlay-base {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@mixin modal-base {
+  padding: 1.5rem;
+  background: var(--bg-dark-secondary);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  animation: scaleIn 0.2s ease-out;
+
+  @media (max-width: 768px) {
+    width: 95%;
+  }
+}
+
+@mixin modal-header-base {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+
+  h3 {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+}
+
+@mixin modal-close-btn-base {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--border-color);
+    color: var(--text-light);
+  }
+}
+
+// Mixin pour les boutons de formulaire dans les modales
+@mixin modal-form-btn-base {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+@mixin modal-form-group-base {
+  margin-bottom: 1.5rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--bg-dark-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-light);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--blue-transparent-sm);
+    }
+
+    &.error {
+      border-color: var(--red-danger);
     }
   }
 }
@@ -334,19 +329,19 @@
 @mixin modal-form-actions-base {
   display: flex;
   gap: 1rem;
-  padding-top: 1.5rem; /* Espacement au-dessus du top */
-  border-top: 1px solid var(--border-color); /* Bordure de séparation */
-  justify-content: flex-end; /* Boutons à droite */
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
 }
 
 @mixin validation-error-base {
-  background: var(--red-transparent-sm); /* Fond léger pour l'erreur */
-  color: var(--red-danger); /* Texte rouge */
-  padding: 0.75rem 1rem; /* Padding */
+  background: var(--red-transparent-sm);
+  color: var(--red-danger);
+  padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  margin-bottom: 1.5rem; /* Marge en bas */
+  margin-bottom: 1.5rem;
   font-size: 0.9rem;
-  border: 1px solid var(--red-danger); /* Bordure rouge */
+  border: 1px solid var(--red-danger);
 }
 
 /* Animations communes */
@@ -409,4 +404,158 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
+}
+
+/* Styles généraux de l'application */
+.app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-dark-blue); /* Couleur de fond principale */
+  transition: all 0.3s ease; /* Transition pour l'ouverture/fermeture du menu */
+}
+
+/* Styles pour le menu latéral */
+.sidemenu {
+  width: 280px; /* Largeur fixe du menu */
+  height: 100vh; /* Prend toute la hauteur de la fenêtre */
+  flex-shrink: 0; /* Empêche le menu de rétrécir */
+  background: var(--bg-dark-secondary);
+  border-right: 1px solid var(--border-color); /* Utilise la variable */
+  position: relative; /* Par défaut, dans le flux pour grand écran */
+  transition: transform 0.3s ease-in-out; /* Transition pour le glissement */
+  z-index: 1000;
+
+  /* Styles existants pour les éléments internes du sidemenu (header, nav, footer, etc.) */
+  .sidemenu-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-dark-tertiary);
+  }
+  .logo { display: flex; align-items: center; gap: 0.75rem; }
+  .logo-icon { font-size: 1.5rem; filter: brightness(1.2); }
+  .logo-text { font-size: 1.25rem; font-weight: 600; color: var(--text-light); text-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
+  .sidemenu-nav { flex: 1; padding: 1.5rem 0; }
+  .menu-list { list-style: none; padding: 0; margin: 0; }
+  .menu-item { margin: 0.25rem 0; }
+  .menu-link {
+    display: flex; align-items: center; padding: 1rem 1.5rem; color: #b0b0b0; text-decoration: none;
+    transition: all 0.3s ease; border-left: 3px solid transparent; font-size: 0.875rem; position: relative;
+    &:hover { background: linear-gradient(90deg, var(--blue-transparent-sm) 0%, rgba(59, 130, 246, 0.05) 100%); color: var(--text-light); border-left-color: var(--accent-blue); transform: translateX(2px); }
+    &.active { background: linear-gradient(90deg, var(--blue-transparent-md) 0%, rgba(59, 130, 246, 0.08) 100%); color: var(--text-light); border-left-color: var(--accent-blue); font-weight: 500; box-shadow: inset 0 0 20px var(--blue-transparent-sm); }
+    &.active::after { content: ''; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); width: 4px; height: 4px; background: var(--accent-blue); border-radius: 50%; box-shadow: 0 0 8px var(--accent-blue); }
+  }
+  .menu-icon { font-size: 1.125rem; margin-right: 0.875rem; width: 20px; text-align: center; filter: brightness(1.1); }
+  .menu-label { font-size: 0.875rem; font-weight: 400; }
+  .sidemenu-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); background: var(--bg-dark-tertiary); }
+  .user-profile {
+    display: flex; align-items: center; gap: 0.875rem; color: var(--text-light); padding: 0.75rem;
+    border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--white-transparent-md); transition: all 0.3s ease;
+    &:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-1px); }
+  }
+  .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-blue), var(--accent-dark-blue)); display: flex; align-items: center; justify-content: center; font-size: 1.125rem; color: var(--text-light); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+  .user-info { display: flex; flex-direction: column; flex: 1; }
+  .user-name { font-weight: 500; font-size: 0.875rem; color: var(--text-light); text-shadow: 0 0 5px rgba(255, 255, 255, 0.1); }
+  .user-role { font-size: 0.75rem; color: #9ca3af; margin-top: 0.125rem; }
+
+  /* Responsive (spécifique au sidemenu) */
+  @media (max-width: 768px) {
+    /* Ces règles peuvent être redondantes ou causer des conflits si gérées par 1024px */
+    /* .sidemenu { width: 100%; height: auto; position: relative; animation: none; } */
+    /* .menu-link { padding: 1rem 1.5rem; } */
+    /* .menu-link:hover { transform: none; } */
+  }
+}
+
+/* Styles pour le contenu principal */
+.main-content {
+  flex-grow: 1; /* Prend tout l'espace restant */
+  padding-left: 2rem; /* Padding par défaut */
+  padding-right: 2rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  transition: all 0.3s ease; /* Transition pour le padding/marges */
+  position: relative; /* Pour le bouton burger */
+
+  /* Sur les grands écrans (>= 768px) */
+  @media (min-width: 1600px) {
+    /* Quand le menu est ouvert (par défaut sur grand écran) */
+    .app.menu-open & {
+      padding-left: 2rem/* Décale le contenu à droite du menu (280px + 2rem padding interne) */
+    }
+    /* Quand le menu est fermé (sur grand écran) */
+    .app.menu-closed & {
+      padding-left: 2rem; /* Revient au padding normal (menu masqué ne pousse pas le contenu) */
+    }
+  }
+
+  /* Sur les petits écrans (< 1599px) */
+  @media (max-width: 1599px) {
+    padding-left: 1rem; /* Padding réduit sur mobile */
+    padding-right: 0;
+    padding-top: 3rem;
+    margin-left: 0; /* Toujours 0, le menu est en absolute/fixed et ne pousse pas */
+  }
+}
+
+/* Overlay pour mobile/tablet quand sidemenu est ouvert */
+.sidemenu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999; /* En dessous du sidemenu (1000) mais au-dessus du contenu principal */
+  @media (min-width: 1024px) { /* Ne s'affiche que sur les petits écrans */
+    display: none;
+  }
+}
+
+/* Bouton pour ouvrir/fermer le menu (burger) */
+.menu-toggle-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001; /* Au-dessus de tout le reste */
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: none; /* Caché par défaut sur grand écran */
+  transition: all 0.3s ease; /* Transition pour le déplacement et le fond */
+
+  &:hover {
+    background: var(--accent-dark-blue);
+  }
+
+  @media (max-width: 1599px) {
+    display: block; /* Visible sur les petits écrans */
+  }
+
+  /* Ajustement de position quand le menu est ouvert sur mobile */
+  .app.menu-open & {
+    left: calc(280px + 1rem); /* Décale le bouton à droite du menu ouvert */
+  }
+}
+
+/* Votre mixin page-container-base ajusté pour ne plus gérer le padding-left du menu */
+@mixin page-container-base {
+  padding-right: 2rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  background-color: var(--bg-dark-blue);
+  min-height: 100vh;
+  color: var(--text-light);
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
+  @media (max-width: 1599px) {
+    padding-right: 0rem;
+    width: 99%;
+  }
 }

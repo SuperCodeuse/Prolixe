@@ -258,7 +258,7 @@
 }
 
 /* Responsive Design (reste spécifique au dashboard) */
-@media (max-width: 1024px) {
+@media (max-width: 1600px) {
     .dashboard-content {
         grid-template-columns: 1fr;
     }

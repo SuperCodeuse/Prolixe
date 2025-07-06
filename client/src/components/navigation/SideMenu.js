@@ -1,46 +1,29 @@
-import React, { useState } from 'react';
+// components/navigation/SideMenu.js
+import React from 'react';
 import './SideMenu.scss';
 
-const SideMenu = ({ currentPage, onPageChange }) => {
+// Reçoit les props pour contrôler son état et sa visibilité
+const SideMenu = ({ currentPage, onPageChange, isMenuOpen, toggleMenu }) => {
     const menuItems = [
-        {
-            id: 'dashboard',
-            label: 'Dashboard',
-            icon: '📊',
-            path: '/dashboard'
-        },
-        {
-            id: 'journal',
-            label: 'Journal',
-            icon: '📖',
-            path: '/journal'
-        },
-        {
-            id: 'horaire',
-            label: 'Emploi du temps',
-            icon: '📅',
-            path: '/horaire'
-        },
-        {
-            id: 'skore',
-            label: 'Corrections',
-            icon: '✅',
-            path: '/skore'
-        },
-        {
-            id: 'settings',
-            label: 'Settings',
-            icon: '⚙️',
-            path: '/settings'
-        }
+        { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
+        { id: 'journal', label: 'Journal', icon: '📖', path: '/journal' },
+        { id: 'horaire', label: 'Emploi du temps', icon: '📅', path: '/horaire' },
+        { id: 'skore', label: 'Corrections', icon: '✅', path: '/skore' },
+        { id: 'settings', label: 'Settings', icon: '⚙️', path: '/settings' }
     ];
 
     const handleItemClick = (itemId) => {
         onPageChange(itemId);
+        // Sur les petits écrans (mobile/tablette), fermer le menu après la navigation
+        // Utilisez le même breakpoint que dans App.jsx pour la cohérence
+        if (window.innerWidth < 1600) {
+            toggleMenu(); // Ferme le menu après avoir cliqué sur un lien
+        }
     };
 
     return (
-        <div className="sidemenu">
+        // Applique une classe conditionnelle ('open' ou 'closed') à la div racine 'sidemenu'
+        <div className={`sidemenu ${isMenuOpen ? 'open' : 'closed'}`}>
             <div className="sidemenu-header">
                 <div className="logo">
                     <span className="logo-icon">🎓</span>
@@ -56,7 +39,7 @@ const SideMenu = ({ currentPage, onPageChange }) => {
                                 href={item.path}
                                 className={`menu-link ${currentPage === item.id ? 'active' : ''}`}
                                 onClick={(e) => {
-                                    e.preventDefault();
+                                    e.preventDefault(); // Empêche le rechargement complet de la page
                                     handleItemClick(item.id);
                                 }}
                             >
