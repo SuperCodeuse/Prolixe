@@ -1,4 +1,4 @@
-// backend/routes/scheduleHours.js
+// backend/routes/ScheduleHours.js
 const express = require('express');
 const router = express.Router();
 const ScheduleHoursController = require('../controllers/ScheduleHoursController');

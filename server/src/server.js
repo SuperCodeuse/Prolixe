@@ -66,8 +66,9 @@ const upload = multer({ dest: 'uploads/' });
 
 // Routes
 app.use('/api/classes', require('./routes/classRoutes'));
-app.use('/api/hours', require('./routes/scheduleHours'));
-app.use('/api/schedule', require('./routes/scheduleRoute'));
+app.use('/api/hours', require('./routes/ScheduleHours'));
+app.use('/api/schedule', require('./routes/ScheduleRoute'));
+app.use('/api/journal', require('./routes/JournalRoute'));
 
 
 // Route de test
@@ -142,25 +143,13 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Routes futures (commentées pour l'instant)
-//app.use('/api/subjects', require('./routes/subjects'));
-//app.use('/api/schedules', require('./routes/schedules'));
-//app.use('/api/sessions', require('./routes/sessions'));
-//app.use('/api/import', require('./routes/import'));
 
 async function startServer() {
     try {
         await initDatabase();
 
         app.listen(PORT, () => {
-            console.log('');
             console.log('🚀 SERVEUR DÉMARRÉ !');
-            console.log(`📡 Port: ${PORT}`);
-            console.log(`🌐 URL: http://localhost:${PORT}`);
-            console.log(`🧪 Test API: http://localhost:${PORT}/api/test`);
-            console.log(`📋 API Classes: http://localhost:${PORT}/api/classes`);
-            console.log(`💾 Statut DB: http://localhost:${PORT}/api/db-status`);
-            console.log('');
         });
     } catch (error) {
         console.error('❌ Erreur démarrage serveur:', error);

@@ -73,10 +73,10 @@ export const useClasses = () => {
             'Informatique_6': '#0F172A', // Bleu marine
 
             // Exp.logiciels - Gamme d'oranges
-            'Ex.Logiciels_3': '#FDBA74', // Orange clair
-            'Ex.Logiciels_4': '#D97706', // Orange foncé
-            'Ex.Logiciels_5': '#B45309', // Orange très foncé
-            'Ex.Logiciels_6': '#78350F', // Orange brun
+            'Exp.logiciels_3': '#FDBA74', // Orange clair
+            'Exp.logiciels_4': '#D97706', // Orange foncé
+            'Exp.logiciels_5': '#B45309', // Orange très foncé
+            'Exp.logiciels_6': '#78350F', // Orange brun
 
             // Programmation - Gamme de violets
             'Programmation_3': '#C4B5FD', // Violet clair
@@ -150,7 +150,6 @@ export const useClasses = () => {
     // Charger les classes au montage du composant
     useEffect(() => {
         loadClasses().then(r => {
-            console.log('Classes chargées:', r);
         });
     }, []);
 

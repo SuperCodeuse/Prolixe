@@ -120,6 +120,7 @@ class ScheduleController {
                 id: item.id,
                 day: item.day,
                 time_slot_id: item.time_slot_id,
+                time_slot_libelle: item.time_slot_libelle,
                 subject: item.subject,
                 classId: item.class_id,
                 room: item.room,
@@ -141,7 +142,6 @@ class ScheduleController {
         try {
             const formattedSchedule = await ScheduleController.getScheduleData();
 
-            console.log(`✅ Emploi du temps récupéré avec ${Object.keys(formattedSchedule).length} créneaux.`);
             res.json({
                 success: true,
                 data: formattedSchedule,
@@ -213,7 +213,6 @@ class ScheduleController {
                 }
             });
 
-            console.log(`✅ Cours ${result.type} avec succès (ID: ${result.id})`);
             res.status(result.type === 'created' ? 201 : 200).json({
                 success: true,
                 message: `Cours ${result.type === 'created' ? 'créé' : 'mis à jour'} avec succès.`,
@@ -279,7 +278,6 @@ class ScheduleController {
                 return ScheduleController.handleError(res, new Error('Cours non trouvé'), 'Cours non trouvé pour suppression.', 404);
             }
 
-            console.log(`✅ Cours supprimé avec succès le ${day} à l'ID de créneau ${time_slot_id}`);
             res.json({
                 success: true,
                 message: 'Cours supprimé avec succès.',

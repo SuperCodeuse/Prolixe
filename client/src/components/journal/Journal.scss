@@ -1,0 +1,381 @@
+/* Journal.scss - Styles spécifiques au Journal / Agenda */
+
+@import '../../App.scss'; // Assurez-vous que le chemin est correct vers votre App.scss global
+
+.journal-page {
+  @include page-container-base;
+
+  .journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, var(--bg-dark-secondary) 0%, var(--border-color) 100%);
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-light);
+      @media (max-width: 768px) {
+        font-size: 1.8rem;
+      }
+    }
+
+    .week-navigation {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 500;
+
+      .btn-secondary {
+        @include btn-secondary-base;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 0.5rem;
+        span {
+          font-size: 0.9rem;
+        }
+      }
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+      padding: 1rem;
+    }
+  }
+
+  .journal-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+
+    @media (min-width: 1024px) {
+      grid-template-columns: 350px 1fr;
+    }
+  }
+
+  /* Section des assignations / devoirs */
+  .assignments-section {
+    @include card-base;
+    padding: 1.5rem;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin: 0;
+    }
+
+    .btn-primary {
+      @include btn-primary-base;
+      width: fit-content;
+      font-size: 0.9rem;
+      padding: 0.6rem 1.2rem;
+    }
+
+    .assignment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .assignment-item {
+      background: var(--white-transparent-sm);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: var(--white-transparent-md);
+      }
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-green);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .assignment-details {
+        flex: 1;
+        h4 {
+          font-size: 1rem;
+          color: var(--text-light);
+          margin: 0 0 0.25rem 0;
+        }
+        p {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+          margin: 0;
+        }
+      }
+
+      .btn-edit {
+        @include btn-action-base;
+        font-size: 0.9rem;
+        padding: 0.4rem;
+        &:hover {
+          background: var(--blue-transparent-sm);
+          border-color: var(--accent-blue);
+        }
+      }
+    }
+  }
+
+  /* Section de l'agenda hebdomadaire par jour */
+  .weekly-agenda-section {
+    @include card-base;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin: 0;
+    }
+  }
+
+  /* NOUVEAU CONTENEUR POUR LES JOURS */
+  .journal-days-container {
+    display: flex; /* Utilise flexbox pour aligner les jours horizontalement */
+    gap: 1rem; /* Espace entre chaque colonne de jour */
+    overflow-x: auto; /* Permet le défilement horizontal si trop de jours */
+    padding-bottom: 0.5rem; /* Espace pour la scrollbar */
+    // background: var(--bg-dark-secondary); /* Un fond pour le conteneur global des jours si besoin */
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color); /* Bordure autour de l'ensemble des jours */
+
+    /* Styles de la scrollbar */
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: var(--bg-dark-blue);
+      border-radius: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  }
+
+  /* Styles pour chaque colonne de jour */
+  .day-column {
+    flex: 1;
+    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-dark-secondary); /* Fond pour la colonne du jour */
+    border-right: 1px solid var(--border-color); /* Séparateur entre les jours */
+    &:last-child {
+      border-right: none; /* Pas de bordure sur la dernière colonne */
+    }
+
+    // Arrondir les coins de la première et dernière colonne si elles sont les seules
+    &:first-child {
+      border-top-left-radius: 0.5rem;
+      border-bottom-left-radius: 0.5rem;
+    }
+    &:last-child {
+      border-top-right-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+    }
+  }
+
+  /* En-tête de chaque jour (Lundi 04/07) */
+  .day-header-journal {
+    background: #475569;
+    color: var(--text-light);
+    padding: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border-color); /* Séparateur sous l'en-tête */
+  }
+
+  /* Liste des cours pour un jour donné */
+  .day-courses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Espace entre les cours dans une même colonne de jour */
+    padding: 0.75rem; /* Padding interne pour les cours */
+    flex-grow: 1; /* Permet à la liste de prendre l'espace restant verticalement */
+  }
+
+  /* Message si aucun cours pour un jour spécifique */
+  .no-courses-for-day-message {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Styles des cellules de cours individuelles */
+  .journal-slot {
+    background: var(--white-transparent-sm);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid; /* Bordure gauche colorée par JS */
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    min-height: 80px; /* Hauteur minimale pour les slots */
+    position: relative;
+    cursor: pointer; /* Indique qu'il est cliquable */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--white-transparent-md);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .course-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      width: 100%;
+
+      .course-info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-light);
+      }
+
+      .course-time-display {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 400;
+      }
+
+      .course-class-display {
+        color: var(--accent-blue);
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .course-details {
+        margin-top: 0.25rem;
+        font-size: 0.9rem;
+        color: var(--text-light);
+        .course-title-display { font-weight: 600; }
+        .course-room-display { color: var(--text-muted); font-size: 0.85rem; }
+      }
+    }
+
+    .journal-entry-indicator {
+      position: absolute;
+      bottom: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--accent-green);
+      background: rgba(var(--accent-green-rgb), 0.1);
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.3rem;
+      font-weight: 500;
+    }
+  }
+
+
+  /* Modals (Journal Entry & Assignment) */
+  .modal-overlay { @include modal-overlay-base; }
+  .modal { @include modal-base; }
+  .modal-header { @include modal-header-base; }
+  .modal-close { @include modal-close-btn-base; }
+  .modal-form {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .modal-body-content { /* */ }
+  .slot-info {
+    background: var(--border-color);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--accent-blue);
+    text-align: center;
+  }
+  .form-group { @include modal-form-group-base; }
+  .modal-footer {
+    @include modal-form-actions-base;
+    .btn-primary { @include modal-form-btn-base; background: var(--accent-blue); color: white; &:hover { background: var(--accent-dark-blue); } }
+    .btn-secondary { @include modal-form-btn-base; background: var(--gray-button); color: white; &:hover { background: var(--gray-button-hover); } }
+    .btn-danger { @include modal-form-btn-base; background: var(--red-danger); color: white; &:hover { background: var(--red-dark-danger); } }
+  }
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      margin-right: 8px;
+    }
+    label {
+      margin-bottom: 0;
+      display: inline-block;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+  }
+
+
+  /* Styles pour le chargement et l'erreur */
+  .loading-message, .error-message {
+    @include card-base;
+    padding: 2rem;
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+  }
+  .error-message {
+    color: var(--red-danger);
+  }
+
+  .no-courses-message {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    //grid-column: 1 / -1; /* Permet au message de prendre toute la largeur de la grille */
+  }
+}

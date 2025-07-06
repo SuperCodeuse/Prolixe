@@ -128,7 +128,6 @@ class ClassController {
                 return rows;
             });
 
-            console.log(`✅ ${data.length} classe(s) récupérée(s).`);
             res.json({
                 success: true,
                 data: data,
@@ -173,7 +172,6 @@ class ClassController {
                 return ClassController.handleError(res, new Error('Classe non trouvée'), 'Classe non trouvée.', 404);
             }
 
-            console.log(`✅ Classe trouvée: ${classData.name} (ID: ${classData.id})`);
             res.json({
                 success: true,
                 data: classData,
@@ -235,7 +233,6 @@ class ClassController {
                 return newClassData[0];
             });
 
-            console.log(`✅ Classe créée avec succès: ${newClass.name} (ID: ${newClass.id})`);
             res.status(201).json({
                 success: true,
                 data: newClass,
@@ -346,7 +343,6 @@ class ClassController {
                 return updatedData[0];
             });
 
-            console.log(`✅ Classe ID: ${id} mise à jour avec succès.`);
             res.json({
                 success: true,
                 data: updatedClass,
@@ -399,7 +395,6 @@ class ClassController {
                 return classToDelete[0]; // Retourne les infos de la classe supprimée
             });
 
-            console.log(`✅ Classe supprimée avec succès: ${deletedClassInfo.name} (ID: ${deletedClassInfo.id})`);
             res.json({
                 success: true,
                 message: 'Classe supprimée avec succès.',

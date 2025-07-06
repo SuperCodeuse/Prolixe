@@ -14,7 +14,6 @@ class ApiService {
         };
 
         try {
-            console.log(`🌐 API Request: ${config.method || 'GET'} ${url}`);
 
             const response = await fetch(url, config);
             const data = await response.json();
@@ -23,7 +22,6 @@ class ApiService {
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
 
-            console.log('✅ API Response:', data);
             return data;
 
         } catch (error) {

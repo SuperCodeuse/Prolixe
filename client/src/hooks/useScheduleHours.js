@@ -125,9 +125,7 @@ export const useScheduleHours = () => {
 
     // Charger les créneaux au montage du composant
     useEffect(() => {
-        loadHours().then(r =>
-            console.log('Créneaux horaires chargés:', r)
-        );
+        loadHours().then();
     }, []);
 
     return {

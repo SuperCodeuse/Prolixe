@@ -10,6 +10,7 @@ import Skore from './components/Skore';*/
 
 import './App.scss';
 import Horaire from "./components/horaire/Horaire";
+import Journal from "./components/journal/Journal";
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -18,9 +19,8 @@ const App = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
-        /*
       case 'journal':
-        return <Journal />;*/
+        return <Journal />;
       case 'horaire':
         return <Horaire />;/*
       case 'skore':

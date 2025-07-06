@@ -258,7 +258,7 @@ const Horaire = () => {
                                         <option value="">Sélectionnez une classe</option>
                                         {classes.map(cls => (
                                             <option key={cls.id} value={cls.id}>
-                                                {cls.name} (Niveau: {cls.level})
+                                                {cls.name}
                                             </option>
                                         ))}
                                     </select>
