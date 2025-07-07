@@ -193,51 +193,161 @@ class JournalController {
         }
     }
 
-    /**
-     * Crée ou met à jour une assignation.
-     */
+
     static async upsertAssignment(req, res) {
-        const { id, class_id, subject, type, description, due_date, is_completed } = req.body;
+        console.log("HERE");
+        const { id } = req.body;
 
-        if (!class_id || !subject || !type || !due_date) {
-            return JournalController.handleError(res, new Error('Tous les champs obligatoires sont requis.'), 'Données invalides.', 400);
-        }
+        if (id) { // C'est une mise à jour
+            console.log("body : ", req.body);
 
-        try {
-            const result = await JournalController.withConnection(async (connection) => {
-                if (id) {
-                    // Mettre à jour
+            try {
+                const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed'];
+                const fieldsToUpdate = [];
+                const values = [];
+
+                Object.keys(req.body).forEach(key => {
+                    if (validColumns.includes(key) && req.body[key] !== undefined) {
+                        let value = req.body[key];
+
+                        // Gestion améliorée des dates
+                        if (key === 'due_date' && value) {
+                            value = JournalController.formatDateForDatabase(value);
+                            console.log("Date formatée pour DB : ", value);
+                        }
+
+                        fieldsToUpdate.push(`${key} = ?`);
+                        values.push(value);
+                    }
+                });
+
+                if (fieldsToUpdate.length === 0) {
+                    const [assignment] = await JournalController.withConnection(async (connection) => {
+                        const [rows] = await connection.execute(`
+                        SELECT a.id, a.type, a.description, a.due_date, a.is_completed, 
+                               c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject 
+                        FROM ASSIGNMENT a 
+                        JOIN CLASS c ON a.class_id = c.id 
+                        WHERE a.id = ?
+                    `, [id]);
+                        return rows;
+                    });
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Aucun champ valide à mettre à jour.',
+                        data: assignment
+                    });
+                }
+
+                values.push(id);
+
+                await JournalController.withConnection(async (connection) => {
                     await connection.execute(
-                        'UPDATE ASSIGNMENT SET class_id = ?, subject = ?, type = ?, description = ?, due_date = ?, is_completed = ? WHERE id = ?',
-                        [parseInt(class_id), subject, type, description, due_date, is_completed, id]
+                        `UPDATE ASSIGNMENT SET ${fieldsToUpdate.join(', ')} WHERE id = ?`,
+                        values
                     );
-                    return { type: 'updated', id };
-                } else {
-                    // Insérer
+                });
+
+                const [assignment] = await JournalController.withConnection(async (connection) => {
+                    const [rows] = await connection.execute(`
+                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
+                           c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
+                    FROM ASSIGNMENT a
+                    JOIN CLASS c ON a.class_id = c.id
+                    WHERE a.id = ?
+                `, [id]);
+                    return rows;
+                });
+
+                res.status(200).json({
+                    success: true,
+                    message: 'Assignation mise à jour avec succès.',
+                    data: assignment
+                });
+
+            } catch (error) {
+                JournalController.handleError(res, error, 'Erreur lors de la mise à jour de l\'assignation.');
+            }
+
+        } else { // Logique de création
+            const { class_id, subject, type, description, due_date, is_completed } = req.body;
+
+            if (!class_id || !subject || !type || !due_date) {
+                return JournalController.handleError(res, new Error('Tous les champs obligatoires sont requis.'), 'Données invalides.', 400);
+            }
+
+            try {
+                // Formatage de la date pour la création aussi
+                const formattedDueDate = JournalController.formatDateForDatabase(due_date);
+
+                const result = await JournalController.withConnection(async (connection) => {
                     const [insertResult] = await connection.execute(
                         'INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)',
-                        [parseInt(class_id), subject, type, description, due_date, is_completed]
+                        [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]
                     );
                     return { type: 'created', id: insertResult.insertId };
-                }
-            });
-            console.log(`✅ Assignation ${result.type} avec succès (ID: ${result.id})`);
-            // Récupérer l'assignation complète après upsert pour le frontend
-            const [assignment] = await JournalController.withConnection(async (connection) => {
-                const [rows] = await connection.execute(`
+                });
+
+                const [assignment] = await JournalController.withConnection(async (connection) => {
+                    const [rows] = await connection.execute(`
                     SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
                            c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
                     FROM ASSIGNMENT a
                     JOIN CLASS c ON a.class_id = c.id
                     WHERE a.id = ?
                 `, [result.id]);
-                return rows;
-            });
-            res.status(id ? 200 : 201).json({ success: true, message: `Assignation ${id ? 'mise à jour' : 'créée'} avec succès.`, data: assignment });
-        } catch (error) {
-            JournalController.handleError(res, error, 'Erreur lors de la sauvegarde de l\'assignation.');
+                    return rows;
+                });
+
+                res.status(201).json({
+                    success: true,
+                    message: 'Assignation créée avec succès.',
+                    data: assignment
+                });
+            } catch (error) {
+                JournalController.handleError(res, error, 'Erreur lors de la création de l\'assignation.');
+            }
         }
     }
+
+// Méthode utilitaire à ajouter dans votre JournalController
+    static formatDateForDatabase(dateInput) {
+        if (!dateInput) return null;
+
+        let date;
+
+        // Si c'est déjà une instance Date
+        if (dateInput instanceof Date) {
+            date = dateInput;
+        }
+        // Si c'est une string
+        else if (typeof dateInput === 'string') {
+            // Si c'est déjà au format YYYY-MM-DD, on le garde tel quel
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+                return dateInput;
+            }
+            // Sinon on parse la date
+            date = new Date(dateInput);
+        }
+        // Autres cas
+        else {
+            date = new Date(dateInput);
+        }
+
+        // Vérification que la date est valide
+        if (isNaN(date.getTime())) {
+            throw new Error('Date invalide');
+        }
+
+        // Retour au format YYYY-MM-DD en utilisant les méthodes locales
+        // pour éviter les problèmes de fuseau horaire
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    }
+
 
     /**
      * Supprime une assignation.
