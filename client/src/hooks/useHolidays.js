@@ -1,5 +1,7 @@
+// client/src/hooks/useHolidays.js
 import { useState, useEffect, useCallback } from 'react';
-import { isWithinInterval, parseISO } from 'date-fns';
+// 1. Importer la fonction 'endOfDay'
+import { isWithinInterval, parseISO, endOfDay } from 'date-fns';
 
 export const useHolidays = () => {
     const [holidays, setHolidays] = useState([]);
@@ -26,8 +28,9 @@ export const useHolidays = () => {
         for (const holiday of holidays) {
             const interval = {
                 start: parseISO(holiday.start),
-                end: parseISO(holiday.end)
+                end: endOfDay(parseISO(holiday.end))
             };
+
             if (isWithinInterval(date, interval)) {
                 return holiday;
             }

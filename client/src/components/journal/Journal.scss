@@ -193,6 +193,7 @@
   .day-column {
     flex: 1;
     min-width: 250px;
+    min-height: 12rem;
     display: flex;
     flex-direction: column;
     background: var(--bg-dark-secondary); /* Fond pour la colonne du jour */
@@ -429,4 +430,48 @@
 textarea {
   padding: 0.2rem !important;
   background: var(--border-color) !important;
+}
+
+.day-column.is-holiday {
+  background-color: var(--bg-dark-tertiary);
+  background-image: repeating-linear-gradient(
+                  45deg,
+                  rgba(255, 255, 255, 0.02),
+                  rgba(255, 255, 255, 0.02) 10px,
+                  rgba(255, 255, 255, 0.04) 10px,
+                  rgba(255, 255, 255, 0.04) 20px
+  );
+  border-color: var(--accent-orange);
+
+  .day-header-journal {
+    background: var(--accent-dark-orange);
+    color: white;
+  }
+}
+
+.holiday-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(5px);
+  border-radius: 0.5rem;
+  color: white;
+  border: 1px solid var(--accent-orange);
+}
+
+.holiday-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.holiday-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
