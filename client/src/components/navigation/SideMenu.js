@@ -1,62 +1,100 @@
 // components/navigation/SideMenu.js
-import React from 'react';
-import './SideMenu.scss';
+import React, { useState } from 'react'; // Importez useState pour l'état du menu déroulant
+import { NavLink } from 'react-router-dom'; // NavLink pour la navigation
+import { useAuth } from '../../hooks/useAuth'; // Hook d'authentification
 
-// Reçoit les props pour contrôler son état et sa visibilité
-const SideMenu = ({ currentPage, onPageChange, isMenuOpen, toggleMenu }) => {
+import './SideMenu.scss'; // Styles du SideMenu
+
+// Composant SideMenu
+// Reçoit l'état d'ouverture/fermeture du menu principal (isMenuOpen)
+// et la fonction pour basculer (toggleMenu)
+const SideMenu = ({ isMenuOpen, toggleMenu }) => {
+    // Récupère la fonction de déconnexion du hook useAuth
+    const { logout } = useAuth();
+    const breakpoint = 1600;
+    // État local pour contrôler la visibilité du menu déroulant de déconnexion
+    const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = useState(false);
+
+    // Liste des éléments du menu de navigation
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'journal', label: 'Journal', icon: '📖', path: '/journal' },
-        { id: 'horaire', label: 'Emploi du temps', icon: '📅', path: '/horaire' },
-        { id: 'skore', label: 'Corrections', icon: '✅', path: '/skore' },
-        { id: 'settings', label: 'Settings', icon: '⚙️', path: '/settings' }
+        { id: 'journal', label: 'Journal', icon: '📝', path: '/journal' },
+        { id: 'horaire', label: 'Emploi du temps', icon: '⏰', path: '/horaire' },
+        { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' }
     ];
 
-    const handleItemClick = (itemId) => {
-        onPageChange(itemId);
-        // Sur les petits écrans (mobile/tablette), fermer le menu après la navigation
-        // Utilisez le même breakpoint que dans App.jsx pour la cohérence
-        if (window.innerWidth < 1600) {
-            toggleMenu(); // Ferme le menu après avoir cliqué sur un lien
+    // Gère le clic sur un élément du menu de navigation
+    const handleMenuItemClick = () => {
+        if (window.innerWidth < breakpoint) {
+            toggleMenu();
+        }
+        setIsLogoutDropdownOpen(false);
+    };
+
+    // Gère la déconnexion
+    const handleLogout = () => {
+        logout();
+        // Ferme le menu déroulant de déconnexion
+        setIsLogoutDropdownOpen(false);
+        // Ferme le menu principal si sur mobile après déconnexion
+        if (window.innerWidth < breakpoint) {
+            toggleMenu();
         }
     };
 
+    // Gère le clic sur la zone du profil utilisateur pour basculer le menu déroulant
+    const handleUserProfileClick = () => {
+        setIsLogoutDropdownOpen(prev => !prev);
+    };
+
     return (
-        // Applique une classe conditionnelle ('open' ou 'closed') à la div racine 'sidemenu'
+        // Applique des classes CSS dynamiques basées sur l'état du menu (open/closed)
         <div className={`sidemenu ${isMenuOpen ? 'open' : 'closed'}`}>
             <div className="sidemenu-header">
                 <div className="logo">
-                    <span className="logo-icon">🎓</span>
-                    <span className="logo-text">Prolixe</span>
+                    <span className="logo-icon">🎓</span> {/* Icône du logo */}
+                    <span className="logo-text">Prolixe</span> {/* Texte du logo */}
                 </div>
             </div>
 
             <nav className="sidemenu-nav">
                 <ul className="menu-list">
-                    {menuItems.map((item) => (
+                    {menuItems.map(item => (
                         <li key={item.id} className="menu-item">
-                            <a
-                                href={item.path}
-                                className={`menu-link ${currentPage === item.id ? 'active' : ''}`}
-                                onClick={(e) => {
-                                    e.preventDefault(); // Empêche le rechargement complet de la page
-                                    handleItemClick(item.id);
-                                }}
+                            {/* NavLink pour la navigation interne avec style actif automatique */}
+                            <NavLink
+                                to={item.path}
+                                className="menu-link"
+                                onClick={handleMenuItemClick} // Gère le clic pour la navigation et la fermeture
                             >
                                 <span className="menu-icon">{item.icon}</span>
                                 <span className="menu-label">{item.label}</span>
-                            </a>
+                            </NavLink>
                         </li>
                     ))}
                 </ul>
             </nav>
 
             <div className="sidemenu-footer">
-                <div className="user-profile">
-                    <div className="user-avatar">👤</div>
-                    <div className="user-info">
-                        <span className="user-name">DEGUELDRE</span>
-                        <span className="user-role">Jedi</span>
+                {/* Conteneur pour le profil utilisateur et le menu déroulant de déconnexion */}
+                {/* Ajoute la classe 'active' si le dropdown est ouvert */}
+                <div className={`user-menu-dropdown ${isLogoutDropdownOpen ? 'active' : ''}`}>
+                    {/* Zone du profil utilisateur, cliquable pour basculer le dropdown */}
+                    <div className="user-profile" onClick={handleUserProfileClick}>
+                        <div className="user-avatar">AD</div> {/* Avatar de l'utilisateur */}
+                        <div className="user-info">
+                            <span className="user-name">Admin User</span>
+                            <span className="user-role">Administrateur</span>
+                        </div>
+                        {/* Indicateur de flèche pour le dropdown */}
+                        <span className="dropdown-arrow"></span>
+                    </div>
+
+                    {/* Contenu du menu déroulant (le bouton de déconnexion) */}
+                    <div className="dropdown-content">
+                        <button onClick={handleLogout} className="logout-btn">
+                            Déconnexion
+                        </button>
                     </div>
                 </div>
             </div>

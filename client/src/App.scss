@@ -560,3 +560,27 @@
     width: 99%;
   }
 }
+
+/* Ajoutez ceci à votre App.scss ou fichier de styles global */
+
+.toast-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999; // Pour s'assurer qu'il est au-dessus de tout
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: clamp(300px, 90vw, 400px); // Largeur responsive
+}
+
+.loading-fullscreen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+  background-color: var(--bg-dark-blue);
+  color: var(--text-light);
+}
+
