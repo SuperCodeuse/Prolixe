@@ -147,7 +147,7 @@ const Journal = () => {
             handleCloseJournalModal();
         } catch (err) {
             showError(`Erreur: ${err.message || 'Impossible de supprimer l\'entrée'}`);
-        }
+            }
     }, [currentJournalEntryId, deleteJournalEntry, success, showError, handleCloseJournalModal]);
 
     const handleAddAssignment = useCallback(() => {
@@ -202,7 +202,7 @@ const Journal = () => {
         setConfirmModal({
             isOpen: true,
             title: 'Supprimer l\'assignation',
-            message: `Êtes-vous sûr de vouloir supprimer cette assignation ?`,
+            message: 'Êtes-vous sûr de vouloir supprimer cette assignation ?',
             onConfirm: handleDeleteAssignment
         });
     }, [handleDeleteAssignment]);
@@ -285,7 +285,7 @@ const Journal = () => {
                             {assignments.map(assign => {
                                 const assignClass = getClassInfo(assign.class_id);
                                 return (
-                                    <div key={assign.id} className="assignment-item">
+                                    <div key={assign.id} className={`assignment-item ${assign.is_completed && assign.is_corrected ? 'fully-corrected' : ''}`}>
                                         <input
                                             type="checkbox"
                                             checked={assign.is_completed}
