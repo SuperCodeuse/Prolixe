@@ -292,7 +292,7 @@ const Journal = () => {
                                     <div key={assign.id} className="assignment-item">
                                         <input type="checkbox" checked={assign.is_completed} onChange={() => upsertAssignment({ ...assign, is_completed: !assign.is_completed })}/>
                                         <div className="assignment-details">
-                                            <h4>{assign.title} ({assign.type})</h4>
+                                            <h4>{assign.subject} ({assign.type})</h4>
                                             <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
                                         </div>
                                         <button className="btn-edit" onClick={() => handleEditAssignment(assign)}>✏️</button>
