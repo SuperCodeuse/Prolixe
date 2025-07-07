@@ -8,11 +8,11 @@ import { useSchedule } from '../../hooks/useSchedule';
 import { useToast } from '../../hooks/useToast';
 import { useHolidays } from '../../hooks/useHolidays';
 import ConfirmModal from '../ConfirmModal';
-import { format, addDays, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Journal = () => {
-    // --- 1. HOOKS ---
+    // --- HOOKS ---
     const { classes, getClassColor } = useClasses();
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
@@ -20,11 +20,11 @@ const Journal = () => {
     const { success, error: showError } = useToast();
     const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
 
-    // --- 2. STATES ---
+    // --- STATES ---
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
-    const [assignmentForm, setAssignmentForm] = useState({ id: null, classId: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
+    const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [journalDebounce, setJournalDebounce] = useState({});
     const [showJournalModal, setShowJournalModal] = useState(false);
@@ -33,26 +33,15 @@ const Journal = () => {
     const [journalForm, setJournalForm] = useState({ planned_work: '', actual_work: '', notes: '' });
     const [currentJournalEntryId, setCurrentJournalEntryId] = useState(null);
 
-    // --- 3. MEMOS & CALLBACKS ---
+    // --- MEMOS & CALLBACKS ---
     const assignmentTypes = ['Interro', 'Devoir', 'Projet', 'Examen', 'Autre'];
-    const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday','samedi':'saturday','dimanche':'sunday'}[dayName]||dayName),[]);
+    const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday','saturday':'saturday','dimanche':'sunday'}[dayName]||dayName),[]);
 
-    const weekDays = useMemo(() => {
-        const days = [];
-        for (let i = 0; i < 5; i++) {
-            const date = addDays(currentWeekStart, i);
-            const holidayInfo = getHolidayForDate(date);
-            days.push({
-                date,
-                key: format(date, 'yyyy-MM-dd'),
-                label: format(date, 'EEEE dd/MM', { locale: fr }),
-                dayOfWeekKey: getDayKeyFromDateFnsString(format(date, 'EEEE', { locale: fr }).toLowerCase()),
-                isHoliday: !!holidayInfo,
-                holidayName: holidayInfo?.name || null,
-            });
-        }
-        return days;
-    }, [currentWeekStart, getDayKeyFromDateFnsString, getHolidayForDate]);
+    const weekDays = useMemo(() => Array.from({ length: 5 }).map((_, i) => {
+        const date = addDays(currentWeekStart, i);
+        const holidayInfo = getHolidayForDate(date);
+        return { date, key: format(date, 'yyyy-MM-dd'), label: format(date, 'EEEE dd/MM', { locale: fr }), dayOfWeekKey: getDayKeyFromDateFnsString(format(date, 'EEEE', { locale: fr }).toLowerCase()), isHoliday: !!holidayInfo, holidayName: holidayInfo?.name || null };
+    }), [currentWeekStart, getDayKeyFromDateFnsString, getHolidayForDate]);
 
     const getCoursesGroupedByDay = useMemo(() => {
         const grouped = {};
@@ -91,9 +80,26 @@ const Journal = () => {
 
     const getClassInfo = useCallback((classId) => classes.find(cls => cls.id === classId), [classes]);
     const navigateWeek = useCallback((direction) => setCurrentWeekStart(prev => addDays(prev, direction * 7)), []);
-    const goToToday = useCallback(() => {
-        setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
-    }, []);
+    const goToToday = useCallback(() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr })), []);
+
+    const isSchoolDay = useCallback((date) => {
+        const dayOfWeek = getDay(date);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Dimanche ou Samedi
+        const isHoliday = getHolidayForDate(date) !== null;
+        return !isWeekend && !isHoliday;
+    }, [getHolidayForDate]);
+
+    const isCourseDayForClass = useCallback((classId, date) => {
+        if (!classId || !date || !schedule.data) {
+            return false;
+        }
+        const dayKey = getDayKeyFromDateFnsString(format(date, 'EEEE', { locale: fr }).toLowerCase());
+
+        return Object.values(schedule.data).some(course =>
+            // CORRECTION : Utiliser 'classId' au lieu de 'class_id' pour correspondre aux données du schedule
+            course.day === dayKey && course.classId === classId
+        );
+    }, [schedule.data, getDayKeyFromDateFnsString]);
 
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
@@ -125,7 +131,7 @@ const Journal = () => {
 
     const handleAddAssignment = useCallback(() => {
         setSelectedAssignment(null);
-        setAssignmentForm({ id: null, classId: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
+        setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
         setShowAssignmentModal(true);
     }, []);
 
@@ -133,7 +139,7 @@ const Journal = () => {
         setSelectedAssignment(assignment);
         setAssignmentForm({
             id: assignment.id,
-            classId: assignment.classId,
+            class_id: assignment.class_id,
             subject: assignment.subject,
             type: assignment.type,
             title: assignment.title,
@@ -146,10 +152,25 @@ const Journal = () => {
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
-        if (!assignmentForm.classId || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.title || !assignmentForm.due_date) {
+        if (!assignmentForm.class_id || typeof assignmentForm.class_id !== 'number' || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.title || !assignmentForm.due_date) {
             showError('Veuillez remplir tous les champs obligatoires.');
             return;
         }
+
+        const dueDate = parseISO(assignmentForm.due_date);
+
+        if (!isSchoolDay(dueDate)) {
+            showError("La date d'échéance ne peut pas être un week-end ou un jour de congé.");
+            return;
+        }
+
+        if (!isCourseDayForClass(assignmentForm.class_id, dueDate)) {
+            const selectedClass = getClassInfo(assignmentForm.class_id);
+            const className = selectedClass ? `"${selectedClass.name}"` : 'cette classe';
+            showError(`La classe ${className} n'a pas cours le jour sélectionné.`);
+            return;
+        }
+
         try {
             await upsertAssignment(assignmentForm);
             success('Assignation sauvegardée !');
@@ -157,7 +178,7 @@ const Journal = () => {
         } catch (err) {
             showError(`Erreur: ${err.message || 'Impossible de sauvegarder l\'assignation'}`);
         }
-    }, [assignmentForm, upsertAssignment, success, showError]);
+    }, [assignmentForm, upsertAssignment, success, showError, isSchoolDay, isCourseDayForClass, getClassInfo]);
 
     const handleDeleteAssignment = useCallback(async () => {
         if (!selectedAssignment?.id) return;
@@ -182,7 +203,6 @@ const Journal = () => {
 
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
 
-    // --- 4. DATA FETCHING ---
     useEffect(() => {
         if (loadingSchedule || loadingHolidays) return;
         if (!errorSchedule && schedule) {
@@ -192,24 +212,19 @@ const Journal = () => {
         }
     }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments]);
 
-    // --- 5. LOADING & ERROR STATES ---
     const isLoading = loadingHours || loadingSchedule || loadingHolidays;
     if (isLoading) return <div className="journal-page"><div className="loading-message">Chargement...</div></div>;
     if (errorHours || errorSchedule) return <div className="journal-page"><div className="error-message">Erreur de chargement des données.</div></div>;
 
-    // --- 6. RENDER ---
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <div className="journal-header-left">
-                    <h1>Agenda de la semaine</h1>
-                    <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 6), 'dd/MM/yyyy', { locale: fr })}</span>
-                </div>
-
+                <h1>Agenda de la semaine</h1>
                 <div className="week-navigation">
-                    <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Semaine précédente</button>
+                    <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
-                    <button className="btn-secondary" onClick={() => navigateWeek(1)}>Semaine suivante &gt;</button>
+                    <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 4), 'dd/MM/yyyy', { locale: fr })}</span>
+                    <button className="btn-secondary" onClick={() => navigateWeek(1)}>Suivant &gt;</button>
                 </div>
             </div>
 
@@ -226,10 +241,7 @@ const Journal = () => {
                                     <div className="day-header-journal">{day.label}</div>
                                     <div className="day-content">
                                         {day.isHoliday ? (
-                                            <div className="holiday-card">
-                                                <span className="holiday-icon">🎉</span>
-                                                <span className="holiday-name">{day.holidayName}</span>
-                                            </div>
+                                            <div className="holiday-card"><span className="holiday-icon">🎉</span><span className="holiday-name">{day.holidayName}</span></div>
                                         ) : (
                                             <div className="day-courses-list">
                                                 {coursesForThisDay.map(courseInSchedule => {
@@ -243,20 +255,9 @@ const Journal = () => {
                                                     return (
                                                         <div key={courseInSchedule.id} className="journal-slot has-course" style={{ backgroundColor: `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`, borderColor: getClassColor(courseInSchedule.subject, classInfo?.level) }} onClick={() => handleOpenJournalModal(courseInSchedule, day)}>
                                                             <div className="course-summary">
-                                                                <div className="course-info-header">
-                                                                    <span className="course-time-display">{courseInSchedule.time_slot_libelle}</span>
-                                                                    <span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span>
-                                                                </div>
-                                                                <div className="course-details">
-                                                                    <div className="course-title-display">{courseInSchedule.subject}</div>
-                                                                    <div className="course-room-display">{courseInSchedule.room}</div>
-                                                                </div>
-                                                                {journalPreview.text && (
-                                                                    <div className={`journal-entry-preview ${journalPreview.className}`}>
-                                                                        {journalPreview.className === 'actual-work' && <span className="preview-icon">📝</span>}
-                                                                        <p className="preview-text">{journalPreview.text}</p>
-                                                                    </div>
-                                                                )}
+                                                                <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div>
+                                                                <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
+                                                                {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}>{journalPreview.className === 'actual-work' && <span className="preview-icon">📝</span>}<p className="preview-text">{journalPreview.text}</p></div>)}
                                                             </div>
                                                         </div>
                                                     );
@@ -276,7 +277,7 @@ const Journal = () => {
                     {assignments.length === 0 ? <p>Aucune assignation prévue cette semaine.</p> : (
                         <div className="assignment-list">
                             {assignments.map(assign => {
-                                const assignClass = getClassInfo(assign.classId);
+                                const assignClass = getClassInfo(assign.class_id);
                                 return (
                                     <div key={assign.id} className="assignment-item">
                                         <input type="checkbox" checked={assign.is_completed} onChange={() => upsertAssignment({ ...assign, is_completed: !assign.is_completed })}/>
@@ -296,18 +297,15 @@ const Journal = () => {
             {showAssignmentModal && (
                 <div className="modal-overlay">
                     <div className="modal">
-                        <div className="modal-header">
-                            <h3>{selectedAssignment ? 'Modifier Assignation' : 'Nouvelle Assignation'}</h3>
-                            <button className="modal-close" onClick={() => setShowAssignmentModal(false)}>×</button>
-                        </div>
+                        <div className="modal-header"><h3>{selectedAssignment ? 'Modifier Assignation' : 'Nouvelle Assignation'}</h3><button className="modal-close" onClick={() => setShowAssignmentModal(false)}>×</button></div>
                         <form className="modal-form" onSubmit={handleSaveAssignment}>
                             <div className="modal-body-content">
-                                <div className="form-group"><label>Classe *</label><select value={assignmentForm.classId} onChange={(e) => setAssignmentForm({ ...assignmentForm, classId: e.target.value === '' ? '' : parseInt(e.target.value, 10) })} required><option value="">Sélectionnez une classe</option>{classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name} (Niveau: {cls.level})</option>)}</select></div>
+                                <div className="form-group"><label>Classe *</label><select value={assignmentForm.class_id} onChange={(e) => setAssignmentForm({ ...assignmentForm, class_id: e.target.value ? parseInt(e.target.value, 10) : '' })} required><option value="">Sélectionnez une classe</option>{classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name} (Niveau: {cls.level})</option>)}</select></div>
                                 <div className="form-group"><label>Matière *</label><input type="text" value={assignmentForm.subject} onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })} required /></div>
                                 <div className="form-group"><label>Type *</label><select value={assignmentForm.type} onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })} required>{assignmentTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
                                 <div className="form-group"><label>Titre *</label><input type="text" value={assignmentForm.title} onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })} required /></div>
                                 <div className="form-group"><label>Description</label><textarea value={assignmentForm.description} onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })} rows="3" /></div>
-                                <div className="form-group"><label>Date d'échéance *</label><input type="date" value={assignmentForm.due_date} onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })} required /></div>
+                                <div className="form-group"><label>Date d'échéance *</label><input type="date" value={assignmentForm.due_date} onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })} required /><small className="form-hint">La date doit être un jour de cours.</small></div>
                                 <div className="form-group checkbox-group"><input type="checkbox" id="completed" checked={assignmentForm.is_completed} onChange={(e) => setAssignmentForm({ ...assignmentForm, is_completed: e.target.checked })} /><label htmlFor="completed">Terminé</label></div>
                             </div>
                             <div className="modal-footer">
@@ -323,21 +321,12 @@ const Journal = () => {
             {showJournalModal && selectedCourseForJournal && selectedDayForJournal && (
                 <div className="modal-overlay">
                     <div className="modal">
-                        <div className="modal-header">
-                            <h3>Notes pour {selectedCourseForJournal.subject} le {format(parseISO(selectedDayForJournal.key), 'EEEE dd/MM', { locale: fr })}</h3>
-                            <button className="modal-close" onClick={handleCloseJournalModal}>×</button>
-                        </div>
+                        <div className="modal-header"><h3>Notes pour {selectedCourseForJournal.subject} le {format(parseISO(selectedDayForJournal.key), 'EEEE dd/MM', { locale: fr })}</h3><button className="modal-close" onClick={handleCloseJournalModal}>×</button></div>
                         <div className="modal-body-content">
                             {(() => {
-                                const classInfo = getClassInfo(selectedCourseForJournal.classId);
+                                const classInfo = getClassInfo(selectedCourseForJournal.class_id);
                                 const courseColor = getClassColor(selectedCourseForJournal.subject, classInfo?.level);
-                                const slotInfoStyle = { borderLeftColor: courseColor || '#cccccc' };
-                                return (
-                                    <div className="slot-info" style={slotInfoStyle}>
-                                        <strong>{selectedCourseForJournal.time_slot_libelle} - {selectedCourseForJournal.room}</strong>
-                                        <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>Classe: {classInfo?.name || 'Inconnue'}</p>
-                                    </div>
-                                );
+                                return (<div className="slot-info" style={{ borderLeftColor: courseColor || '#cccccc' }}><strong>{selectedCourseForJournal.time_slot_libelle} - {selectedCourseForJournal.room}</strong><p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>Classe: {classInfo?.name || 'Inconnue'}</p></div>);
                             })()}
                             <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => { setJournalForm(prev => ({ ...prev, planned_work: e.target.value })); handleJournalEntryChange({ id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...journalForm }, 'planned_work', e.target.value); }} placeholder="Décrivez le travail prévu..." rows="3"/></div>
                             <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => { setJournalForm(prev => ({ ...prev, actual_work: e.target.value })); handleJournalEntryChange({ id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...journalForm }, 'actual_work', e.target.value); }} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>

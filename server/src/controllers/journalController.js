@@ -231,7 +231,7 @@ class JournalController {
                     JOIN CLASS c ON a.class_id = c.id
                     WHERE a.id = ?
                 `, [result.id]);
-                return rows[0];
+                return rows;
             });
             res.status(id ? 200 : 201).json({ success: true, message: `Assignation ${id ? 'mise à jour' : 'créée'} avec succès.`, data: assignment });
         } catch (error) {
