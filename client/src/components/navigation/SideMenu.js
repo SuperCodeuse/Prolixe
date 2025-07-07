@@ -77,7 +77,7 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
                 <div className="sidemenu-footer">
                     <div className={`user-menu-dropdown ${isLogoutDropdownOpen ? 'active' : ''}`}>
                         <div className="user-profile" onClick={handleUserProfileClick}>
-                            <div className="user-avatar">{user.firstname[0]}{user?.name[0]}</div>
+                            <div className="user-avatar">{user?.firstname[0]}{user?.name[0]}</div>
                             <div className="user-info">
                                 <span className="user-name">{user?.name }</span>
                                 <span className="user-role">{user?.role}</span>
