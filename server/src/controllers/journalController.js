@@ -216,10 +216,10 @@ class JournalController {
                 if (fieldsToUpdate.length === 0) {
                     const [assignment] = await JournalController.withConnection(async (connection) => {
                         const [rows] = await connection.execute(`
-                        SELECT a.id, a.type, a.description, a.due_date, a.is_completed, 
-                               c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject 
-                        FROM ASSIGNMENT a 
-                        JOIN CLASS c ON a.class_id = c.id 
+                        SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected,
+                               c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
+                        FROM ASSIGNMENT a
+                        JOIN CLASS c ON a.class_id = c.id
                         WHERE a.id = ?
                     `, [id]);
                         return rows;
@@ -242,7 +242,7 @@ class JournalController {
 
                 const [assignment] = await JournalController.withConnection(async (connection) => {
                     const [rows] = await connection.execute(`
-                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
+                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected,
                            c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
                     FROM ASSIGNMENT a
                     JOIN CLASS c ON a.class_id = c.id
@@ -282,7 +282,7 @@ class JournalController {
 
                 const [assignment] = await JournalController.withConnection(async (connection) => {
                     const [rows] = await connection.execute(`
-                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
+                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected,
                            c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
                     FROM ASSIGNMENT a
                     JOIN CLASS c ON a.class_id = c.id
