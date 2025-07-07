@@ -57,44 +57,40 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
                 </div>
             </div>
 
-            <nav className="sidemenu-nav">
-                <ul className="menu-list">
-                    {menuItems.map(item => (
-                        <li key={item.id} className="menu-item">
-                            {/* NavLink pour la navigation interne avec style actif automatique */}
-                            <NavLink
-                                to={item.path}
-                                className="menu-link"
-                                onClick={handleMenuItemClick} // Gère le clic pour la navigation et la fermeture
-                            >
-                                <span className="menu-icon">{item.icon}</span>
-                                <span className="menu-label">{item.label}</span>
-                            </NavLink>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
+            <div className="sidemenu-content">
+                <nav className="sidemenu-nav">
+                    <ul className="menu-list">
+                        {menuItems.map(item => (
+                            <li key={item.id} className="menu-item">
+                                <NavLink
+                                    to={item.path}
+                                    className="menu-link"
+                                    onClick={handleMenuItemClick}
+                                >
+                                    <span className="menu-icon">{item.icon}</span>
+                                    <span className="menu-label">{item.label}</span>
+                                </NavLink>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
 
-            <div className="sidemenu-footer">
-                {/* Conteneur pour le profil utilisateur et le menu déroulant de déconnexion */}
-                {/* Ajoute la classe 'active' si le dropdown est ouvert */}
-                <div className={`user-menu-dropdown ${isLogoutDropdownOpen ? 'active' : ''}`}>
-                    {/* Zone du profil utilisateur, cliquable pour basculer le dropdown */}
-                    <div className="user-profile" onClick={handleUserProfileClick}>
-                        <div className="user-avatar">AD</div> {/* Avatar de l'utilisateur */}
-                        <div className="user-info">
-                            <span className="user-name">Admin User</span>
-                            <span className="user-role">Administrateur</span>
+                <div className="sidemenu-footer">
+                    <div className={`user-menu-dropdown ${isLogoutDropdownOpen ? 'active' : ''}`}>
+                        <div className="user-profile" onClick={handleUserProfileClick}>
+                            <div className="user-avatar">AD</div>
+                            <div className="user-info">
+                                <span className="user-name">Admin User</span>
+                                <span className="user-role">Administrateur</span>
+                            </div>
+                            <span className="dropdown-arrow"></span>
                         </div>
-                        {/* Indicateur de flèche pour le dropdown */}
-                        <span className="dropdown-arrow"></span>
-                    </div>
 
-                    {/* Contenu du menu déroulant (le bouton de déconnexion) */}
-                    <div className="dropdown-content">
-                        <button onClick={handleLogout} className="logout-btn">
-                            Déconnexion
-                        </button>
+                        <div className="dropdown-content">
+                            <button onClick={handleLogout} className="logout-btn">
+                                Déconnexion
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
