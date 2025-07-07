@@ -25,6 +25,18 @@
       }
     }
 
+    .journal-header-left{
+      display: flex;
+      flex-direction: row;
+      gap: 2rem;
+
+      span{
+        padding-top: 1rem;
+        font-weight: bold;
+        color: var(--accent-cyan);
+      }
+    }
+
     .week-navigation {
       display: flex;
       align-items: center;
@@ -352,6 +364,17 @@
     .btn-secondary { @include modal-form-btn-base; background: var(--gray-button); color: white; &:hover { background: var(--gray-button-hover); } }
     .btn-danger { @include modal-form-btn-base; background: var(--red-danger); color: white; &:hover { background: var(--red-dark-danger); } }
   }
+
+  .btn-today {
+    @include btn-primary-base;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+    background: var(--accent-cyan);
+    &:hover {
+      background: var(--accent-dark-cyan);
+    }
+  }
+
   .checkbox-group {
     display: flex;
     align-items: center;

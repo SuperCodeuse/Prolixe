@@ -91,6 +91,9 @@ const Journal = () => {
 
     const getClassInfo = useCallback((classId) => classes.find(cls => cls.id === classId), [classes]);
     const navigateWeek = useCallback((direction) => setCurrentWeekStart(prev => addDays(prev, direction * 7)), []);
+    const goToToday = useCallback(() => {
+        setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
+    }, []);
 
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
@@ -198,10 +201,14 @@ const Journal = () => {
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <h1>Agenda de la semaine</h1>
+                <div className="journal-header-left">
+                    <h1>Agenda de la semaine</h1>
+                    <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 6), 'dd/MM/yyyy', { locale: fr })}</span>
+                </div>
+
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Semaine précédente</button>
-                    <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 6), 'dd/MM/yyyy', { locale: fr })}</span>
+                    <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
                     <button className="btn-secondary" onClick={() => navigateWeek(1)}>Semaine suivante &gt;</button>
                 </div>
             </div>
