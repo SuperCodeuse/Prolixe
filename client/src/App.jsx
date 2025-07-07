@@ -8,14 +8,14 @@ import Horaire from "./components/horaire/Horaire";
 import Journal from "./components/journal/Journal";
 import Login from './components/authentification/login';
 import { useAuth } from './hooks/useAuth';
-import { useToast } from './hooks/useToast'; // AJOUTÉ : Import du hook pour les toasts
-import Toast from './components/Toast';     // AJOUTÉ : Import du composant Toast
+import { useToast } from './hooks/useToast'; // Import du hook
+import Toast from './components/Toast';     // Import du composant
 
 import './App.scss';
 
-// Composant pour le contenu de l'application une fois authentifié
-const breakpoint = 1600;
+// ... (le composant AuthenticatedAppContent ne change pas)
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
+    const breakpoint = 1600;
     return (
         <>
             {isMenuOpen && window.innerWidth < breakpoint && (
@@ -39,11 +39,11 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     );
 };
 
-// Composant principal de l'application
+// Composant principal
 const App = () => {
     const { isAuthenticated, loadingAuth } = useAuth();
     const navigate = useNavigate();
-    const { toasts, removeToast } = useToast(); // AJOUTÉ : Récupération des toasts
+    const { toasts, removeToast } = useToast(); // Récupération des toasts
 
     const breakpoint = 1600;
     const [isMenuOpen, setIsMenuOpen] = useState(window.innerWidth >= breakpoint);
@@ -58,12 +58,13 @@ const App = () => {
 
     useEffect(() => {
         if (!loadingAuth) {
+            const currentPath = window.location.pathname;
             if (isAuthenticated) {
-                if (window.location.pathname === '/login' || window.location.pathname === '/') {
+                if (currentPath === '/login' || currentPath === '/') {
                     navigate('/dashboard', { replace: true });
                 }
             } else {
-                if (window.location.pathname !== '/login') {
+                if (currentPath !== '/login') {
                     navigate('/login', { replace: true });
                 }
             }
@@ -88,6 +89,7 @@ const App = () => {
                 </Routes>
             )}
 
+            {/* --- CONTENEUR DE NOTIFICATIONS GLOBAL --- */}
             <div className="toast-container">
                 {toasts.map(toast => (
                     <Toast

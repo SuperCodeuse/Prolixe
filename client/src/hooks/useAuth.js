@@ -1,20 +1,21 @@
-// frontend/src/hooks/useAuth.js
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AuthService from '../services/authService';
 
-export const useAuth = () => {
-    const [user, setUser] = useState(null); // Stocke l'objet utilisateur si authentifié
-    const [isAuthenticated, setIsAuthenticated] = useState(false); // État de l'authentification
-    const [loadingAuth, setLoadingAuth] = useState(true); // État de chargement initial de l'authentification
+// 1. Créer le contexte d'authentification
+const AuthContext = createContext(null);
 
-    // Vérifier l'état d'authentification au chargement de l'application
+// 2. Créer le fournisseur (Provider)
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loadingAuth, setLoadingAuth] = useState(true);
+    const navigate = useNavigate();
+
+    // Vérifier si l'utilisateur est déjà connecté au chargement
     useEffect(() => {
         const storedUser = AuthService.getCurrentUser();
-        const storedToken = AuthService.getToken();
-
-        if (storedUser && storedToken) {
-            // Dans une vraie application, vous vérifieriez ici la validité du token avec le backend
-            // Pour ce basique, la présence du token et de l'utilisateur est suffisante.
+        if (storedUser) {
             setUser(storedUser);
             setIsAuthenticated(true);
         }
@@ -28,13 +29,13 @@ export const useAuth = () => {
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
+                // La redirection est gérée par le useEffect dans App.jsx, c'est bien.
                 return { success: true };
             } else {
                 return { success: false, message: response.message || 'Échec de la connexion' };
             }
         } catch (error) {
-            console.error('Erreur de connexion dans useAuth:', error);
-            return { success: false, message: error || 'Erreur inconnue lors de la connexion' };
+            return { success: false, message: error.message || 'Erreur inconnue' };
         }
     }, []);
 
@@ -43,13 +44,25 @@ export const useAuth = () => {
         AuthService.logout();
         setUser(null);
         setIsAuthenticated(false);
-    }, []);
+        // Redirige explicitement vers la page de connexion
+        navigate('/login', { replace: true });
+    }, [navigate]);
 
-    return {
-        user,
-        isAuthenticated,
-        loadingAuth,
-        login,
-        logout
-    };
+    // La valeur qui sera partagée
+    const value = { user, isAuthenticated, loadingAuth, login, logout };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+// 3. Le hook personnalisé pour consommer le contexte
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth doit être utilisé à l\'intérieur d\'un AuthProvider');
+    }
+    return context;
 };
