@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken'); // Pour la génération de token JWT (optio
 const JWT_SECRET = process.env.JWT_SECRET;
 
 class AuthController {
-    
+
     /**
      * Gère et standardise les réponses d'erreur HTTP.
      * @param {Response} res - L'objet réponse Express.
@@ -47,6 +47,14 @@ class AuthController {
         }
 
         try {
+
+            const userPayload = {
+                username: username,
+                role: user.role,
+                firstname: user.firstname,
+                name: user.name
+            };
+
             // Générer un token JWT
 
             const token = jwt.sign(
@@ -60,7 +68,7 @@ class AuthController {
                 success: true,
                 message: 'Connexion réussie !',
                 token: token,
-                user: { username: username, role: user.role } // Informations utilisateur (sans le mot de passe)
+                user: userPayload // Informations utilisateur (sans le mot de passe)
             });
 
         } catch (error) {

@@ -19,9 +19,9 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); // Ombre plus prononcée pour la profondeur
 
   width: 90%; // Prend 90% de la largeur sur les petits écrans
-  max-width: 400px; // Largeur maximale pour ne pas être trop grand sur les grands écrans
+  max-width: 40rem; // Largeur maximale pour ne pas être trop grand sur les grands écrans
   height: auto; // Hauteur automatique pour s'adapter au contenu
-  padding: 2.5rem 2rem; // Padding interne ajusté pour plus d'espace
+  padding: 2.5rem 3rem; // Padding interne ajusté pour plus d'espace
   text-align: center;
 
   // Responsive pour les petits écrans
@@ -64,7 +64,7 @@
     }
 
     input {
-      width: 100%;
+      width: 95%;
       padding: 0.85rem; // Padding légèrement augmenté
       background: var(--bg-dark-tertiary);
       border: 1px solid var(--border-color);

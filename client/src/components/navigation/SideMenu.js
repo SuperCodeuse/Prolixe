@@ -9,10 +9,9 @@ import './SideMenu.scss'; // Styles du SideMenu
 // Reçoit l'état d'ouverture/fermeture du menu principal (isMenuOpen)
 // et la fonction pour basculer (toggleMenu)
 const SideMenu = ({ isMenuOpen, toggleMenu }) => {
-    // Récupère la fonction de déconnexion du hook useAuth
-    const { logout } = useAuth();
+
+    const { logout, user } = useAuth()
     const breakpoint = 1600;
-    // État local pour contrôler la visibilité du menu déroulant de déconnexion
     const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = useState(false);
 
     // Liste des éléments du menu de navigation
@@ -78,10 +77,10 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
                 <div className="sidemenu-footer">
                     <div className={`user-menu-dropdown ${isLogoutDropdownOpen ? 'active' : ''}`}>
                         <div className="user-profile" onClick={handleUserProfileClick}>
-                            <div className="user-avatar">AD</div>
+                            <div className="user-avatar">{user.firstname[0]}{user?.name[0]}</div>
                             <div className="user-info">
-                                <span className="user-name">Admin User</span>
-                                <span className="user-role">Administrateur</span>
+                                <span className="user-name">{user?.name }</span>
+                                <span className="user-role">{user?.role}</span>
                             </div>
                             <span className="dropdown-arrow"></span>
                         </div>

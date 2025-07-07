@@ -32,7 +32,6 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        overflow-y: auto;
         min-height: 0;
     }
 
@@ -46,7 +45,7 @@
     }
 
     .sidemenu-nav {
-        overflow-y: auto; // Ajoute un scroll si les items dépassent la hauteur
+        flex: 1;
         padding: 1rem 0;
         min-height: 0;
         .menu-list { list-style: none; padding: 0; margin: 0; }
@@ -66,6 +65,7 @@
 
     // --- STYLES MODIFIÉS ET AJOUTÉS POUR LE FOOTER ET LE DROPDOWN ---
     .sidemenu-footer {
+        flex-shrink: 0;
         padding: 1rem; // Un peu d'espace autour
         border-top: 1px solid var(--border-color);
         background: var(--bg-dark-tertiary);
@@ -94,7 +94,10 @@
         }
 
         .user-info { flex: 1; }
-        .user-name { font-weight: 500; }
+        .user-name {
+            text-transform: uppercase;
+            font-weight: 500;
+        }
         .user-role { font-size: 0.75rem; color: #9ca3af; }
 
         .dropdown-arrow {

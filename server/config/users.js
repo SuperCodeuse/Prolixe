@@ -7,6 +7,8 @@ module.exports = {
     },
     "songon": {
         password: "minecraftetlesgof",
-        role: "user"
+        role: "ADMIN",
+        firstname: "Céline",
+        name: "Degueldre"
     }
 };
