@@ -37,9 +37,6 @@ const extractSubjects = (sessions) => {
 exports.importJournal = async (req, res) => {
     try {
         const journalData = req.body; // Ton JSON sera envoyé ici
-
-        console.log(`Import de ${journalData.length} sessions...`);
-
         // 1. Créer les matières si elles n'existent pas
         const subjectNames = extractSubjects(journalData);
         const subjectPromises = subjectNames.map(async (name) => {
@@ -47,7 +44,6 @@ exports.importJournal = async (req, res) => {
             if (!subject) {
                 subject = new Subject({ name, code: name.substring(0, 4).toUpperCase() });
                 await subject.save();
-                console.log(`Matière créée: ${name}`);
             }
             return subject;
         });
@@ -69,7 +65,6 @@ exports.importJournal = async (req, res) => {
                 });
 
                 if (existingSession) {
-                    console.log(`Session existante ignorée: ${sessionData.date}`);
                     return null;
                 }
 

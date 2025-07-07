@@ -170,8 +170,6 @@ class ScheduleController {
         }
 
         try {
-            console.log(`🔄 Tentative d'upsert du cours: ${subject} le ${day} à l'ID de créneau ${time_slot_id}`);
-
             const result = await ScheduleController.withConnection(async (connection) => {
                 // Vérifier si un cours existe déjà pour ce créneau (day, time_slot_id)
                 const [existing] = await connection.execute(
@@ -245,15 +243,11 @@ class ScheduleController {
     static async deleteCourse(req, res) {
         const { day, time_slot_id } = req.params;
 
-        console.log(`DEBUG: Tentative de suppression pour jour: ${day}, time_slot_id: ${time_slot_id}`);
-
         if (!day || !time_slot_id || isNaN(parseInt(time_slot_id))) {
             return ScheduleController.handleError(res, new Error('Paramètres de suppression invalides'), 'Paramètres de suppression invalides.', 400);
         }
 
         try {
-            console.log(`🗑️ Tentative de suppression du cours le ${day} à l'ID de créneau ${time_slot_id}`);
-
             const result = await ScheduleController.withConnection(async (connection) => {
                 const [deleteResult] = await connection.execute(
                     'DELETE FROM SCHEDULE WHERE day = ? AND time_slot_id = ?',

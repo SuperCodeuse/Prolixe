@@ -20,9 +20,7 @@ const config = {
 
 // Créez le pool directement ici et exportez-le
 const pool = mysql.createPool(config);
-console.log('✅ Pool MySQL créé');
 console.log(`📍 Serveur: ${config.host}:${config.port}`);
-console.log(`🗄️ Base de données: ${config.database}`);
 
 // Test de connexion au démarrage (peut rester une fonction séparée si vous le souhaitez)
 const testConnection = async () => {
@@ -30,7 +28,6 @@ const testConnection = async () => {
         const connection = await pool.getConnection(); // Utilise le pool créé
         const [rows] = await connection.execute('SELECT 1 as test');
         connection.release(); // Libérer la connexion après le test
-        console.log('🔍 Test de connexion réussi:', rows);
         return true;
     } catch (error) {
         console.error('❌ Test de connexion échoué:', error);

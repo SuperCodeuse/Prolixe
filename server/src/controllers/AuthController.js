@@ -63,7 +63,6 @@ class AuthController {
                 { expiresIn: '1h' }               // Expiration du token (ex: 1 heure)
             );
 
-            console.log(`✅ Utilisateur '${username}' connecté avec succès.`);
             res.json({
                 success: true,
                 message: 'Connexion réussie !',

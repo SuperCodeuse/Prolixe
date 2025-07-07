@@ -117,6 +117,14 @@ export const useJournal = () => {
         }
     }, []);
 
+    const updateAssignmentInState = useCallback((updatedAssignment) => {
+        setAssignments(prev => prev.map(assignment =>
+            assignment.id === updatedAssignment.id
+                ? { ...assignment, ...updatedAssignment }
+                : assignment
+        ));
+    }, []);
+
     return {
         journalEntries,
         assignments,
@@ -128,5 +136,6 @@ export const useJournal = () => {
         deleteJournalEntry,
         upsertAssignment,
         deleteAssignment,
+        updateAssignmentInState
     };
 };

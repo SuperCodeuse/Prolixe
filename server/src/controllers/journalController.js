@@ -61,7 +61,6 @@ class JournalController {
                 `, [startDate, endDate]);
                 return rows;
             });
-            console.log(`✅ ${entries.length} entrées de journal récupérées pour la période.`);
             res.json({ success: true, data: entries, count: entries.length, message: `${entries.length} entrées de journal récupérées.` });
         } catch (error) {
             console.error("DÉTAIL ERREUR GET JOURNAL ENTRIES:", error); // Utile pour le débogage
@@ -97,7 +96,6 @@ class JournalController {
                     return { type: 'created', id: insertResult.insertId };
                 }
             });
-            console.log(`✅ Entrée de journal ${result.type} avec succès (ID: ${result.id})`);
 
             // Récupérer l'entrée complète après upsert pour le frontend
             const [entry] = await JournalController.withConnection(async (connection) => {
@@ -144,7 +142,6 @@ class JournalController {
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Entrée non trouvée'), 'Entrée de journal non trouvée.', 404);
             }
-            console.log(`✅ Entrée de journal supprimée avec succès (ID: ${id})`);
             res.json({ success: true, message: 'Entrée de journal supprimée avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, 'Erreur lors de la suppression de l\'entrée de journal.');
@@ -159,7 +156,7 @@ class JournalController {
     static async getAssignments(req, res) {
         const { classId, startDate, endDate } = req.query; // Filtrer par classe ou par date
         let query = `
-            SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
+            SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected,
                    c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
             FROM ASSIGNMENT a
             JOIN CLASS c ON a.class_id = c.id
@@ -186,7 +183,6 @@ class JournalController {
                 const [rows] = await connection.execute(query, params);
                 return rows;
             });
-            console.log(`✅ ${assignments.length} assignations récupérées.`);
             res.json({ success: true, data: assignments, count: assignments.length, message: `${assignments.length} assignations récupérées.` });
         } catch (error) {
             JournalController.handleError(res, error, 'Erreur lors de la récupération des assignations.');
@@ -195,14 +191,11 @@ class JournalController {
 
 
     static async upsertAssignment(req, res) {
-        console.log("HERE");
         const { id } = req.body;
 
         if (id) { // C'est une mise à jour
-            console.log("body : ", req.body);
-
             try {
-                const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed'];
+                const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed', 'is_corrected'];
                 const fieldsToUpdate = [];
                 const values = [];
 
@@ -213,7 +206,6 @@ class JournalController {
                         // Gestion améliorée des dates
                         if (key === 'due_date' && value) {
                             value = JournalController.formatDateForDatabase(value);
-                            console.log("Date formatée pour DB : ", value);
                         }
 
                         fieldsToUpdate.push(`${key} = ?`);
@@ -365,7 +357,6 @@ class JournalController {
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Assignation non trouvée'), 'Assignation non trouvée.', 404);
             }
-            console.log(`✅ Assignation supprimée avec succès (ID: ${id})`);
             res.json({ success: true, message: 'Assignation supprimée avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, 'Erreur lors de la suppression de l\'assignation.');

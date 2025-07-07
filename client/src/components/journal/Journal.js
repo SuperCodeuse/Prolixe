@@ -16,6 +16,7 @@ const Journal = () => {
     const { classes, getClassColor } = useClasses();
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
+    // On utilise directement `assignments` du hook. Le hook gère maintenant son propre état.
     const { journalEntries, assignments, fetchJournalEntries, fetchAssignments, upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment } = useJournal();
     const { success, error: showError } = useToast();
     const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
@@ -24,7 +25,7 @@ const Journal = () => {
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
-    const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: '', is_completed: false });
+    const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', description: '', due_date: '', is_completed: false, is_corrected: false });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [journalDebounce, setJournalDebounce] = useState({});
     const [showJournalModal, setShowJournalModal] = useState(false);
@@ -95,19 +96,17 @@ const Journal = () => {
         return Object.values(schedule.data).some(course => course.day === dayKey && course.classId === classId);
     }, [schedule.data, getDayKeyFromDateFnsString]);
 
-    // MODIFIÉ : Génère les dates disponibles en se basant sur la semaine affichée
     const availableDueDates = useMemo(() => {
         const dates = [];
         const { class_id } = assignmentForm;
         if (!class_id) return [];
 
-        // On parcourt les 5 jours de la semaine affichée
         for (let i = 0; i < 5; i++) {
             const date = addDays(currentWeekStart, i);
             if (isCourseDayForClass(class_id, date) && isSchoolDay(date)) {
                 dates.push({
                     value: format(date, 'yyyy-MM-dd'),
-                    label: format(date, 'EEEE dd MMMM', { locale: fr }) // Format plus court et plus clair
+                    label: format(date, 'EEEE dd MMMM', { locale: fr })
                 });
             }
         }
@@ -115,17 +114,13 @@ const Journal = () => {
     }, [assignmentForm.class_id, currentWeekStart, isCourseDayForClass, isSchoolDay]);
 
     useEffect(() => {
-        if (showAssignmentModal) {
-            if (assignmentForm.class_id && availableDueDates.length > 0) {
-                const isCurrentDateValid = availableDueDates.some(d => d.value === assignmentForm.due_date);
-                if (!isCurrentDateValid) {
-                    setAssignmentForm(prev => ({ ...prev, due_date: availableDueDates[0].value }));
-                }
-            } else {
-                setAssignmentForm(prev => ({ ...prev, due_date: '' }));
+        if (showAssignmentModal && assignmentForm.class_id && availableDueDates.length > 0) {
+            const isCurrentDateValid = availableDueDates.some(d => d.value === assignmentForm.due_date);
+            if (!isCurrentDateValid) {
+                setAssignmentForm(prev => ({ ...prev, due_date: availableDueDates[0].value }));
             }
         }
-    }, [assignmentForm.class_id, availableDueDates, showAssignmentModal]);
+    }, [assignmentForm.class_id, availableDueDates, showAssignmentModal, assignmentForm.due_date]);
 
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
@@ -157,7 +152,7 @@ const Journal = () => {
 
     const handleAddAssignment = useCallback(() => {
         setSelectedAssignment(null);
-        setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: '', is_completed: false });
+        setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', description: '', due_date: '', is_completed: false, is_corrected: false });
         setShowAssignmentModal(true);
     }, []);
 
@@ -170,30 +165,31 @@ const Journal = () => {
             type: assignment.type,
             description: assignment.description || '',
             due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : '',
-            is_completed: assignment.is_completed
+            is_completed: assignment.is_completed,
+            is_corrected: !!assignment.is_corrected
         });
         setShowAssignmentModal(true);
     }, []);
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
-        if (!assignmentForm.class_id || typeof assignmentForm.class_id !== 'number' || !assignmentForm.subject || !assignmentForm.type  || !assignmentForm.due_date) {
+        if (!assignmentForm.class_id || !assignmentForm.subject || !assignmentForm.type  || !assignmentForm.due_date) {
             showError('Veuillez remplir tous les champs obligatoires.');
             return;
         }
         try {
-            await upsertAssignment(assignmentForm);
+            await upsertAssignment(assignmentForm); // On utilise la fonction du hook qui met à jour l'état
             success('Assignation sauvegardée !');
             setShowAssignmentModal(false);
         } catch (err) {
-            showError(`Erreur: ${err.message || 'Impossible de sauvegarder l\'assignation'}`);
+            // L'erreur est déjà gérée dans le hook
         }
     }, [assignmentForm, upsertAssignment, success, showError]);
 
     const handleDeleteAssignment = useCallback(async () => {
         if (!selectedAssignment?.id) return;
         try {
-            await deleteAssignment(selectedAssignment.id);
+            await deleteAssignment(selectedAssignment.id); // On utilise la fonction du hook
             success('Assignation supprimée !');
             setShowAssignmentModal(false);
             closeConfirmModal();
@@ -206,10 +202,10 @@ const Journal = () => {
         setConfirmModal({
             isOpen: true,
             title: 'Supprimer l\'assignation',
-            message: `Êtes-vous sûr de vouloir supprimer l'assignation "${selectedAssignment?.title}" ?`,
+            message: `Êtes-vous sûr de vouloir supprimer cette assignation ?`,
             onConfirm: handleDeleteAssignment
         });
-    }, [selectedAssignment, handleDeleteAssignment]);
+    }, [handleDeleteAssignment]);
 
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
 
@@ -290,11 +286,32 @@ const Journal = () => {
                                 const assignClass = getClassInfo(assign.class_id);
                                 return (
                                     <div key={assign.id} className="assignment-item">
-                                        <input type="checkbox" checked={assign.is_completed} onChange={() => upsertAssignment({ ...assign, is_completed: !assign.is_completed })}/>
+                                        <input
+                                            type="checkbox"
+                                            checked={assign.is_completed}
+                                            title="Terminé ?"
+                                            onChange={() => {
+                                                const payload = { ...assign, is_completed: !assign.is_completed };
+                                                if (!payload.is_completed) payload.is_corrected = false;
+                                                upsertAssignment(payload);
+                                            }}
+                                        />
                                         <div className="assignment-details">
                                             <h4>{assign.subject} ({assign.type})</h4>
                                             <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
                                         </div>
+                                        {assign.is_completed && (
+                                            <div className="corrected-checkbox-wrapper">
+                                                <label htmlFor={`corrected-${assign.id}`}>Corrigé</label>
+                                                <input
+                                                    type="checkbox"
+                                                    id={`corrected-${assign.id}`}
+                                                    title="Corrigé ?"
+                                                    checked={!!assign.is_corrected}
+                                                    onChange={() => upsertAssignment({ id: assign.id, is_corrected: !assign.is_corrected })}
+                                                />
+                                            </div>
+                                        )}
                                         <button className="btn-edit" onClick={() => handleEditAssignment(assign)}>✏️</button>
                                     </div>
                                 );
@@ -314,7 +331,6 @@ const Journal = () => {
                                 <div className="form-group"><label>Matière *</label><input type="text" value={assignmentForm.subject} onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })} required /></div>
                                 <div className="form-group"><label>Type *</label><select value={assignmentForm.type} onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })} required>{assignmentTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
                                 <div className="form-group"><label>Description</label><textarea value={assignmentForm.description} onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })} rows="3" /></div>
-
                                 <div className="form-group">
                                     <label>Date d'échéance *</label>
                                     <select value={assignmentForm.due_date} onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })} required disabled={!assignmentForm.class_id || availableDueDates.length === 0}>
@@ -325,7 +341,6 @@ const Journal = () => {
                                     </select>
                                     <small className="form-hint">Seuls les jours de cours pour la classe sélectionnée sont affichés.</small>
                                 </div>
-
                                 <div className="form-group checkbox-group"><input type="checkbox" id="completed" checked={assignmentForm.is_completed} onChange={(e) => setAssignmentForm({ ...assignmentForm, is_completed: e.target.checked })} /><label htmlFor="completed">Terminé</label></div>
                             </div>
                             <div className="modal-footer">

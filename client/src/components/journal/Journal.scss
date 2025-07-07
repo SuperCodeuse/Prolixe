@@ -498,3 +498,18 @@ textarea {
   font-size: 1.1rem;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
+
+.corrected-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border-color);
+
+  label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+}

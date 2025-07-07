@@ -29,8 +29,6 @@ export default function ImportJournal() {
             const text = await file.text();
             const jsonData = JSON.parse(text);
 
-            console.log('JSON parsé:', jsonData);
-
             const response = await importService.importJournal(jsonData);
             setResult(response.data);
 

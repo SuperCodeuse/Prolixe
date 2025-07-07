@@ -153,7 +153,6 @@ class ClassController {
         }
 
         try {
-            console.log(`🔍 Tentative de récupération de la classe ID: ${id}`);
             const classData = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
                     SELECT
@@ -198,7 +197,6 @@ class ClassController {
         }
 
         try {
-            console.log(`➕ Tentative de création de la classe: ${name.trim()}`);
             const newClass = await ClassController.withConnection(async (connection) => {
                 // Vérifier l'unicité du nom
                 const [existing] = await connection.execute(
@@ -269,7 +267,6 @@ class ClassController {
         }
 
         try {
-            console.log(`📝 Tentative de mise à jour de la classe ID: ${id}`);
             const updatedClass = await ClassController.withConnection(async (connection) => {
                 // Vérifier que la classe existe
                 const [existing] = await connection.execute(
@@ -377,7 +374,6 @@ class ClassController {
         }
 
         try {
-            console.log(`🗑️ Tentative de suppression de la classe ID: ${id}`);
             const deletedClassInfo = await ClassController.withConnection(async (connection) => {
                 // Récupérer les infos de la classe avant suppression
                 const [classToDelete] = await connection.execute(
@@ -438,7 +434,6 @@ class ClassController {
                 return result[0];
             });
 
-            console.log('✅ Statistiques des classes récupérées.');
             res.json({
                 success: true,
                 data: {
