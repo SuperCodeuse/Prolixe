@@ -2,57 +2,26 @@
 import React, { useState } from 'react';
 import ClassesManager from "./Class/ClassManager";
 import ScheduleManager from "./Schedule/ScheduleManager";
+import HolidaysManager from "./holidays/HolidaysManager";
 import './Settings.scss';
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('classes');
 
     const settingsTabs = [
-        {
-            id: 'classes',
-            label: 'Classes',
-            icon: '🏫',
-            component: ClassesManager
-        },
-        {
-            id: 'schedule',
-            label: 'Horaire',
-            icon: '⏰',
-            component: ScheduleManager
-        },
-        {
-            id: 'preferences',
-            label: 'Préférences',
-            icon: '⚙️'
-        },
-        {
-            id: 'notifications',
-            label: 'Notifications',
-            icon: '🔔'
-        },
-        {
-            id: 'security',
-            label: 'Sécurité',
-            icon: '🔒'
-        }
+        { id: 'classes', label: 'Classes', icon: '🏫' },
+        { id: 'schedule', label: 'Horaire', icon: '⏰' },
+        { id: 'holidays', label: 'Calendrier', icon: '📅' }, // <-- 2. Ajouter l'onglet
+        // ... autres onglets
     ];
 
     const renderTabContent = () => {
-        const activeTabData = settingsTabs.find(tab => tab.id === activeTab);
-
         switch (activeTab) {
-            case 'classes':
-                return <ClassesManager />;
-            case 'schedule':
-                return <ScheduleManager />;
-            case 'preferences':
-                return <PreferencesSettings />;
-            case 'notifications':
-                return <NotificationsSettings />;
-            case 'security':
-                return <SecuritySettings />;
-            default:
-                return <ClassesManager />;
+            case 'classes': return <ClassesManager />;
+            case 'schedule': return <ScheduleManager />;
+            case 'holidays': return <HolidaysManager />; // <-- 3. Gérer le rendu
+            // ... autres cas
+            default: return <ClassesManager />;
         }
     };
 
