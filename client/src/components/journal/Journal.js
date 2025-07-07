@@ -24,7 +24,7 @@ const Journal = () => {
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
-    const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
+    const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: '', is_completed: false });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [journalDebounce, setJournalDebounce] = useState({});
     const [showJournalModal, setShowJournalModal] = useState(false);
@@ -84,22 +84,48 @@ const Journal = () => {
 
     const isSchoolDay = useCallback((date) => {
         const dayOfWeek = getDay(date);
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Dimanche ou Samedi
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = getHolidayForDate(date) !== null;
         return !isWeekend && !isHoliday;
     }, [getHolidayForDate]);
 
     const isCourseDayForClass = useCallback((classId, date) => {
-        if (!classId || !date || !schedule.data) {
-            return false;
-        }
+        if (!classId || !date || !schedule.data) return false;
         const dayKey = getDayKeyFromDateFnsString(format(date, 'EEEE', { locale: fr }).toLowerCase());
-
-        return Object.values(schedule.data).some(course =>
-            // CORRECTION : Utiliser 'classId' au lieu de 'class_id' pour correspondre aux données du schedule
-            course.day === dayKey && course.classId === classId
-        );
+        return Object.values(schedule.data).some(course => course.day === dayKey && course.classId === classId);
     }, [schedule.data, getDayKeyFromDateFnsString]);
+
+    // MODIFIÉ : Génère les dates disponibles en se basant sur la semaine affichée
+    const availableDueDates = useMemo(() => {
+        const dates = [];
+        const { class_id } = assignmentForm;
+        if (!class_id) return [];
+
+        // On parcourt les 5 jours de la semaine affichée
+        for (let i = 0; i < 5; i++) {
+            const date = addDays(currentWeekStart, i);
+            if (isCourseDayForClass(class_id, date) && isSchoolDay(date)) {
+                dates.push({
+                    value: format(date, 'yyyy-MM-dd'),
+                    label: format(date, 'EEEE dd MMMM', { locale: fr }) // Format plus court et plus clair
+                });
+            }
+        }
+        return dates;
+    }, [assignmentForm.class_id, currentWeekStart, isCourseDayForClass, isSchoolDay]);
+
+    useEffect(() => {
+        if (showAssignmentModal) {
+            if (assignmentForm.class_id && availableDueDates.length > 0) {
+                const isCurrentDateValid = availableDueDates.some(d => d.value === assignmentForm.due_date);
+                if (!isCurrentDateValid) {
+                    setAssignmentForm(prev => ({ ...prev, due_date: availableDueDates[0].value }));
+                }
+            } else {
+                setAssignmentForm(prev => ({ ...prev, due_date: '' }));
+            }
+        }
+    }, [assignmentForm.class_id, availableDueDates, showAssignmentModal]);
 
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
@@ -131,7 +157,7 @@ const Journal = () => {
 
     const handleAddAssignment = useCallback(() => {
         setSelectedAssignment(null);
-        setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: format(new Date(), 'yyyy-MM-dd'), is_completed: false });
+        setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', title: '', description: '', due_date: '', is_completed: false });
         setShowAssignmentModal(true);
     }, []);
 
@@ -142,9 +168,8 @@ const Journal = () => {
             class_id: assignment.class_id,
             subject: assignment.subject,
             type: assignment.type,
-            title: assignment.title,
             description: assignment.description || '',
-            due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+            due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : '',
             is_completed: assignment.is_completed
         });
         setShowAssignmentModal(true);
@@ -152,25 +177,10 @@ const Journal = () => {
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
-        if (!assignmentForm.class_id || typeof assignmentForm.class_id !== 'number' || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.title || !assignmentForm.due_date) {
+        if (!assignmentForm.class_id || typeof assignmentForm.class_id !== 'number' || !assignmentForm.subject || !assignmentForm.type  || !assignmentForm.due_date) {
             showError('Veuillez remplir tous les champs obligatoires.');
             return;
         }
-
-        const dueDate = parseISO(assignmentForm.due_date);
-
-        if (!isSchoolDay(dueDate)) {
-            showError("La date d'échéance ne peut pas être un week-end ou un jour de congé.");
-            return;
-        }
-
-        if (!isCourseDayForClass(assignmentForm.class_id, dueDate)) {
-            const selectedClass = getClassInfo(assignmentForm.class_id);
-            const className = selectedClass ? `"${selectedClass.name}"` : 'cette classe';
-            showError(`La classe ${className} n'a pas cours le jour sélectionné.`);
-            return;
-        }
-
         try {
             await upsertAssignment(assignmentForm);
             success('Assignation sauvegardée !');
@@ -178,7 +188,7 @@ const Journal = () => {
         } catch (err) {
             showError(`Erreur: ${err.message || 'Impossible de sauvegarder l\'assignation'}`);
         }
-    }, [assignmentForm, upsertAssignment, success, showError, isSchoolDay, isCourseDayForClass, getClassInfo]);
+    }, [assignmentForm, upsertAssignment, success, showError]);
 
     const handleDeleteAssignment = useCallback(async () => {
         if (!selectedAssignment?.id) return;
@@ -303,9 +313,19 @@ const Journal = () => {
                                 <div className="form-group"><label>Classe *</label><select value={assignmentForm.class_id} onChange={(e) => setAssignmentForm({ ...assignmentForm, class_id: e.target.value ? parseInt(e.target.value, 10) : '' })} required><option value="">Sélectionnez une classe</option>{classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name} (Niveau: {cls.level})</option>)}</select></div>
                                 <div className="form-group"><label>Matière *</label><input type="text" value={assignmentForm.subject} onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })} required /></div>
                                 <div className="form-group"><label>Type *</label><select value={assignmentForm.type} onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })} required>{assignmentTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
-                                <div className="form-group"><label>Titre *</label><input type="text" value={assignmentForm.title} onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })} required /></div>
                                 <div className="form-group"><label>Description</label><textarea value={assignmentForm.description} onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })} rows="3" /></div>
-                                <div className="form-group"><label>Date d'échéance *</label><input type="date" value={assignmentForm.due_date} onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })} required /><small className="form-hint">La date doit être un jour de cours.</small></div>
+
+                                <div className="form-group">
+                                    <label>Date d'échéance *</label>
+                                    <select value={assignmentForm.due_date} onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })} required disabled={!assignmentForm.class_id || availableDueDates.length === 0}>
+                                        <option value="">{assignmentForm.class_id ? (availableDueDates.length > 0 ? 'Sélectionnez une date' : 'Aucun jour de cours disponible') : 'Sélectionnez d\'abord une classe'}</option>
+                                        {availableDueDates.map(date => (
+                                            <option key={date.value} value={date.value}>{date.label}</option>
+                                        ))}
+                                    </select>
+                                    <small className="form-hint">Seuls les jours de cours pour la classe sélectionnée sont affichés.</small>
+                                </div>
+
                                 <div className="form-group checkbox-group"><input type="checkbox" id="completed" checked={assignmentForm.is_completed} onChange={(e) => setAssignmentForm({ ...assignmentForm, is_completed: e.target.checked })} /><label htmlFor="completed">Terminé</label></div>
                             </div>
                             <div className="modal-footer">
@@ -324,7 +344,7 @@ const Journal = () => {
                         <div className="modal-header"><h3>Notes pour {selectedCourseForJournal.subject} le {format(parseISO(selectedDayForJournal.key), 'EEEE dd/MM', { locale: fr })}</h3><button className="modal-close" onClick={handleCloseJournalModal}>×</button></div>
                         <div className="modal-body-content">
                             {(() => {
-                                const classInfo = getClassInfo(selectedCourseForJournal.class_id);
+                                const classInfo = getClassInfo(selectedCourseForJournal.classId);
                                 const courseColor = getClassColor(selectedCourseForJournal.subject, classInfo?.level);
                                 return (<div className="slot-info" style={{ borderLeftColor: courseColor || '#cccccc' }}><strong>{selectedCourseForJournal.time_slot_libelle} - {selectedCourseForJournal.room}</strong><p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>Classe: {classInfo?.name || 'Inconnue'}</p></div>);
                             })()}

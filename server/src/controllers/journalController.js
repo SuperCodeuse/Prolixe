@@ -159,7 +159,7 @@ class JournalController {
     static async getAssignments(req, res) {
         const { classId, startDate, endDate } = req.query; // Filtrer par classe ou par date
         let query = `
-            SELECT a.id, a.type, a.title, a.description, a.due_date, a.is_completed,
+            SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
                    c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
             FROM ASSIGNMENT a
             JOIN CLASS c ON a.class_id = c.id
@@ -197,9 +197,9 @@ class JournalController {
      * Crée ou met à jour une assignation.
      */
     static async upsertAssignment(req, res) {
-        const { id, class_id, subject, type, title, description, due_date, is_completed } = req.body;
+        const { id, class_id, subject, type, description, due_date, is_completed } = req.body;
 
-        if (!class_id || !subject || !type || !title || !due_date) {
+        if (!class_id || !subject || !type || !due_date) {
             return JournalController.handleError(res, new Error('Tous les champs obligatoires sont requis.'), 'Données invalides.', 400);
         }
 
@@ -208,15 +208,15 @@ class JournalController {
                 if (id) {
                     // Mettre à jour
                     await connection.execute(
-                        'UPDATE ASSIGNMENT SET class_id = ?, subject = ?, type = ?, title = ?, description = ?, due_date = ?, is_completed = ? WHERE id = ?',
-                        [parseInt(class_id), subject, type, title, description, due_date, is_completed, id]
+                        'UPDATE ASSIGNMENT SET class_id = ?, subject = ?, type = ?, description = ?, due_date = ?, is_completed = ? WHERE id = ?',
+                        [parseInt(class_id), subject, type, description, due_date, is_completed, id]
                     );
                     return { type: 'updated', id };
                 } else {
                     // Insérer
                     const [insertResult] = await connection.execute(
-                        'INSERT INTO ASSIGNMENT (class_id, subject, type, title, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                        [parseInt(class_id), subject, type, title, description, due_date, is_completed]
+                        'INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)',
+                        [parseInt(class_id), subject, type, description, due_date, is_completed]
                     );
                     return { type: 'created', id: insertResult.insertId };
                 }
@@ -225,7 +225,7 @@ class JournalController {
             // Récupérer l'assignation complète après upsert pour le frontend
             const [assignment] = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT a.id, a.type, a.title, a.description, a.due_date, a.is_completed,
+                    SELECT a.id, a.type, a.description, a.due_date, a.is_completed,
                            c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
                     FROM ASSIGNMENT a
                     JOIN CLASS c ON a.class_id = c.id
