@@ -1,97 +1,58 @@
 // dashboard.jsx
 import React from 'react';
+import { useClasses } from '../../hooks/useClasses';
+import { useSchedule } from '../../hooks/useSchedule';
+import { useJournal } from '../../hooks/useJournal';
+import { format, getDay } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import '../../App.scss';
 import './dashboard.scss';
 
 const Dashboard = () => {
-    // Données d'exemple pour les statistiques
+    const { classes } = useClasses();
+    const { schedule } = useSchedule();
+    const { assignments } = useJournal();
+
+    // --- Statistiques dynamiques ---
+    const programmedAssignments = assignments.filter(a => !a.is_completed).length;
+    const pendingCorrections = assignments.filter(a => a.is_completed && !a.is_corrected).length;
+
+    // --- Emploi du temps du jour ---
+    const dayOfWeekMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayKey = dayOfWeekMap[getDay(new Date())];
+    const todaySchedule = Object.values(schedule.data || {}).filter(course => course.day === todayKey);
+
     const stats = [
         {
             title: 'Total Classes',
-            value: '12',
+            value: classes.length,
             icon: '🏫',
             color: 'primary',
-            trend: '+2 ce mois'
         },
         {
-            title: 'Cours cette semaine',
-            value: '24',
+            title: 'Cours aujourd\'hui',
+            value: todaySchedule.length,
             icon: '📚',
             color: 'info',
-            trend: '6 cours/jour'
         },
         {
-            title: 'Devoirs à corriger',
-            value: '45',
+            title: 'Devoirs programmés',
+            value: programmedAssignments,
             icon: '📝',
             color: 'warning',
-            trend: '3 nouvelles'
         },
         {
-            title: 'Étudiants actifs',
-            value: '285',
-            icon: '👨‍🎓',
+            title: 'Corrections en attente',
+            value: pendingCorrections,
+            icon: '✍️',
             color: 'success',
-            trend: '+15 ce mois'
         }
     ];
 
-    // Cours du jour
-    const todaySchedule = [
-        {
-            time: '08:00',
-            subject: 'Mathématiques',
-            class: '3ème A',
-            room: 'Salle 101',
-            type: 'cours'
-        },
-        {
-            time: '10:00',
-            subject: 'Physique',
-            class: '2ème B',
-            room: 'Labo 1',
-            type: 'tp'
-        },
-        {
-            time: '14:00',
-            subject: 'Mathématiques',
-            class: '1ère C',
-            room: 'Salle 105',
-            type: 'cours'
-        },
-        {
-            time: '16:00',
-            subject: 'Contrôle',
-            class: '3ème A',
-            room: 'Salle 101',
-            type: 'evaluation'
-        }
-    ];
+    // --- Tâches à faire ---
+    const assignmentsToCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
+    const upcomingAssignments = assignments.filter(a => !a.is_completed).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 5);
 
-    // Tâches récentes
-    const recentTasks = [
-        {
-            id: 1,
-            title: 'Corriger les devoirs de Math - 3ème A',
-            deadline: '2024-01-15',
-            priority: 'high',
-            completed: false
-        },
-        {
-            id: 2,
-            title: 'Préparer l\'examen de Physique',
-            deadline: '2024-01-18',
-            priority: 'medium',
-            completed: false
-        },
-        {
-            id: 3,
-            title: 'Réunion parents-professeurs',
-            deadline: '2024-01-20',
-            priority: 'low',
-            completed: true
-        }
-    ];
 
     return (
         <div className="dashboard">
@@ -102,12 +63,12 @@ const Dashboard = () => {
                     <p>Vue d'ensemble de vos activités d'enseignement</p>
                 </div>
                 <div className="header-date">
-          <span>{new Date().toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-          })}</span>
+                    <span>{new Date().toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })}</span>
                 </div>
             </div>
 
@@ -117,7 +78,6 @@ const Dashboard = () => {
                     <div key={index} className={`stat-card ${stat.color}`}>
                         <div className="stat-header">
                             <div className="stat-icon">{stat.icon}</div>
-                            <div className="stat-trend">{stat.trend}</div>
                         </div>
                         <div className="stat-content">
                             <h3>{stat.value}</h3>
@@ -135,52 +95,52 @@ const Dashboard = () => {
                         <button className="view-all-btn">Voir tout</button>
                     </div>
                     <div className="schedule-list">
-                        {todaySchedule.map((item, index) => (
-                            <div key={index} className={`schedule-item ${item.type}`}>
-                                <div className="schedule-time">
-                                    <span>{item.time}</span>
+                        {todaySchedule.length > 0 ? todaySchedule.map((item, index) => {
+                            const classInfo = classes.find(c => c.id === item.classId);
+                            return (
+                                <div key={index} className="schedule-item">
+                                    <div className="schedule-time">
+                                        <span>{item.time_slot_libelle.split('-')[0]}</span>
+                                    </div>
+                                    <div className="schedule-details">
+                                        <h4>{item.subject}</h4>
+                                        <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
+                                    </div>
                                 </div>
-                                <div className="schedule-details">
-                                    <h4>{item.subject}</h4>
-                                    <p>{item.class} - {item.room}</p>
-                                </div>
-                                <div className={`schedule-type ${item.type}`}>
-                                    {item.type === 'cours' && '📚'}
-                                    {item.type === 'tp' && '🧪'}
-                                    {item.type === 'evaluation' && '📝'}
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        }) : <p>Aucun cours programmé pour aujourd'hui.</p>}
                     </div>
                 </div>
 
-                {/* Recent Tasks */}
+                {/* "À faire" Section */}
                 <div className="dashboard-section">
                     <div className="section-header">
-                        <h2>✅ Tâches récentes</h2>
-                        <button className="view-all-btn">Voir tout</button>
+                        <h2>✅ À faire</h2>
                     </div>
                     <div className="tasks-list">
-                        {recentTasks.map((task) => (
-                            <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
-                                <div className="task-checkbox">
-                                    <input
-                                        type="checkbox"
-                                        checked={task.completed}
-                                        onChange={() => {}}
-                                    />
+                        <h4>Corrections en attente</h4>
+                        {assignmentsToCorrect.length > 0 ? (
+                            assignmentsToCorrect.map(task => (
+                                <div key={task.id} className="task-item">
+                                    <div className="task-content">
+                                        <h4>{task.subject} - {classes.find(c => c.id === task.class_id)?.name}</h4>
+                                        <p>Remis le: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
+                                    </div>
                                 </div>
-                                <div className="task-content">
-                                    <h4>{task.title}</h4>
-                                    <p>Échéance: {new Date(task.deadline).toLocaleDateString('fr-FR')}</p>
+                            ))
+                        ) : <p>Aucune correction en attente.</p>}
+
+                        <h4 style={{marginTop: '1.5rem'}}>Prochains devoirs</h4>
+                        {upcomingAssignments.length > 0 ? (
+                            upcomingAssignments.map(task => (
+                                <div key={task.id} className="task-item">
+                                    <div className="task-content">
+                                        <h4>{task.subject} - {classes.find(c => c.id === task.class_id)?.name}</h4>
+                                        <p>À rendre le: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
+                                    </div>
                                 </div>
-                                <div className={`task-priority ${task.priority}`}>
-                                    {task.priority === 'high' && '🔴'}
-                                    {task.priority === 'medium' && '🟡'}
-                                    {task.priority === 'low' && '🟢'}
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : <p>Aucun devoir programmé.</p>}
                     </div>
                 </div>
             </div>

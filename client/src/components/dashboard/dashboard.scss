@@ -273,3 +273,15 @@
         grid-template-columns: 1fr;
     }
 }
+
+.tasks-list h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.task-item .task-content {
+    flex-grow: 1;
+}

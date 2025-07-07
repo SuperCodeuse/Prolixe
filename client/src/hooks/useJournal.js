@@ -30,7 +30,7 @@ export const useJournal = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, []); // Les fonctions de mise à jour d'état (set...) sont stables et n'ont pas besoin d'être listées.
 
     // Fetch assignments
     const fetchAssignments = useCallback(async (classId, startDate, endDate) => {
@@ -44,7 +44,14 @@ export const useJournal = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, []); // Les fonctions de mise à jour d'état (set...) sont stables et n'ont pas besoin d'être listées.
+
+    // **NOUVEAU useEffect pour charger les données au montage**
+    useEffect(() => {
+        // Charger toutes les assignations au démarrage
+        fetchAssignments();
+    }, [fetchAssignments]);
+
 
     // Upsert journal entry
     const upsertJournalEntry = useCallback(async (entryData) => {
