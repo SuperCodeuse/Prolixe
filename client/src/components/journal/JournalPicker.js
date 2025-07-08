@@ -33,9 +33,12 @@ const JournalPicker = () => {
                         <h2>Journaux Archivés</h2>
                         <div className="archived-list">
                             {archived.map(journal => (
-                                <button key={journal.id} className="journal-button" onClick={() => selectJournal(journal)}>
-                                    {journal.name} <span>({journal.school_year})</span>
-                                </button>
+                                <div key={journal.id} style={{ display: 'flex', gap: '1rem' }}>
+                                    <button className="journal-button" onClick={() => selectJournal(journal)}>
+                                        {journal.name} <span>({journal.school_year})</span>
+                                    </button>
+                                    <button className="journal-button" disabled>Exporter</button>
+                                </div>
                             ))}
                         </div>
                     </div>

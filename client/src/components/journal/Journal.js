@@ -122,13 +122,13 @@ const JournalView = () => {
     }, [assignmentForm.class_id, currentWeekStart, isCourseDayForClass, isSchoolDay]);
 
     useEffect(() => {
-        if (showAssignmentModal && assignmentForm.class_id && availableDueDates.length > 0) {
-            const isCurrentDateValid = availableDueDates.some(d => d.value === assignmentForm.due_date);
-            if (!isCurrentDateValid) {
-                setAssignmentForm(prev => ({ ...prev, due_date: availableDueDates[0].value }));
-            }
+        if (loadingSchedule || loadingHolidays) return;
+        if (!errorSchedule && schedule) {
+            const endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1, locale: fr });
+            fetchJournalEntries(format(currentWeekStart, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'));
+            fetchAssignments(null, format(currentWeekStart, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'));
         }
-    }, [assignmentForm.class_id, availableDueDates, showAssignmentModal, assignmentForm.due_date]);
+    }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments, currentJournal]);
 
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);

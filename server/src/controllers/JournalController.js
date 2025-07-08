@@ -164,49 +164,62 @@ class JournalController {
 
                 const dayKey = getDayKeyFromDate(sessionDate);
 
-                for (const activity of sessionData.activites) {
-                    const activityTime = activity.heure.replace('h', ':');
-
-                    // Trouver le time_slot_id correspondant
-                    const timeSlotId = Array.from(timeSlotMap.keys()).find(libelle => libelle.startsWith(activityTime))?.[1];
-
-                    if (!timeSlotId) {
-                        console.warn(`Créneau horaire non trouvé pour ${activityTime} le ${sessionData.date}`);
-                        continue;
-                    }
-
-                    // Trouver le schedule_id
-                    const scheduleEntry = schedule.find(s =>
-                        s.day === dayKey && s.time_slot_id === timeSlotId
-                    );
-
-                    if (!scheduleEntry) {
-                        console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
+                for (const sessionData of jsonData) {
+                    const sessionDate = parseFrenchDate(sessionData.date);
+                    if (!sessionDate) {
+                        console.warn(`Date invalide ignorée: ${sessionData.date}`);
                         skippedCount++;
                         continue;
                     }
 
-                    const entryToInsert = {
-                        journal_id: journalId,
-                        schedule_id: scheduleEntry.id,
-                        date: sessionDate,
-                        planned_work: activity.description,
-                        notes: sessionData.remediation?.map(r => r.description).join('\n') || null
-                    };
+                    const dayKey = getDayKeyFromDate(sessionDate);
 
-                    await connection.execute(
-                        'INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?)',
-                        [entryToInsert.journal_id, entryToInsert.schedule_id, entryToInsert.date, entryToInsert.planned_work, entryToInsert.notes]
-                    );
-                    importedCount++;
+                    for (const activity of sessionData.activites) {
+                        const activityTime = activity.heure.replace('h', ':');
+
+                        // Trouver le time_slot_id correspondant
+                        const foundLibelle = Array.from(timeSlotMap.keys()).find(libelle => libelle.startsWith(activityTime));
+                        const timeSlotId = foundLibelle ? timeSlotMap.get(foundLibelle) : undefined;
+
+
+                        if (!timeSlotId) {
+                            console.warn(`Créneau horaire non trouvé pour ${activityTime} le ${sessionData.date}`);
+                            continue;
+                        }
+
+                        // Trouver le schedule_id
+                        const scheduleEntry = schedule.find(s =>
+                            s.day === dayKey && s.time_slot_id === timeSlotId
+                        );
+
+                        if (!scheduleEntry) {
+                            console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
+                            skippedCount++;
+                            continue;
+                        }
+
+                        const plannedWorkDescription = activity.description;
+                        const notesDescription = sessionData.remediation?.map(r => r.description).join('\n') || '';
+
+                        // *** Voici la correction clé ***
+                        await connection.execute(
+                            `INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes)
+                             VALUES (?, ?, ?, ?, ?)
+                             ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)),
+                                                     notes        = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`,
+                            [journalId, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]
+                        );
+                        importedCount++;
+                    }
                 }
             }
+
 
             await connection.commit();
 
             res.json({
                 success: true,
-                message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées.`,
+                message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées, ${skippedCount} ignorées.`,
                 data: { newJournalId: journalId, itemsImported: importedCount, itemsSkipped: skippedCount, totalItems: jsonData.length }
             });
 
@@ -218,8 +231,6 @@ class JournalController {
             if (connection) connection.release();
         }
     }
-
-
     /**
      * Récupère le journal actuellement défini comme "courant".
      */
