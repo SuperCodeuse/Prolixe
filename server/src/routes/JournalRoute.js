@@ -1,7 +1,7 @@
 // backend/routes/journalRoutes.js
 const express = require('express');
 const router = express.Router();
-const JournalController = require('../controllers/JournalController'); // Assurez-vous que le chemin est correct
+const JournalController = require('../controllers/JournalController');
 const multer = require('multer');
 
 const storage = multer.memoryStorage();
@@ -19,6 +19,9 @@ router.get('/archived', JournalController.getArchivedJournals);
 router.get('/entries', JournalController.getJournalEntries);
 router.put('/entries', JournalController.upsertJournalEntry); // Upsert (créer/mettre à jour)
 router.delete('/entries/:id', JournalController.deleteJournalEntry);
+// Nouvelle route pour vider un journal
+router.delete('/entries/clear/:journal_id', JournalController.clearJournal);
+
 
 // Routes pour les assignations (interros/devoirs)
 router.get('/assignments', JournalController.getAssignments);

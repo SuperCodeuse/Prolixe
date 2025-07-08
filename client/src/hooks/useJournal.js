@@ -8,7 +8,7 @@ export const JournalProvider = ({ children }) => {
     const [journals, setJournals] = useState([]);
     const [currentJournal, setCurrentJournal] = useState(null);
     const [archivedJournals, setArchivedJournals] = useState([]);
-    const [journalEntries, setJournalEntries] = useState([]); // Changé pour un tableau
+    const [journalEntries, setJournalEntries] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -42,6 +42,17 @@ export const JournalProvider = ({ children }) => {
             localStorage.setItem('prolixe_currentJournalId', journal.id);
         }
     };
+
+    const clearJournal = useCallback(async (journalId) => {
+        try {
+            await JournalService.clearJournal(journalId);
+            if (currentJournal && currentJournal.id === journalId) {
+                setJournalEntries([]);
+            }
+        } catch (err) {
+            throw err;
+        }
+    }, [currentJournal]);
 
     const createJournal = useCallback(async (journalData) => {
         try {
@@ -158,7 +169,7 @@ export const JournalProvider = ({ children }) => {
     const value = {
         journals, currentJournal, archivedJournals, selectJournal, loadAllJournals, createJournal, archiveJournal,
         journalEntries, assignments, loading, error, fetchJournalEntries, fetchAssignments,
-        upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment,
+        upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment,clearJournal
     };
 
     return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;

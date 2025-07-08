@@ -124,9 +124,9 @@ class JournalController {
                         skippedCount++;
                         continue;
                     }
-                    const plannedWorkDescription = activity.description;
+                    const actual_work = activity.description;
                     const notesDescription = sessionData.remediation?.map(r => r.description).join('\n') || '';
-                    await connection.execute(`INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)), notes = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`, [journal_id, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]);
+                    await connection.execute(`INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, actual_work, notes) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE actual_work = CONCAT(IFNULL(actual_work, ''), '\\n', VALUES(actual_work)), notes = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`, [journal_id, scheduleEntry.id, sessionDate, actual_work, notesDescription]);
                     importedCount++;
                 }
             }
@@ -233,6 +233,25 @@ class JournalController {
             res.json({ success: true, message: 'Entrée de journal supprimée avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, "Erreur lors de la suppression de l'entrée de journal.");
+        }
+    }
+
+    static async clearJournal(req, res) {
+        const { journal_id } = req.params;
+        if (!journal_id || isNaN(parseInt(journal_id))) {
+            return JournalController.handleError(res, new Error('ID de journal invalide'), "ID de journal invalide.", 400);
+        }
+        try {
+            const result = await JournalController.withConnection(async (connection) => {
+                const [deleteResult] = await connection.execute(
+                    'DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?',
+                    [parseInt(journal_id)]
+                );
+                return deleteResult;
+            });
+            res.json({ success: true, message: `Journal vidé avec succès. ${result.affectedRows} entrée(s) supprimée(s).`, data: { deletedCount: result.affectedRows } });
+        } catch (error) {
+            JournalController.handleError(res, error, "Erreur lors du vidage du journal.");
         }
     }
 

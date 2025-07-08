@@ -14,6 +14,7 @@ const JournalManager = () => {
         selectJournal,
         createJournal,
         archiveJournal,
+        clearJournal,
         loading,
         error,
         loadAllJournals,
@@ -26,6 +27,23 @@ const JournalManager = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
     const [importTargetJournalId, setImportTargetJournalId] = useState(''); // Nouvel état
+
+    const handleClear = (journal) => {
+        showConfirmModal(
+            'Vider le journal',
+            `Êtes-vous sûr de vouloir vider le journal "${journal.name}" ? Toutes ses entrées seront définitivement supprimées. Cette action est irréversible.`,
+            async () => {
+                try {
+                    await clearJournal(journal.id);
+                    success(`Journal "${journal.name}" vidé avec succès.`);
+                    closeConfirmModal();
+                } catch (err) {
+                    showError(err.message || "Erreur lors du vidage du journal.");
+                    closeConfirmModal();
+                }
+            }
+        );
+    };
 
     const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -168,7 +186,8 @@ const JournalManager = () => {
                             </div>
                             <div className="journal-actions">
                                 <span className="status-badge current">Actif</span>
-                                <button onClick={() => handleArchive(currentJournal)} className="btn-archive" disabled={journals.length <= 1}>Archiver</button>
+                                <button onClick={() => handleClear(currentJournal)} className="btn-clear">Vider</button>
+                                <button onClick={() => handleArchive(currentJournal)} className="btn-archive" disabled={journals.filter(j => !j.is_archived).length <= 1}>Archiver</button>
                             </div>
                         </div>
                     ) : (
@@ -187,6 +206,7 @@ const JournalManager = () => {
                                 </div>
                                 <div className="journal-actions">
                                     <button onClick={() => selectJournal(journal)} className="btn-select">Sélectionner</button>
+                                    <button onClick={() => handleClear(journal)} className="btn-clear">Vider</button>
                                     <button onClick={() => handleArchive(journal)} className="btn-archive">Archiver</button>
                                 </div>
                             </div>

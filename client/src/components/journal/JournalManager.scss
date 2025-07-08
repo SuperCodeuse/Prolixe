@@ -148,3 +148,21 @@
   display: flex;
 }
 
+
+.journal-actions {
+  // ...
+  .btn-clear {
+    @include btn-secondary-base; // ou une autre base si vous préférez
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--accent-orange);
+    border: 1px solid var(--accent-dark-orange);
+    &:hover {
+      background: var(--red-transparent-sm);
+      color: var(--red-danger);
+      border-color: var(--red-danger);
+    }
+  }
+}
+

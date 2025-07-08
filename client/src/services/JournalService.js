@@ -62,6 +62,12 @@ class JournalService {
         });
     }
 
+    static async clearJournal(journalId) {
+        return ApiService.request(`${JOURNAL_API_URL}/entries/clear/${journalId}`, {
+            method: 'DELETE',
+        });
+    }
+
     // --- Assignments ---
     static async getAssignments(classId = '', startDate = '', endDate = '') {
         let query = `${JOURNAL_API_URL}/assignments`;
