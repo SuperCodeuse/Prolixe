@@ -14,11 +14,6 @@ import { fr } from 'date-fns/locale';
 
 const Journal = () => {
     const { currentJournal, loading } = useJournal();
-
-    if (loading) {
-        return <div>Chargement...</div>;
-    }
-
     return currentJournal ? <JournalView /> : <JournalPicker />;
 };
 

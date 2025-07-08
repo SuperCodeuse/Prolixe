@@ -56,6 +56,28 @@ export const JournalProvider = ({ children }) => {
         }
     };
 
+    const createJournal = useCallback(async (journalData) => {
+        try {
+            const response = await JournalService.createJournal(journalData);
+            await loadAllJournals(); // Recharger pour mettre à jour la liste et le journal courant
+            return response.data;
+        } catch (err) {
+            setError(err.message || "Erreur lors de la création du journal.");
+            throw err;
+        }
+    }, [loadAllJournals]);
+
+    const archiveJournal = useCallback(async (journalId) => {
+        try {
+            await JournalService.archiveJournal(journalId);
+            await loadAllJournals(); // Recharger pour mettre à jour les listes
+        } catch (err) {
+            setError(err.message || "Erreur lors de l'archivage du journal.");
+            throw err;
+        }
+    }, [loadAllJournals]);
+
+
     // --- GESTION DES DONNÉES DU JOURNAL COURANT ---
 
     const fetchJournalEntries = useCallback(async (startDate, endDate) => {
@@ -167,6 +189,8 @@ export const JournalProvider = ({ children }) => {
         archivedJournals,
         selectJournal,
         loadAllJournals,
+        createJournal, // <-- Ajouté
+        archiveJournal, // <-- Ajouté
         journalEntries,
         assignments,
         loading,
@@ -182,7 +206,6 @@ export const JournalProvider = ({ children }) => {
     return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;
 };
 
-// 3. Le hook personnalisé pour consommer le contexte
 export const useJournal = () => {
     const context = useContext(JournalContext);
     if (!context) {

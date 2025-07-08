@@ -4,6 +4,7 @@ import ClassesManager from "./Class/ClassManager";
 import ScheduleManager from "./Schedule/ScheduleManager";
 import HolidaysManager from "./holidays/HolidaysManager";
 import './Settings.scss';
+import JournalManager from "../journal/JournalManager";
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('classes');
@@ -11,16 +12,17 @@ const Settings = () => {
     const settingsTabs = [
         { id: 'classes', label: 'Classes', icon: '🏫' },
         { id: 'schedule', label: 'Horaire', icon: '⏰' },
-        { id: 'holidays', label: 'Calendrier', icon: '📅' }, // <-- 2. Ajouter l'onglet
-        // ... autres onglets
+        { id: 'journals', label: 'Journaux', icon: '📚' },
+        { id: 'holidays', label: 'Calendrier', icon: '📅' },
+
     ];
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'classes': return <ClassesManager />;
             case 'schedule': return <ScheduleManager />;
-            case 'holidays': return <HolidaysManager />; // <-- 3. Gérer le rendu
-            // ... autres cas
+            case 'holidays': return <HolidaysManager />;
+            case 'journals': return <JournalManager />;
             default: return <ClassesManager />;
         }
     };
@@ -55,26 +57,5 @@ const Settings = () => {
         </div>
     );
 };
-
-const PreferencesSettings = () => (
-    <div className="settings-section">
-        <h2>⚙️ Préférences</h2>
-        <p>Préférences générales - À développer</p>
-    </div>
-);
-
-const NotificationsSettings = () => (
-    <div className="settings-section">
-        <h2>🔔 Notifications</h2>
-        <p>Paramètres de notifications - À développer</p>
-    </div>
-);
-
-const SecuritySettings = () => (
-    <div className="settings-section">
-        <h2>🔒 Sécurité</h2>
-        <p>Paramètres de sécurité - À développer</p>
-    </div>
-);
 
 export default Settings;

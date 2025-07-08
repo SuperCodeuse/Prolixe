@@ -1,0 +1,110 @@
+// client/src/components/settings/Journal/JournalManager.scss
+@import '../../App.scss';
+
+.journal-manager {
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  h2 {
+    color: var(--text-light);
+    margin: 0;
+  }
+
+  .journal-lists {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .journal-list {
+    h3 {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+  }
+
+  .journal-card {
+    background: var(--bg-dark-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s ease;
+
+    &:not(:last-child) {
+      margin-bottom: 1rem;
+    }
+
+    &.current {
+      border-left: 4px solid var(--accent-green);
+    }
+
+    &.archived {
+      opacity: 0.6;
+    }
+  }
+
+  .journal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    strong {
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    span {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+  }
+
+  .journal-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .status-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+
+    &.current {
+      background-color: rgba(var(--accent-green-rgb), 0.1);
+      color: var(--accent-green);
+    }
+
+    &.archived {
+      background-color: rgba(var(--accent-orange-rgb), 0.1);
+      color: var(--accent-orange);
+    }
+  }
+
+  .btn-select, .btn-archive {
+    @include btn-secondary-base;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-archive {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    &:hover {
+      background: var(--red-transparent-sm);
+      color: var(--red-danger);
+      border-color: var(--red-danger);
+    }
+  }
+}
