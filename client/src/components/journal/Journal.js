@@ -26,6 +26,7 @@ const JournalView = () => {
     const { success, error: showError } = useToast();
     const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
 
+    // --- STATES ---
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -37,9 +38,11 @@ const JournalView = () => {
     const [selectedDayForJournal, setSelectedDayForJournal] = useState(null);
     const [journalForm, setJournalForm] = useState({ planned_work: '', actual_work: '', notes: '' });
     const [currentJournalEntryId, setCurrentJournalEntryId] = useState(null);
+    const [nextCourseSlot, setNextCourseSlot] = useState(null);
+    const [copyToNextSlot, setCopyToNextSlot] = useState(false);
 
+    // --- MEMOS & CALLBACKS ---
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
-
     const assignmentTypes = ['Interro', 'Devoir', 'Projet', 'Examen', 'Autre'];
     const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday','saturday':'saturday','dimanche':'sunday'}[dayName]||dayName),[]);
 
@@ -63,22 +66,87 @@ const JournalView = () => {
 
     const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
 
-    const handleJournalEntryChange = useCallback(async (entryData, field, value) => {
-        const updatedEntryData = { ...entryData, [field]: value };
-        const keyForDebounce = `${updatedEntryData.schedule_id}-${updatedEntryData.date}`;
+    const handleFormChange = (field, value) => {
+        const newFormState = { ...journalForm, [field]: value };
+        setJournalForm(newFormState);
+
+        const keyForDebounce = `${selectedCourseForJournal.id}-${selectedDayForJournal.key}`;
         if (journalDebounce[keyForDebounce]) clearTimeout(journalDebounce[keyForDebounce]);
+
         const timeoutId = setTimeout(async () => {
             try {
-                const savedEntry = await upsertJournalEntry(updatedEntryData);
-                if (savedEntry && savedEntry.id) setCurrentJournalEntryId(savedEntry.id);
+                const currentEntryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+                const savedEntry = await upsertJournalEntry(currentEntryData);
+                if (savedEntry && savedEntry.id && !currentJournalEntryId) setCurrentJournalEntryId(savedEntry.id);
+
+                if (copyToNextSlot && nextCourseSlot) {
+                    const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
+                    const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...newFormState };
+                    await upsertJournalEntry(nextEntryData);
+                }
             } catch (err) {
-                showError('Erreur lors de la sauvegarde du journal', 3000);
+                showError('Erreur de sauvegarde: ' + err.message);
             } finally {
                 setJournalDebounce(prev => { const newState = { ...prev }; delete newState[keyForDebounce]; return newState; });
             }
         }, 1000);
+
         setJournalDebounce(prev => ({ ...prev, [keyForDebounce]: timeoutId }));
-    }, [upsertJournalEntry, showError, journalDebounce]);
+    };
+
+    const handleCopyToNextSlotChange = async (e) => {
+        const isChecked = e.target.checked;
+        setCopyToNextSlot(isChecked);
+
+        if (isChecked && nextCourseSlot) {
+            try {
+                const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
+                const nextEntryData = {
+                    id: nextEntry?.id || null,
+                    schedule_id: nextCourseSlot.id,
+                    date: selectedDayForJournal.key,
+                    ...journalForm // Copie l'état actuel du formulaire
+                };
+                await upsertJournalEntry(nextEntryData);
+                success('Notes copiées sur le créneau suivant.');
+            } catch (err) {
+                showError('Erreur lors de la copie: ' + err.message);
+                setCopyToNextSlot(false); // Annuler le cochage en cas d'erreur
+            }
+        }
+    };
+
+    const handleOpenJournalModal = useCallback((course, day) => {
+        setSelectedCourseForJournal(course);
+        setSelectedDayForJournal(day);
+        const entry = getJournalEntry(course.id, day.key);
+        setJournalForm({ planned_work: entry?.planned_work || '', actual_work: entry?.actual_work || '', notes: entry?.notes || '' });
+        setCurrentJournalEntryId(entry?.id || null);
+        setCopyToNextSlot(false);
+
+        const dayKeyForSchedule = getDayKeyFromDateFnsString(day.dayOfWeekKey);
+        const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
+        const currentIndex = coursesForThisDay.findIndex(c => c.id === course.id);
+        const nextCourse = (currentIndex !== -1 && currentIndex + 1 < coursesForThisDay.length) ? coursesForThisDay[currentIndex + 1] : null;
+
+        if (nextCourse && nextCourse.classId === course.classId && nextCourse.subject === course.subject) {
+            setNextCourseSlot(nextCourse);
+        } else {
+            setNextCourseSlot(null);
+        }
+
+        setShowJournalModal(true);
+    }, [getJournalEntry, getCoursesGroupedByDay, getDayKeyFromDateFnsString]);
+
+    const handleCloseJournalModal = useCallback(() => {
+        setShowJournalModal(false);
+        setSelectedCourseForJournal(null);
+        setSelectedDayForJournal(null);
+        setNextCourseSlot(null);
+        setCopyToNextSlot(false);
+        setJournalForm({ planned_work: '', actual_work: '', notes: '' });
+        setCurrentJournalEntryId(null);
+    }, []);
 
     const getClassInfo = useCallback((classId) => classes.find(cls => cls.id === classId), [classes]);
     const navigateWeek = useCallback((direction) => setCurrentWeekStart(prev => addDays(prev, direction * 7)), []);
@@ -86,9 +154,7 @@ const JournalView = () => {
 
     const isSchoolDay = useCallback((date) => {
         const dayOfWeek = getDay(date);
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isHoliday = getHolidayForDate(date) !== null;
-        return !isWeekend && !isHoliday;
+        return dayOfWeek !== 0 && dayOfWeek !== 6 && !getHolidayForDate(date);
     }, [getHolidayForDate]);
 
     const isCourseDayForClass = useCallback((classId, date) => {
@@ -99,12 +165,10 @@ const JournalView = () => {
 
     const availableDueDates = useMemo(() => {
         const dates = [];
-        const { class_id } = assignmentForm;
-        if (!class_id) return [];
-
+        if (!assignmentForm.class_id) return [];
         for (let i = 0; i < 5; i++) {
             const date = addDays(currentWeekStart, i);
-            if (isCourseDayForClass(class_id, date) && isSchoolDay(date)) {
+            if (isCourseDayForClass(assignmentForm.class_id, date) && isSchoolDay(date)) {
                 dates.push({ value: format(date, 'yyyy-MM-dd'), label: format(date, 'EEEE dd MMMM', { locale: fr }) });
             }
         }
@@ -112,30 +176,13 @@ const JournalView = () => {
     }, [assignmentForm.class_id, currentWeekStart, isCourseDayForClass, isSchoolDay]);
 
     useEffect(() => {
-        if (loadingSchedule || loadingHolidays) return;
+        if (loadingSchedule || loadingHolidays || !currentJournal) return;
         if (!errorSchedule && schedule) {
             const endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1, locale: fr });
             fetchJournalEntries(format(currentWeekStart, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'));
             fetchAssignments(null, format(currentWeekStart, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'));
         }
     }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments, currentJournal]);
-
-    const handleOpenJournalModal = useCallback((course, day) => {
-        setSelectedCourseForJournal(course);
-        setSelectedDayForJournal(day);
-        const entry = getJournalEntry(course.id, day.key);
-        setJournalForm({ planned_work: entry?.planned_work || '', actual_work: entry?.actual_work || '', notes: entry?.notes || '' });
-        setCurrentJournalEntryId(entry?.id || null);
-        setShowJournalModal(true);
-    }, [getJournalEntry]);
-
-    const handleCloseJournalModal = useCallback(() => {
-        setShowJournalModal(false);
-        setSelectedCourseForJournal(null);
-        setSelectedDayForJournal(null);
-        setJournalForm({ planned_work: '', actual_work: '', notes: '' });
-        setCurrentJournalEntryId(null);
-    }, []);
 
     const handleDeleteJournalEntry = useCallback(async () => {
         if (!currentJournalEntryId) return;
@@ -163,7 +210,7 @@ const JournalView = () => {
             type: assignment.type,
             description: assignment.description || '',
             due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : '',
-            is_completed: assignment.is_completed,
+            is_completed: !!assignment.is_completed,
             is_corrected: !!assignment.is_corrected
         });
         setShowAssignmentModal(true);
@@ -172,15 +219,14 @@ const JournalView = () => {
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
         if (!assignmentForm.class_id || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.due_date) {
-            showError('Veuillez remplir tous les champs obligatoires.');
-            return;
+            return showError('Veuillez remplir tous les champs obligatoires.');
         }
         try {
             await upsertAssignment(assignmentForm);
             success('Assignation sauvegardée !');
             setShowAssignmentModal(false);
         } catch (err) {
-            // L'erreur est déjà gérée dans le hook
+            showError(err.message || "Erreur lors de la sauvegarde de l'assignation");
         }
     }, [assignmentForm, upsertAssignment, success, showError]);
 
@@ -207,7 +253,7 @@ const JournalView = () => {
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <h1>{currentJournal.name}</h1>
+                <h1>{currentJournal?.name}</h1>
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
@@ -266,16 +312,7 @@ const JournalView = () => {
                                 const assignClass = getClassInfo(assign.class_id);
                                 return (
                                     <div key={assign.id} className={`assignment-item ${assign.is_completed && assign.is_corrected ? 'fully-corrected' : ''}`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={assign.is_completed}
-                                            title="Terminé ?"
-                                            onChange={() => {
-                                                const payload = { ...assign, is_completed: !assign.is_completed };
-                                                if (!payload.is_completed) payload.is_corrected = false;
-                                                upsertAssignment(payload);
-                                            }}
-                                        />
+                                        <input type="checkbox" checked={assign.is_completed} title="Terminé ?" onChange={() => { const payload = { ...assign, is_completed: !assign.is_completed }; if (!payload.is_completed) payload.is_corrected = false; upsertAssignment(payload); }} />
                                         <div className="assignment-details">
                                             <h4>{assign.subject} ({assign.type})</h4>
                                             <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
@@ -332,9 +369,16 @@ const JournalView = () => {
                                 const classInfo = getClassInfo(selectedCourseForJournal.classId);
                                 return (<div className="slot-info" style={{ borderLeftColor: getClassColor(selectedCourseForJournal.subject, classInfo?.level) || '#cccccc' }}><p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>Classe: {classInfo?.name || 'Inconnue'}</p></div>);
                             })()}
-                            <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => { setJournalForm(prev => ({ ...prev, planned_work: e.target.value })); handleJournalEntryChange({ id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...journalForm }, 'planned_work', e.target.value); }} placeholder="Décrivez le travail prévu..." rows="3"/></div>
-                            <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => { setJournalForm(prev => ({ ...prev, actual_work: e.target.value })); handleJournalEntryChange({ id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...journalForm }, 'actual_work', e.target.value); }} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>
-                            <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => { setJournalForm(prev => ({ ...prev, notes: e.target.value })); handleJournalEntryChange({ id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...journalForm }, 'notes', e.target.value); }} placeholder="Ajoutez des notes ici..." rows="2"/></div>
+                            <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3"/></div>
+                            <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>
+                            <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2"/></div>
+
+                            {nextCourseSlot && (
+                                <div className="form-group checkbox-group copy-next-group">
+                                    <input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} />
+                                    <label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label>
+                                </div>
+                            )}
                         </div>
                         <div className="modal-footer">
                             {currentJournalEntryId && <button type="button" className="btn-danger" onClick={handleDeleteJournalEntry}>Supprimer l'entrée</button>}
