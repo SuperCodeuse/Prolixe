@@ -2,6 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const JournalController = require('../controllers/JournalController'); // Assurez-vous que le chemin est correct
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
+router.get('/', JournalController.getAllJournals);
+router.post('/', JournalController.createJournal);
+router.post('/archive/:id', JournalController.archiveJournal);
+router.post('/import', upload.single('journalFile'), JournalController.importJournal);
+router.get('/current', JournalController.getCurrentJournal);
+router.get('/archived', JournalController.getArchivedJournals);
+
 
 // Routes pour les entrées de journal
 router.get('/entries', JournalController.getJournalEntries);

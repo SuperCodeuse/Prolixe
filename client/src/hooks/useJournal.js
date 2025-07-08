@@ -1,15 +1,50 @@
 // frontend/src/hooks/useJournal.js
-import { useState, useEffect, useCallback } from 'react';
+import {useState, useEffect, useCallback, useContext} from 'react';
 import JournalService from '../services/JournalService';
 import { useSchedule } from './useSchedule'; // Pour récupérer l'emploi du temps
 
-export const useJournal = () => {
-    const [journalEntries, setJournalEntries] = useState({}); // {date-day-time_libelle: entry}
-    const [assignments, setAssignments] = useState([]);
+export const JournalProvider = () => {
+    const [journals, setJournals] = useState([]);
+    const [currentJournal, setCurrentJournal] = useState(null);
+    const [archivedJournals, setArchivedJournals] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule(); // Pour les cours du planning
+    const [journalEntries, setJournalEntries] = useState({});
+    const [assignments, setAssignments] = useState([]);
+
+    const loadAllJournals = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await JournalService.getAllJournals();
+            const all = response.data || [];
+            setJournals(all);
+
+            const current = all.find(j => j.is_current && !j.is_archived);
+            const archived = all.filter(j => j.is_archived);
+
+            // Tente de charger le dernier journal sélectionné depuis le localStorage
+            const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
+            const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
+
+            setCurrentJournal(lastSelected || current || null);
+            setArchivedJournals(archived);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadAllJournals();
+    }, [loadAllJournals]);
+
+    const selectJournal = (journal) => {
+        setCurrentJournal(journal);
+        localStorage.setItem('prolixe_currentJournalId', journal.id);
+    };
+
 
     // Fetch journal entries for a given week/period
     const fetchJournalEntries = useCallback(async (startDate, endDate) => {
@@ -132,9 +167,14 @@ export const useJournal = () => {
         ));
     }, []);
 
-    return {
+    const value = {
+        journals,
+        currentJournal,
+        archivedJournals,
         journalEntries,
         assignments,
+        selectJournal,
+        loadAllJournals,
         loading: loading || loadingSchedule, // Combiner les statuts de chargement
         error: error || errorSchedule,       // Combiner les erreurs
         fetchJournalEntries,
@@ -145,4 +185,14 @@ export const useJournal = () => {
         deleteAssignment,
         updateAssignmentInState
     };
+
+    return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;
+};
+
+export const useJournal = () => {
+    const context = useContext(JournalContext);
+    if (!context) {
+        throw new Error('useJournal doit être utilisé à l\'intérieur d\'un JournalProvider');
+    }
+    return context;
 };

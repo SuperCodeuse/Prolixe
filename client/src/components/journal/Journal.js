@@ -7,11 +7,25 @@ import { useScheduleHours } from '../../hooks/useScheduleHours';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useToast } from '../../hooks/useToast';
 import { useHolidays } from '../../hooks/useHolidays';
+import JournalPicker from './JournalPicker';
+import JournalView from './JournalView'; // Nouveau composant pour la vue du journal
 import ConfirmModal from '../ConfirmModal';
 import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Journal = () => {
+    const { currentJournal, loading } = useJournal();
+
+    if (loading) {
+        return <div>Chargement...</div>;
+    }
+
+    return currentJournal ? <JournalView /> : <JournalPicker />;
+};
+
+const JournalView = () => {
+    const { currentJournal } = useJournal();
+
     // --- HOOKS ---
     const { classes, getClassColor } = useClasses();
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
@@ -225,7 +239,7 @@ const Journal = () => {
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <h1>Agenda de la semaine</h1>
+                <h1>{currentJournal.name}</h1>
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>

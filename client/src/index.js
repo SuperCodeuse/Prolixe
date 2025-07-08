@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom'; // <-- Importez BrowserRouter
 import { AuthProvider } from './hooks/useAuth';      // Assurez-vous que le chemin est correct
 import { ToastProvider } from './hooks/useToast';
+import { JournalProvider } from './hooks/useJournal';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
@@ -14,7 +15,9 @@ root.render(
         <BrowserRouter>
             <AuthProvider>
                 <ToastProvider>
-                    <App />
+                    <JournalProvider>
+                        <App />
+                    </JournalProvider>
                 </ToastProvider>
             </AuthProvider>
         </BrowserRouter>

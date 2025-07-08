@@ -5,6 +5,38 @@ const JOURNAL_API_URL = '/journal/entries';
 const ASSIGNMENT_API_URL = '/journal/assignments';
 
 class JournalService {
+    // --- Journal (année scolaire) ---
+    static async getAllJournals() {
+        return ApiService.request(JOURNAL_API_URL);
+    }
+
+    static async createJournal(journalData) {
+        return ApiService.request(JOURNAL_API_URL, {
+            method: 'POST',
+            body: JSON.stringify(journalData),
+        });
+    }
+
+    static async archiveJournal(id) {
+        return ApiService.request(`${JOURNAL_API_URL}/${id}/archive`, {
+            method: 'PUT',
+        });
+    }
+
+    static async setCurrentJournal(id) {
+        return ApiService.request(`${JOURNAL_API_URL}/${id}/current`, {
+            method: 'PUT',
+        });
+    }
+
+    static async importJournal(formData) {
+        return ApiService.request(`${JOURNAL_API_URL}/import`, {
+            method: 'POST',
+            body: formData,
+            headers: {}, // Laisser le navigateur gérer le Content-Type pour FormData
+        });
+    }
+
     // --- Journal Entries ---
     static async getJournalEntries(startDate, endDate) {
         return ApiService.request(`${JOURNAL_API_URL}?startDate=${startDate}&endDate=${endDate}`);
