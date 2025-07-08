@@ -34,29 +34,131 @@ let pool;
 async function initDatabase() {
     try {
         console.log('🔄 Initialisation de la base de données...');
-
-        // Créer le pool MySQL (pas new mysql.ConnectionPool)
         pool = mysql.createPool(dbConfig);
 
         console.log('✅ Pool de connexions MySQL créé !');
         console.log(`📍 Serveur: ${dbConfig.host}:${dbConfig.port}`);
-        console.log(`🗄️ Base de données: ${dbConfig.database}`);
+        console.log(`🗄️  Base de données: ${dbConfig.database}`);
 
-        // Rendre le pool accessible globalement
+        const connection = await pool.getConnection();
+        console.log('🔗 Connexion à la base de données réussie.');
+
+        console.log('📝 Vérification et création des tables si nécessaire...');
+
+        // Création des tables dans le bon ordre pour respecter les clés étrangères
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`journal\` (
+                                                       \`id\` int NOT NULL AUTO_INCREMENT,
+                                                       \`name\` varchar(255) NOT NULL,
+                                                       \`school_year\` varchar(100) DEFAULT NULL,
+                                                       \`is_archived\` tinyint(1) DEFAULT 0,
+                                                       \`is_current\` tinyint(1) DEFAULT 0,
+                                                       \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                                                       PRIMARY KEY (\`id\`)
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`class\` (
+                                                     \`id\` int NOT NULL AUTO_INCREMENT,
+                                                     \`name\` varchar(100) NOT NULL,
+                                                     \`students\` int DEFAULT NULL,
+                                                     \`lesson\` text,
+                                                     \`level\` int DEFAULT NULL,
+                                                     PRIMARY KEY (\`id\`)
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`schedule_hours\` (
+                                                              \`id\` int NOT NULL AUTO_INCREMENT,
+                                                              \`libelle\` text,
+                                                              PRIMARY KEY (\`id\`)
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`assignment\` (
+                                                          \`id\` int NOT NULL AUTO_INCREMENT,
+                                                          \`class_id\` int NOT NULL,
+                                                          \`subject\` varchar(100) NOT NULL,
+                                                          \`type\` enum('Interro','Devoir','Projet','Examen','Autre') NOT NULL,
+                                                          \`title\` varchar(255) NOT NULL,
+                                                          \`description\` text,
+                                                          \`due_date\` date NOT NULL,
+                                                          \`is_completed\` tinyint(1) DEFAULT 0,
+                                                          \`is_corrected\` tinyint(1) DEFAULT 0,
+                                                          \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                                                          \`updated_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                          PRIMARY KEY (\`id\`),
+                                                          KEY \`fk_assignment_class_idx\` (\`class_id\`),
+                                                          CONSTRAINT \`fk_assignment_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`schedule\` (
+                                                        \`id\` int NOT NULL AUTO_INCREMENT,
+                                                        \`day\` varchar(20) NOT NULL,
+                                                        \`time_slot_id\` int NOT NULL,
+                                                        \`subject\` varchar(100) NOT NULL,
+                                                        \`class_id\` int NOT NULL,
+                                                        \`room\` varchar(50) NOT NULL,
+                                                        \`notes\` text,
+                                                        \`journal_id\` int NULL,
+                                                        \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                                                        \`updated_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                        PRIMARY KEY (\`id\`),
+                                                        UNIQUE KEY \`uq_schedule_journal_slot\` (\`journal_id\`, \`day\`, \`time_slot_id\`),
+                                                        KEY \`fk_schedule_class_idx\` (\`class_id\`),
+                                                        KEY \`fk_schedule_time_slot_idx\` (\`time_slot_id\`),
+                                                        CONSTRAINT \`fk_schedule_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE,
+                                                        CONSTRAINT \`fk_schedule_time_slot\` FOREIGN KEY (\`time_slot_id\`) REFERENCES \`schedule_hours\` (\`id\`) ON DELETE CASCADE,
+                                                        CONSTRAINT \`fk_schedule_journal\` FOREIGN KEY (\`journal_id\`) REFERENCES \`journal\` (\`id\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB;
+        `);
+
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`journal_entry\` (
+              \`id\` int NOT NULL AUTO_INCREMENT,
+              \`schedule_id\` int NOT NULL,
+              \`date\` date NOT NULL,
+              \`planned_work\` text,
+              \`actual_work\` text,
+              \`notes\` text,
+              \`journal_id\` int NOT NULL,
+              \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+              \`updated_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (\`id\`),
+              UNIQUE KEY \`uq_journal_session\` (\`schedule_id\`, \`date\`),
+              KEY \`fk_journal_schedule_idx\` (\`schedule_id\`),
+              KEY \`fk_entry_journal_idx\` (\`journal_id\`),
+              CONSTRAINT \`fk_journal_schedule\` FOREIGN KEY (\`schedule_id\`) REFERENCES \`schedule\` (\`id\`) ON DELETE CASCADE,
+              CONSTRAINT \`fk_entry_journal\` FOREIGN KEY (\`journal_id\`) REFERENCES \`journal\` (\`id\`) ON DELETE CASCADE
+            ) ENGINE=InnoDB;
+        `);
+
+        console.log('✅ Tables créées ou déjà existantes.');
+
+        // Insertion des données par défaut si la table des heures est vide
+        const [hours] = await connection.execute('SELECT COUNT(*) as count FROM schedule_hours');
+        if (hours[0].count === 0) {
+            console.log('🕒 Insertion des créneaux horaires par défaut...');
+            await connection.execute(`
+                INSERT INTO \`schedule_hours\` (id, libelle) VALUES
+                                                                 (1, '08:25-09:15'), (2, '09:15-10:05'), (3, '10:20-11:10'),
+                                                                 (4, '11:10-12:00'), (5, '12:45-13:35'), (6, '13:35-14:20'),
+                                                                 (7, '14:30-15:15'), (8, '15:15-16:05');
+            `);
+            console.log('👍 Créneaux horaires insérés.');
+        }
+
+        connection.release();
+
         global.dbPool = pool;
 
-        // Test de connexion et de la table CLASS
-        const [rows] = await pool.execute('SELECT COUNT(*) as count FROM CLASS');
-        console.log(`📊 ${rows[0].count} classes dans la base`);
-
     } catch (error) {
-        console.error('❌ Erreur connexion base de données:', error);
-        console.error('Détails:', {
-            host: dbConfig.host,
-            port: dbConfig.port,
-            database: dbConfig.database,
-            user: dbConfig.user
-        });
+        console.error('❌ Erreur lors de l\'initialisation de la base de données:', error);
         process.exit(1);
     }
 }

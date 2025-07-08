@@ -40,6 +40,7 @@ const JournalView = () => {
     const [currentJournalEntryId, setCurrentJournalEntryId] = useState(null);
     const [nextCourseSlot, setNextCourseSlot] = useState(null);
     const [copyToNextSlot, setCopyToNextSlot] = useState(false);
+    const [courseStatus, setCourseStatus] = useState('given'); // 'given' ou 'cancelled'
 
     // --- MEMOS & CALLBACKS ---
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
@@ -66,23 +67,15 @@ const JournalView = () => {
 
     const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
 
-    const handleFormChange = (field, value) => {
-        const newFormState = { ...journalForm, [field]: value };
-        setJournalForm(newFormState);
-
-        const keyForDebounce = `${selectedCourseForJournal.id}-${selectedDayForJournal.key}`;
+    const debouncedSave = (entryData) => {
+        const keyForDebounce = `${entryData.schedule_id}-${entryData.date}`;
         if (journalDebounce[keyForDebounce]) clearTimeout(journalDebounce[keyForDebounce]);
 
         const timeoutId = setTimeout(async () => {
             try {
-                const currentEntryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
-                const savedEntry = await upsertJournalEntry(currentEntryData);
-                if (savedEntry && savedEntry.id && !currentJournalEntryId) setCurrentJournalEntryId(savedEntry.id);
-
-                if (copyToNextSlot && nextCourseSlot) {
-                    const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
-                    const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...newFormState };
-                    await upsertJournalEntry(nextEntryData);
+                const savedEntry = await upsertJournalEntry(entryData);
+                if (savedEntry && savedEntry.id && entryData.schedule_id === selectedCourseForJournal.id) {
+                    setCurrentJournalEntryId(savedEntry.id);
                 }
             } catch (err) {
                 showError('Erreur de sauvegarde: ' + err.message);
@@ -90,8 +83,33 @@ const JournalView = () => {
                 setJournalDebounce(prev => { const newState = { ...prev }; delete newState[keyForDebounce]; return newState; });
             }
         }, 1000);
-
         setJournalDebounce(prev => ({ ...prev, [keyForDebounce]: timeoutId }));
+    };
+
+    const handleFormChange = (field, value) => {
+        const newFormState = { ...journalForm, [field]: value };
+        setJournalForm(newFormState);
+        const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+        debouncedSave(entryData);
+        if (copyToNextSlot && nextCourseSlot) {
+            const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
+            const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...newFormState };
+            debouncedSave(nextEntryData);
+        }
+    };
+
+    const handleStatusChange = (e) => {
+        const newStatus = e.target.value;
+        setCourseStatus(newStatus);
+        let newFormState;
+        if (newStatus === 'cancelled') {
+            newFormState = { planned_work: '', actual_work: '[CANCELLED]', notes: journalForm.notes };
+        } else {
+            newFormState = { planned_work: journalForm.planned_work, actual_work: '', notes: '' };
+        }
+        setJournalForm(newFormState);
+        const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+        debouncedSave(entryData);
     };
 
     const handleCopyToNextSlotChange = async (e) => {
@@ -101,17 +119,12 @@ const JournalView = () => {
         if (isChecked && nextCourseSlot) {
             try {
                 const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
-                const nextEntryData = {
-                    id: nextEntry?.id || null,
-                    schedule_id: nextCourseSlot.id,
-                    date: selectedDayForJournal.key,
-                    ...journalForm // Copie l'état actuel du formulaire
-                };
+                const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...journalForm };
                 await upsertJournalEntry(nextEntryData);
                 success('Notes copiées sur le créneau suivant.');
             } catch (err) {
                 showError('Erreur lors de la copie: ' + err.message);
-                setCopyToNextSlot(false); // Annuler le cochage en cas d'erreur
+                setCopyToNextSlot(false);
             }
         }
     };
@@ -120,32 +133,34 @@ const JournalView = () => {
         setSelectedCourseForJournal(course);
         setSelectedDayForJournal(day);
         const entry = getJournalEntry(course.id, day.key);
-        setJournalForm({ planned_work: entry?.planned_work || '', actual_work: entry?.actual_work || '', notes: entry?.notes || '' });
+
+        if (entry && entry.actual_work === '[CANCELLED]') {
+            setCourseStatus('cancelled');
+            setJournalForm({ planned_work: '', actual_work: '[CANCELLED]', notes: entry.notes || '' });
+        } else {
+            setCourseStatus('given');
+            setJournalForm({ planned_work: entry?.planned_work || '', actual_work: entry?.actual_work || '', notes: entry?.notes || '' });
+        }
+
         setCurrentJournalEntryId(entry?.id || null);
         setCopyToNextSlot(false);
 
         const dayKeyForSchedule = getDayKeyFromDateFnsString(day.dayOfWeekKey);
         const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
         const currentIndex = coursesForThisDay.findIndex(c => c.id === course.id);
-        const nextCourse = (currentIndex !== -1 && currentIndex + 1 < coursesForThisDay.length) ? coursesForThisDay[currentIndex + 1] : null;
+        const nextCourse = (currentIndex > -1 && currentIndex + 1 < coursesForThisDay.length) ? coursesForThisDay[currentIndex + 1] : null;
 
         if (nextCourse && nextCourse.classId === course.classId && nextCourse.subject === course.subject) {
             setNextCourseSlot(nextCourse);
         } else {
             setNextCourseSlot(null);
         }
-
         setShowJournalModal(true);
     }, [getJournalEntry, getCoursesGroupedByDay, getDayKeyFromDateFnsString]);
 
     const handleCloseJournalModal = useCallback(() => {
         setShowJournalModal(false);
-        setSelectedCourseForJournal(null);
-        setSelectedDayForJournal(null);
-        setNextCourseSlot(null);
-        setCopyToNextSlot(false);
-        setJournalForm({ planned_work: '', actual_work: '', notes: '' });
-        setCurrentJournalEntryId(null);
+        setCourseStatus('given');
     }, []);
 
     const getClassInfo = useCallback((classId) => classes.find(cls => cls.id === classId), [classes]);
@@ -280,18 +295,35 @@ const JournalView = () => {
                                                 {coursesForThisDay.map(courseInSchedule => {
                                                     const classInfo = getClassInfo(courseInSchedule.classId);
                                                     const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
+                                                    const isCancelled = journalEntry && journalEntry.actual_work === '[CANCELLED]';
+                                                    const cancellationReason = isCancelled ? journalEntry.notes : null;
+
                                                     let journalPreview = { text: null, className: '' };
-                                                    if (journalEntry) {
+                                                    if (journalEntry && !isCancelled) {
                                                         journalPreview.text = journalEntry.actual_work || journalEntry.planned_work;
                                                         journalPreview.className = journalEntry.actual_work ? 'actual-work' : 'planned-work';
                                                     }
+
                                                     return (
-                                                        <div key={courseInSchedule.id} className="journal-slot has-course" style={{ backgroundColor: `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`, borderColor: getClassColor(courseInSchedule.subject, classInfo?.level) }} onClick={() => handleOpenJournalModal(courseInSchedule, day)}>
-                                                            <div className="course-summary">
-                                                                <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div>
-                                                                <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
-                                                                {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}>{journalPreview.className === 'actual-work' && <span className="preview-icon">📝</span>}<p className="preview-text">{journalPreview.text}</p></div>)}
-                                                            </div>
+                                                        <div
+                                                            key={courseInSchedule.id}
+                                                            className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''}`}
+                                                            style={{ backgroundColor: `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`, borderColor: isCancelled ? 'var(--red-danger)' : getClassColor(courseInSchedule.subject, classInfo?.level) }}
+                                                            onClick={() => handleOpenJournalModal(courseInSchedule, day)}
+                                                        >
+                                                            {isCancelled ? (
+                                                                <div className="cancellation-display">
+                                                                    <span className="cancellation-icon">🚫</span>
+                                                                    <p className="cancellation-label">ANNULÉ</p>
+                                                                    <p className="cancellation-reason">{cancellationReason}</p>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="course-summary">
+                                                                    <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div>
+                                                                    <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
+                                                                    {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}>{journalPreview.className === 'actual-work' && <span className="preview-icon">📝</span>}<p className="preview-text">{journalPreview.text}</p></div>)}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}
@@ -369,14 +401,32 @@ const JournalView = () => {
                                 const classInfo = getClassInfo(selectedCourseForJournal.classId);
                                 return (<div className="slot-info" style={{ borderLeftColor: getClassColor(selectedCourseForJournal.subject, classInfo?.level) || '#cccccc' }}><p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)'}}>Classe: {classInfo?.name || 'Inconnue'}</p></div>);
                             })()}
-                            <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3"/></div>
-                            <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>
-                            <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2"/></div>
 
-                            {nextCourseSlot && (
-                                <div className="form-group checkbox-group copy-next-group">
-                                    <input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} />
-                                    <label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label>
+                            <div className="form-group">
+                                <label>Statut du cours</label>
+                                <select value={courseStatus} onChange={handleStatusChange} className="status-select">
+                                    <option value="given">Cours donné</option>
+                                    <option value="cancelled">Cours annulé</option>
+                                </select>
+                            </div>
+
+                            {courseStatus === 'given' ? (
+                                <>
+                                    <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3"/></div>
+                                    <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>
+                                    <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2"/></div>
+
+                                    {nextCourseSlot && (
+                                        <div className="form-group checkbox-group copy-next-group">
+                                            <input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} />
+                                            <label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="form-group">
+                                    <label>Raison de l'annulation</label>
+                                    <textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3"/>
                                 </div>
                             )}
                         </div>
