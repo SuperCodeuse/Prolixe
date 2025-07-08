@@ -1,26 +1,17 @@
-// frontend/src/hooks/useJournal.js
+// client/src/hooks/useJournal.js
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import JournalService from '../services/JournalService';
 
-// 1. Création du contexte
 const JournalContext = createContext(null);
 
-// 2. Création du fournisseur (Provider)
 export const JournalProvider = ({ children }) => {
-    // State pour la gestion des journaux (années scolaires)
     const [journals, setJournals] = useState([]);
     const [currentJournal, setCurrentJournal] = useState(null);
     const [archivedJournals, setArchivedJournals] = useState([]);
-
-    // State pour les données du journal courant
-    const [journalEntries, setJournalEntries] = useState({});
+    const [journalEntries, setJournalEntries] = useState([]); // Changé pour un tableau
     const [assignments, setAssignments] = useState([]);
-
-    // State de chargement et d'erreur
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // --- GESTION DES JOURNAUX (Années scolaires) ---
 
     const loadAllJournals = useCallback(async () => {
         setLoading(true);
@@ -28,16 +19,12 @@ export const JournalProvider = ({ children }) => {
             const response = await JournalService.getAllJournals();
             const all = response.data || [];
             setJournals(all);
-
             const current = all.find(j => j.is_current && !j.is_archived);
             const archived = all.filter(j => j.is_archived);
-
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
             const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
-
             setCurrentJournal(lastSelected || current || (all.length > 0 ? all[0] : null));
             setArchivedJournals(archived);
-
         } catch (err) {
             setError(err.message || "Erreur lors du chargement des journaux.");
         } finally {
@@ -59,7 +46,7 @@ export const JournalProvider = ({ children }) => {
     const createJournal = useCallback(async (journalData) => {
         try {
             const response = await JournalService.createJournal(journalData);
-            await loadAllJournals(); // Recharger pour mettre à jour la liste et le journal courant
+            await loadAllJournals();
             return response.data;
         } catch (err) {
             setError(err.message || "Erreur lors de la création du journal.");
@@ -70,15 +57,12 @@ export const JournalProvider = ({ children }) => {
     const archiveJournal = useCallback(async (journalId) => {
         try {
             await JournalService.archiveJournal(journalId);
-            await loadAllJournals(); // Recharger pour mettre à jour les listes
+            await loadAllJournals();
         } catch (err) {
             setError(err.message || "Erreur lors de l'archivage du journal.");
             throw err;
         }
     }, [loadAllJournals]);
-
-
-    // --- GESTION DES DONNÉES DU JOURNAL COURANT ---
 
     const fetchJournalEntries = useCallback(async (startDate, endDate) => {
         if (!startDate || !endDate || !currentJournal) return;
@@ -86,14 +70,7 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             const response = await JournalService.getJournalEntries(startDate, endDate, currentJournal.id);
-            const formattedEntries = {};
-            if (response.data) {
-                response.data.forEach(entry => {
-                    const slotKey = `${entry.day}-${entry.time_slot_libelle}-${entry.date}`;
-                    formattedEntries[slotKey] = entry;
-                });
-            }
-            setJournalEntries(formattedEntries);
+            setJournalEntries(response.data || []); // Stocker directement le tableau
         } catch (err) {
             setError(err.message || 'Erreur lors de la récupération des entrées du journal.');
         } finally {
@@ -115,18 +92,20 @@ export const JournalProvider = ({ children }) => {
     }, []);
 
     const upsertJournalEntry = useCallback(async (entryData) => {
-        if (!currentJournal) {
-            throw new Error("Aucun journal sélectionné.");
-        }
+        if (!currentJournal) throw new Error("Aucun journal sélectionné.");
         setError(null);
         try {
-            // Assurer que journal_id est inclus
             const dataWithJournalId = { ...entryData, journal_id: currentJournal.id };
             const response = await JournalService.upsertJournalEntry(dataWithJournalId);
             const newEntry = response.data;
             setJournalEntries(prev => {
-                const slotKey = `${newEntry.day}-${newEntry.time_slot_libelle}-${newEntry.date}`;
-                return { ...prev, [slotKey]: newEntry };
+                const index = prev.findIndex(e => e.id === newEntry.id);
+                if (index > -1) {
+                    const newEntries = [...prev];
+                    newEntries[index] = newEntry;
+                    return newEntries;
+                }
+                return [...prev, newEntry];
             });
             return newEntry;
         } catch (err) {
@@ -139,14 +118,7 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             await JournalService.deleteJournalEntry(id);
-            setJournalEntries(prev => {
-                const newEntries = { ...prev };
-                const keyToDelete = Object.keys(newEntries).find(key => newEntries[key].id === id);
-                if (keyToDelete) {
-                    delete newEntries[keyToDelete];
-                }
-                return newEntries;
-            });
+            setJournalEntries(prev => prev.filter(a => a.id !== id));
         } catch (err) {
             setError(err.message || "Erreur lors de la suppression de l'entrée de journal.");
             throw err;
@@ -184,23 +156,9 @@ export const JournalProvider = ({ children }) => {
     }, []);
 
     const value = {
-        journals,
-        currentJournal,
-        archivedJournals,
-        selectJournal,
-        loadAllJournals,
-        createJournal, // <-- Ajouté
-        archiveJournal, // <-- Ajouté
-        journalEntries,
-        assignments,
-        loading,
-        error,
-        fetchJournalEntries,
-        fetchAssignments,
-        upsertJournalEntry,
-        deleteJournalEntry,
-        upsertAssignment,
-        deleteAssignment,
+        journals, currentJournal, archivedJournals, selectJournal, loadAllJournals, createJournal, archiveJournal,
+        journalEntries, assignments, loading, error, fetchJournalEntries, fetchAssignments,
+        upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment,
     };
 
     return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;

@@ -3,10 +3,7 @@ const mysql = require('mysql2/promise');
 const pool = require('../../config/database');
 
 const parseFrenchDate = (dateStr) => {
-    const months = {
-        'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5,
-        'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11
-    };
+    const months = { 'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11 };
     const parts = dateStr.toLowerCase().split(' ');
     const day = parseInt(parts[1], 10);
     const month = months[parts[2]];
@@ -14,10 +11,7 @@ const parseFrenchDate = (dateStr) => {
     return new Date(year, month, day);
 };
 
-const getDayKeyFromDate = (date) => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[date.getDay()];
-};
+const getDayKeyFromDate = (date) => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
 
 class JournalController {
     static async withConnection(operation) {
@@ -39,11 +33,6 @@ class JournalController {
         res.status(statusCode).json({ success: false, message: defaultMessage, error: errorMessage, errors: customErrors });
     }
 
-    // --- GESTION DES JOURNAUX (table JOURNAL) ---
-
-    /**
-     * Récupère tous les journaux.
-     */
     static async getAllJournals(req, res) {
         try {
             const journals = await JournalController.withConnection(async (connection) => {
@@ -56,34 +45,21 @@ class JournalController {
         }
     }
 
-    /**
-     * Crée un nouveau journal et le définit comme courant.
-     */
     static async createJournal(req, res) {
         const { name, school_year } = req.body;
         if (!name || !school_year) {
             return JournalController.handleError(res, new Error('Champs manquants'), 'Le nom et l\'année scolaire sont requis.', 400);
         }
-
         let connection;
         try {
             connection = await pool.getConnection();
             await connection.beginTransaction();
-
-            // S'assurer qu'aucun autre journal n'est courant
             await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
-
-            // Insérer le nouveau journal
-            const [insertResult] = await connection.execute(
-                'INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)',
-                [name, school_year]
-            );
+            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)', [name, school_year]);
             const newJournalId = insertResult.insertId;
             await connection.commit();
             const [newJournal] = await connection.execute('SELECT * FROM JOURNAL WHERE id = ?', [newJournalId]);
-
             res.status(201).json({ success: true, message: 'Journal créé avec succès.', data: newJournal[0] });
-
         } catch (error) {
             if (connection) await connection.rollback();
             JournalController.handleError(res, error, 'Erreur lors de la création du journal.');
@@ -92,68 +68,44 @@ class JournalController {
         }
     }
 
-    /**
-     * Archive un journal.
-     */
     static async archiveJournal(req, res) {
         const { id } = req.params;
         try {
-            const [result] = await JournalController.withConnection(async (connection) => {
-                return await connection.execute('UPDATE JOURNAL SET is_archived = 1, is_current = 0 WHERE id = ?', [id]);
-            });
-
+            const [result] = await JournalController.withConnection(async (connection) => await connection.execute('UPDATE JOURNAL SET is_archived = 1, is_current = 0 WHERE id = ?', [id]));
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Journal non trouvé'), 'Journal non trouvé.', 404);
             }
-
             res.json({ success: true, message: 'Journal archivé avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, "Erreur lors de l'archivage du journal.");
         }
     }
 
-    /**
-     * Importe les données d'un journal depuis un fichier JSON.
-     */
-
-
     static async importJournal(req, res) {
-        if (!req.file) {
-            return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
-        }
-
+        if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
         let connection;
         try {
             const jsonData = JSON.parse(req.file.buffer.toString('utf8'));
-            if (!Array.isArray(jsonData)) {
-                throw new Error("Le JSON doit être un tableau de sessions.");
-            }
+            if (!Array.isArray(jsonData)) throw new Error("Le JSON doit être un tableau de sessions.");
 
             connection = await pool.getConnection();
             await connection.beginTransaction();
 
-            // --- Préparation des données pour la recherche ---
             const [classes] = await connection.execute('SELECT id, name FROM CLASS');
             const [scheduleHours] = await connection.execute('SELECT id, libelle FROM schedule_hours');
             const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE');
-
             const classMap = new Map(classes.map(c => [c.name.toLowerCase(), c.id]));
             const timeSlotMap = new Map(scheduleHours.map(h => [h.libelle, h.id]));
 
-            // --- Création du Journal ---
             const journalName = req.file.originalname.replace(/\.json$/i, '');
             const schoolYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
             await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
-            const [journalResult] = await connection.execute(
-                'INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)',
-                [journalName, schoolYear]
-            );
+            const [journalResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)', [journalName, schoolYear]);
             const journalId = journalResult.insertId;
 
             let importedCount = 0;
             let skippedCount = 0;
 
-            // --- Traitement et insertion des entrées ---
             for (const sessionData of jsonData) {
                 const sessionDate = parseFrenchDate(sessionData.date);
                 if (!sessionDate) {
@@ -161,68 +113,30 @@ class JournalController {
                     skippedCount++;
                     continue;
                 }
-
                 const dayKey = getDayKeyFromDate(sessionDate);
-
-                for (const sessionData of jsonData) {
-                    const sessionDate = parseFrenchDate(sessionData.date);
-                    if (!sessionDate) {
-                        console.warn(`Date invalide ignorée: ${sessionData.date}`);
+                for (const activity of sessionData.activites) {
+                    const activityTime = activity.heure.replace('h', ':');
+                    const foundLibelle = Array.from(timeSlotMap.keys()).find(libelle => libelle.startsWith(activityTime));
+                    const timeSlotId = foundLibelle ? timeSlotMap.get(foundLibelle) : undefined;
+                    if (!timeSlotId) {
+                        console.warn(`Créneau horaire non trouvé pour ${activityTime} le ${sessionData.date}`);
+                        continue;
+                    }
+                    const scheduleEntry = schedule.find(s => s.day === dayKey && s.time_slot_id === timeSlotId);
+                    if (!scheduleEntry) {
+                        console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
                         skippedCount++;
                         continue;
                     }
-
-                    const dayKey = getDayKeyFromDate(sessionDate);
-
-                    for (const activity of sessionData.activites) {
-                        const activityTime = activity.heure.replace('h', ':');
-
-                        // Trouver le time_slot_id correspondant
-                        const foundLibelle = Array.from(timeSlotMap.keys()).find(libelle => libelle.startsWith(activityTime));
-                        const timeSlotId = foundLibelle ? timeSlotMap.get(foundLibelle) : undefined;
-
-
-                        if (!timeSlotId) {
-                            console.warn(`Créneau horaire non trouvé pour ${activityTime} le ${sessionData.date}`);
-                            continue;
-                        }
-
-                        // Trouver le schedule_id
-                        const scheduleEntry = schedule.find(s =>
-                            s.day === dayKey && s.time_slot_id === timeSlotId
-                        );
-
-                        if (!scheduleEntry) {
-                            console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
-                            skippedCount++;
-                            continue;
-                        }
-
-                        const plannedWorkDescription = activity.description;
-                        const notesDescription = sessionData.remediation?.map(r => r.description).join('\n') || '';
-
-                        // *** Voici la correction clé ***
-                        await connection.execute(
-                            `INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes)
-                             VALUES (?, ?, ?, ?, ?)
-                             ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)),
-                                                     notes        = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`,
-                            [journalId, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]
-                        );
-                        importedCount++;
-                    }
+                    const plannedWorkDescription = activity.description;
+                    const notesDescription = sessionData.remediation?.map(r => r.description).join('\n') || '';
+                    await connection.execute(`INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)), notes = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`, [journalId, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]);
+                    importedCount++;
                 }
             }
 
-
             await connection.commit();
-
-            res.json({
-                success: true,
-                message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées, ${skippedCount} ignorées.`,
-                data: { newJournalId: journalId, itemsImported: importedCount, itemsSkipped: skippedCount, totalItems: jsonData.length }
-            });
-
+            res.json({ success: true, message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées, ${skippedCount} ignorées.`, data: { newJournalId: journalId, itemsImported: importedCount, itemsSkipped: skippedCount, totalItems: jsonData.length } });
         } catch (error) {
             if (connection) await connection.rollback();
             console.error("Erreur détaillée de l'importation:", error);
@@ -231,9 +145,7 @@ class JournalController {
             if (connection) connection.release();
         }
     }
-    /**
-     * Récupère le journal actuellement défini comme "courant".
-     */
+
     static async getCurrentJournal(req, res) {
         try {
             const [journal] = await JournalController.withConnection(async (connection) => {
@@ -246,9 +158,6 @@ class JournalController {
         }
     }
 
-    /**
-     * Récupère tous les journaux archivés.
-     */
     static async getArchivedJournals(req, res) {
         try {
             const journals = await JournalController.withConnection(async (connection) => {
@@ -261,15 +170,11 @@ class JournalController {
         }
     }
 
-
-    // --- GESTION DES ENTRÉES DE JOURNAL (table JOURNAL_ENTRY) ---
-
     static async getJournalEntries(req, res) {
         const { startDate, endDate, journal_id } = req.query;
         if (!startDate || !endDate || !journal_id) {
             return JournalController.handleError(res, new Error('Paramètres manquants'), 'Les dates de début, de fin et l\'ID du journal sont requis.', 400);
         }
-
         try {
             const entries = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
@@ -314,9 +219,7 @@ class JournalController {
             }
             res.status(id ? 200 : 201).json({ success: true, message: `Entrée de journal ${id ? 'mise à jour' : 'créée'} avec succès.`, data: entry });
         } catch (error) {
-            if (error.code === 'ER_DUP_ENTRY') {
-                return JournalController.handleError(res, error, 'Une entrée existe déjà pour ce cours à cette date.', 409);
-            }
+            if (error.code === 'ER_DUP_ENTRY') return JournalController.handleError(res, error, 'Une entrée existe déjà pour ce cours à cette date.', 409);
             JournalController.handleError(res, error, "Erreur lors de la sauvegarde de l'entrée de journal.");
         }
     }
@@ -327,10 +230,7 @@ class JournalController {
             return JournalController.handleError(res, new Error('ID invalide'), "ID d'entrée de journal invalide.", 400);
         }
         try {
-            const result = await JournalController.withConnection(async (connection) => {
-                const [deleteResult] = await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE id = ?', [parseInt(id)]);
-                return deleteResult;
-            });
+            const result = await JournalController.withConnection(async (connection) => await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE id = ?', [parseInt(id)]));
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Entrée non trouvée'), 'Entrée de journal non trouvée.', 404);
             }
@@ -339,8 +239,6 @@ class JournalController {
             JournalController.handleError(res, error, "Erreur lors de la suppression de l'entrée de journal.");
         }
     }
-
-    // --- GESTION DES DEVOIRS (table ASSIGNMENT) ---
 
     static async getAssignments(req, res) {
         const { classId, startDate, endDate } = req.query;
@@ -357,9 +255,7 @@ class JournalController {
             conditions.push('a.due_date BETWEEN ? AND ?');
             params.push(startDate, endDate);
         }
-        if (conditions.length > 0) {
-            query += ' WHERE ' + conditions.join(' AND ');
-        }
+        if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
         query += ' ORDER BY a.due_date ASC, a.type ASC';
         try {
             const assignments = await JournalController.withConnection(async (connection) => {
@@ -374,7 +270,7 @@ class JournalController {
 
     static async upsertAssignment(req, res) {
         const { id } = req.body;
-        if (id) { // Mise à jour
+        if (id) {
             try {
                 const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed', 'is_corrected'];
                 const fieldsToUpdate = [];
@@ -398,11 +294,9 @@ class JournalController {
             } catch (error) {
                 JournalController.handleError(res, error, "Erreur lors de la mise à jour de l'assignation.");
             }
-        } else { // Création
+        } else {
             const { class_id, subject, type, description, due_date, is_completed } = req.body;
-            if (!class_id || !subject || !type || !due_date) {
-                return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides.', 400);
-            }
+            if (!class_id || !subject || !type || !due_date) return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides.', 400);
             try {
                 const formattedDueDate = JournalController.formatDateForDatabase(due_date);
                 const result = await JournalController.withConnection(async (c) => c.execute('INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)', [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]));
@@ -417,14 +311,11 @@ class JournalController {
     static formatDateForDatabase(dateInput) {
         if (!dateInput) return null;
         let date;
-        if (dateInput instanceof Date) {
-            date = dateInput;
-        } else if (typeof dateInput === 'string') {
+        if (dateInput instanceof Date) date = dateInput;
+        else if (typeof dateInput === 'string') {
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) return dateInput;
             date = new Date(dateInput);
-        } else {
-            date = new Date(dateInput);
-        }
+        } else date = new Date(dateInput);
         if (isNaN(date.getTime())) throw new Error('Date invalide');
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -434,14 +325,10 @@ class JournalController {
 
     static async deleteAssignment(req, res) {
         const { id } = req.params;
-        if (!id || isNaN(parseInt(id))) {
-            return JournalController.handleError(res, new Error('ID invalide'), "ID d'assignation invalide.", 400);
-        }
+        if (!id || isNaN(parseInt(id))) return JournalController.handleError(res, new Error('ID invalide'), "ID d'assignation invalide.", 400);
         try {
             const result = await JournalController.withConnection(async (c) => c.execute('DELETE FROM ASSIGNMENT WHERE id = ?', [parseInt(id)]));
-            if (result.affectedRows === 0) {
-                return JournalController.handleError(res, new Error('Assignation non trouvée'), 'Assignation non trouvée.', 404);
-            }
+            if (result.affectedRows === 0) return JournalController.handleError(res, new Error('Assignation non trouvée'), 'Assignation non trouvée.', 404);
             res.json({ success: true, message: 'Assignation supprimée avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, "Erreur lors de la suppression de l'assignation.");
