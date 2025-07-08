@@ -8,7 +8,6 @@ import { useSchedule } from '../../hooks/useSchedule';
 import { useToast } from '../../hooks/useToast';
 import { useHolidays } from '../../hooks/useHolidays';
 import JournalPicker from './JournalPicker';
-import JournalView from './JournalView'; // Nouveau composant pour la vue du journal
 import ConfirmModal from '../ConfirmModal';
 import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';

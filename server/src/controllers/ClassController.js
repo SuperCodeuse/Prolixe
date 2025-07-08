@@ -81,9 +81,9 @@ class ClassController {
         if (!isUpdate || data.students !== undefined) {
             const studentsNum = parseInt(data.students);
             if (isNaN(studentsNum) || studentsNum < 0) { // On autorise 0 étudiants
-                errors.students = 'Le nombre d\'étudiants doit être un nombre entier positif ou zéro.';
+                errors.students = "Le nombre d'étudiants doit être un nombre entier positif ou zéro.";
             } else if (studentsNum > 1000) { // Limite haute
-                errors.students = 'Le nombre d\'étudiants ne peut pas dépasser 1000.';
+                errors.students = "Le nombre d'étudiants ne peut pas dépasser 1000.";
             }
         }
 
@@ -210,19 +210,11 @@ class ClassController {
                     throw err;
                 }
 
-                // Corriger l'ordre des valeurs pour correspondre aux colonnes de l'INSERT
-                // 'INSERT INTO CLASS (name, students, lesson, level) VALUES (?, ?, ?, ?)'
-                // Il semble que votre base de données ait une colonne 'lesson' et non 'subject' pour la matière.
-                // Donc 'lesson' recevra 'subject.trim()'.
-                // 'level' recevra 'parseInt(level)'.
                 const [result] = await connection.execute(
                     'INSERT INTO CLASS (name, students, lesson, level) VALUES (?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), subject.trim(), parseInt(level)] // Ordre corrigé
+                    [name.trim(), parseInt(students), subject.trim(), parseInt(level)]
                 );
 
-                // Récupérer la classe créée avec toutes ses propriétés (y compris l'ID auto-incrémenté)
-                // L'alias 'level AS subject' est incorrect ici. La colonne est 'level' et la matière est 'lesson'.
-                // On doit récupérer les deux correctement.
                 const [newClassData] = await connection.execute(
                     'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
                     [result.insertId]
@@ -244,6 +236,7 @@ class ClassController {
             ClassController.handleError(res, error, 'Erreur lors de la création de la classe.');
         }
     }
+
 
     /**
      * Met à jour une classe existante par son ID.
@@ -331,7 +324,6 @@ class ClassController {
                 );
 
                 // Récupérer la classe mise à jour pour renvoyer les données complètes
-                // L'alias 'level AS subject' est incorrect. Récupérer 'lesson' et 'level' séparément.
                 const [updatedData] = await connection.execute(
                     'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
                     [parseInt(id)]

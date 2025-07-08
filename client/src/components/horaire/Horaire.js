@@ -134,6 +134,7 @@ const Horaire = () => {
         }
     };
 
+
     const getClassInfo = (classId) => {
         return classes.find(cls => cls.id == classId);
     };

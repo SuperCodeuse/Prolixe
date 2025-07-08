@@ -23,7 +23,7 @@ export const useSchedule = () => {
             const data = await scheduleService.getSchedule();
             setSchedule(data);
         } catch (err) {
-            setError(err.message || 'Erreur lors de la récupération de l\'emploi du temps.');
+            setError(err.message || "Erreur lors de la récupération de l'emploi du temps.");
         } finally {
             setLoading(false);
         }
@@ -94,6 +94,7 @@ export const useSchedule = () => {
             throw err;
         }
     }, [getHourIdByLibelle]);
+
 
     // Fonction pour récupérer un cours par jour et libellé de créneau
     const getCourseBySlotKey = useCallback((slotKey) => {

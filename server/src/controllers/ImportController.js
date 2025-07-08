@@ -1,4 +1,4 @@
-// server/src/controllers/importController.js
+// server/src/controllers/ImportController.js
 const CourseSession = require('../models/CourseSession');
 const Subject = require('../models/Subject');
 const moment = require('moment');

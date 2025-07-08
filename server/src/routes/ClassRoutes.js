@@ -1,7 +1,7 @@
 // backend/routes/classRoutes.js
 const express = require('express');
 const router = express.Router();
-const ClassController = require('../controllers/classController');
+const ClassController = require('../controllers/ClassController');
 
 // GET /api/classes - Récupérer toutes les classes
 router.get('/', ClassController.getAllClasses);
