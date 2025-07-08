@@ -19,7 +19,6 @@ const parseFrenchDate = (dateStr) => {
     return new Date(year, month, day);
 };
 
-// Extraire les matières uniques du JSON
 const extractSubjects = (sessions) => {
     const subjects = new Set();
 
@@ -32,6 +31,86 @@ const extractSubjects = (sessions) => {
     });
 
     return Array.from(subjects);
+};
+
+exports.importJournal = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Aucun fichier fourni.' });
+    }
+    try {
+        const journalData = JSON.parse(req.file.buffer.toString('utf8'));
+
+        // 1. Créer les matières si elles n'existent pas
+        const subjectNames = extractSubjects(journalData);
+        const subjectPromises = subjectNames.map(async (name) => {
+            let subject = await Subject.findOne({ name });
+            if (!subject) {
+                subject = new Subject({ name, code: name.substring(0, 4).toUpperCase() });
+                await subject.save();
+            }
+            return subject;
+        });
+
+        await Promise.all(subjectPromises);
+
+        // 2. Transformer et importer chaque session
+        const importPromises = journalData.map(async (sessionData) => {
+            try {
+                const date = parseFrenchDate(sessionData.date);
+
+                // Vérifier si la session existe déjà
+                const existingSession = await CourseSession.findOne({
+                    date: {
+                        $gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+                        $lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+                    },
+                    classes: sessionData.classes
+                });
+
+                if (existingSession) {
+                    return null;
+                }
+
+                // Créer la nouvelle session
+                const newSession = new CourseSession({
+                    date,
+                    classes: sessionData.classes,
+                    subjects: sessionData.matiere,
+                    duration: sessionData.duree,
+                    activities: sessionData.activites || [],
+                    remediation: sessionData.remediation || [],
+                    events: sessionData.evenements || [],
+                    homework: '',
+                    preparation: '',
+                    notes: ''
+                });
+
+                await newSession.save();
+                return newSession;
+            } catch (error) {
+                console.error(`Erreur pour la session ${sessionData.date}:`, error.message);
+                return null;
+            }
+        });
+
+        const results = await Promise.all(importPromises);
+        const successCount = results.filter(r => r !== null).length;
+
+        res.json({
+            success: true,
+            message: `Import terminé: ${successCount} sessions importées sur ${journalData.length}`,
+            imported: successCount,
+            total: journalData.length
+        });
+
+    } catch (error) {
+        console.error('Erreur import:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors du traitement du fichier.',
+            error: error.message
+        });
+    }
 };
 
 exports.importJournal = async (req, res) => {

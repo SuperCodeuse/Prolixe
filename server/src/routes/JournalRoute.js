@@ -3,7 +3,9 @@ const express = require('express');
 const router = express.Router();
 const JournalController = require('../controllers/JournalController'); // Assurez-vous que le chemin est correct
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 router.get('/', JournalController.getAllJournals);
 router.post('/', JournalController.createJournal);

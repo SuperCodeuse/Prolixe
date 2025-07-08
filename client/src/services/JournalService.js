@@ -22,6 +22,17 @@ class JournalService {
         });
     }
 
+    static async importJournal(file) {
+        const formData = new FormData();
+        formData.append('journalFile', file); // 'journalFile' doit correspondre au nom attendu par Multer
+        return ApiService.request(`${JOURNAL_API_URL}/import`, {
+            method: 'POST',
+            body: formData,
+            // Ne pas définir 'Content-Type', le navigateur le fera pour multipart/form-data
+            headers: {}
+        });
+    }
+
     static async getCurrentJournal() {
         return ApiService.request(`${JOURNAL_API_URL}/current`);
     }

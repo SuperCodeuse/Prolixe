@@ -2,6 +2,23 @@
 const mysql = require('mysql2/promise');
 const pool = require('../../config/database');
 
+const parseFrenchDate = (dateStr) => {
+    const months = {
+        'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5,
+        'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11
+    };
+    const parts = dateStr.toLowerCase().split(' ');
+    const day = parseInt(parts[1], 10);
+    const month = months[parts[2]];
+    const year = parseInt(parts[3], 10);
+    return new Date(year, month, day);
+};
+
+const getDayKeyFromDate = (date) => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[date.getDay()];
+};
+
 class JournalController {
     static async withConnection(operation) {
         let connection;
@@ -62,9 +79,7 @@ class JournalController {
                 [name, school_year]
             );
             const newJournalId = insertResult.insertId;
-
             await connection.commit();
-
             const [newJournal] = await connection.execute('SELECT * FROM JOURNAL WHERE id = ?', [newJournalId]);
 
             res.status(201).json({ success: true, message: 'Journal créé avec succès.', data: newJournal[0] });
@@ -100,21 +115,110 @@ class JournalController {
     /**
      * Importe les données d'un journal depuis un fichier JSON.
      */
+
+
     static async importJournal(req, res) {
         if (!req.file) {
             return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
         }
+
+        let connection;
         try {
             const jsonData = JSON.parse(req.file.buffer.toString('utf8'));
-            // NOTE: Une logique d'importation robuste nécessiterait des transactions
-            // et une validation approfondie des données JSON.
-            // Ceci est un placeholder.
-            console.log('Données JSON reçues pour import:', jsonData);
-            res.json({ success: true, message: 'Fichier reçu. La logique d\'importation reste à implémenter.', data: { itemsReceived: jsonData.length } });
+            if (!Array.isArray(jsonData)) {
+                throw new Error("Le JSON doit être un tableau de sessions.");
+            }
+
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            // --- Préparation des données pour la recherche ---
+            const [classes] = await connection.execute('SELECT id, name FROM CLASS');
+            const [scheduleHours] = await connection.execute('SELECT id, libelle FROM schedule_hours');
+            const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE');
+
+            const classMap = new Map(classes.map(c => [c.name.toLowerCase(), c.id]));
+            const timeSlotMap = new Map(scheduleHours.map(h => [h.libelle, h.id]));
+
+            // --- Création du Journal ---
+            const journalName = req.file.originalname.replace(/\.json$/i, '');
+            const schoolYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
+            const [journalResult] = await connection.execute(
+                'INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)',
+                [journalName, schoolYear]
+            );
+            const journalId = journalResult.insertId;
+
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            // --- Traitement et insertion des entrées ---
+            for (const sessionData of jsonData) {
+                const sessionDate = parseFrenchDate(sessionData.date);
+                if (!sessionDate) {
+                    console.warn(`Date invalide ignorée: ${sessionData.date}`);
+                    skippedCount++;
+                    continue;
+                }
+
+                const dayKey = getDayKeyFromDate(sessionDate);
+
+                for (const activity of sessionData.activites) {
+                    const activityTime = activity.heure.replace('h', ':');
+
+                    // Trouver le time_slot_id correspondant
+                    const timeSlotId = Array.from(timeSlotMap.keys()).find(libelle => libelle.startsWith(activityTime))?.[1];
+
+                    if (!timeSlotId) {
+                        console.warn(`Créneau horaire non trouvé pour ${activityTime} le ${sessionData.date}`);
+                        continue;
+                    }
+
+                    // Trouver le schedule_id
+                    const scheduleEntry = schedule.find(s =>
+                        s.day === dayKey && s.time_slot_id === timeSlotId
+                    );
+
+                    if (!scheduleEntry) {
+                        console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
+                        skippedCount++;
+                        continue;
+                    }
+
+                    const entryToInsert = {
+                        journal_id: journalId,
+                        schedule_id: scheduleEntry.id,
+                        date: sessionDate,
+                        planned_work: activity.description,
+                        notes: sessionData.remediation?.map(r => r.description).join('\n') || null
+                    };
+
+                    await connection.execute(
+                        'INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?)',
+                        [entryToInsert.journal_id, entryToInsert.schedule_id, entryToInsert.date, entryToInsert.planned_work, entryToInsert.notes]
+                    );
+                    importedCount++;
+                }
+            }
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées.`,
+                data: { newJournalId: journalId, itemsImported: importedCount, itemsSkipped: skippedCount, totalItems: jsonData.length }
+            });
+
         } catch (error) {
-            JournalController.handleError(res, error, "Erreur lors de l'importation du journal : JSON invalide.");
+            if (connection) await connection.rollback();
+            console.error("Erreur détaillée de l'importation:", error);
+            JournalController.handleError(res, error, `Erreur lors de l'importation du journal : ${error.message}`);
+        } finally {
+            if (connection) connection.release();
         }
     }
+
 
     /**
      * Récupère le journal actuellement défini comme "courant".

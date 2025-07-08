@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useJournal } from '../../hooks/useJournal';
 import { useToast } from '../../hooks/useToast';
 import ConfirmModal from '../ConfirmModal';
+import JournalService from '../../services/JournalService'; // Importez le service
 import './JournalManager.scss';
 
 const JournalManager = () => {
@@ -22,6 +23,37 @@ const JournalManager = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ name: '', school_year: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isImporting, setIsImporting] = useState(false);
+
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (file && file.type === 'application/json') {
+            setSelectedFile(file);
+        } else {
+            showError('Veuillez sélectionner un fichier JSON valide.');
+            setSelectedFile(null);
+        }
+    };
+
+    const handleImport = async () => {
+        console.log("here !!");
+        if (!selectedFile) {
+            showError('Aucun fichier sélectionné.');
+            return;
+        }
+        setIsImporting(true);
+        try {
+            const response = await JournalService.importJournal(selectedFile);
+            success(response.message || 'Importation réussie !');
+            loadAllJournals(); // Recharger les données après l'import
+        } catch (err) {
+            showError(err.message || 'Erreur lors de l\'importation.');
+        } finally {
+            setIsImporting(false);
+            setSelectedFile(null);
+        }
+    };
 
     const handleOpenModal = () => {
         setFormData({ name: '', school_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}` });
@@ -81,9 +113,42 @@ const JournalManager = () => {
         <div className="journal-manager">
             <div className="section-header">
                 <h2>📚 Gestion des Journaux</h2>
-                <button className="btn-primary" onClick={handleOpenModal}>
-                    <span>➕</span> Ajouter un journal
-                </button>
+                <div className="file-container">
+                    <div className="file-input-container">
+                        {!selectedFile && (
+                            <>
+                                <input
+                                    type="file"
+                                    id="import-journal-input"
+                                    accept=".json"
+                                    onChange={handleFileChange}
+                                    className="file-input"
+                                />
+                                <label htmlFor="import-journal-input" className="file-input-label">
+                            <span className="file-input-label-text">
+                              📁 Choisir un fichier
+                            </span>
+                                </label>
+                            </>
+                        )}
+
+                        {selectedFile && (
+                            <button
+                                className="btn-primary"
+                                onClick={handleImport}
+                                disabled={!selectedFile || isImporting}
+                            >
+                                {isImporting ? 'Importation...' : 'Importer le journal'}
+                            </button>
+                        )}
+
+                    </div>
+
+                    <button className="btn-primary" onClick={handleOpenModal}>
+                        <span>➕</span> Ajouter un journal
+                    </button>
+                </div>
+
             </div>
 
             <div className="journal-lists">
