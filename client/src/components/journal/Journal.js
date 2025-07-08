@@ -13,16 +13,15 @@ import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay } from 'date-
 import { fr } from 'date-fns/locale';
 
 const Journal = () => {
-    const { currentJournal, loading } = useJournal();
+    const { currentJournal } = useJournal();
     return currentJournal ? <JournalView /> : <JournalPicker />;
 };
 
 const JournalView = () => {
-    const { currentJournal } = useJournal();
+    const { currentJournal, upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment, fetchJournalEntries, fetchAssignments, journalEntries, assignments } = useJournal();
     const { classes, getClassColor } = useClasses();
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
-    const { journalEntries, assignments, fetchJournalEntries, fetchAssignments, upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment } = useJournal();
     const { success, error: showError } = useToast();
     const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
 
@@ -41,6 +40,8 @@ const JournalView = () => {
     const [nextCourseSlot, setNextCourseSlot] = useState(null);
     const [copyToNextSlot, setCopyToNextSlot] = useState(false);
     const [courseStatus, setCourseStatus] = useState('given'); // 'given' ou 'cancelled'
+
+    const isArchived = currentJournal?.is_archived;
 
     // --- MEMOS & CALLBACKS ---
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
@@ -68,6 +69,7 @@ const JournalView = () => {
     const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
 
     const debouncedSave = (entryData) => {
+        if (isArchived) return;
         const keyForDebounce = `${entryData.schedule_id}-${entryData.date}`;
         if (journalDebounce[keyForDebounce]) clearTimeout(journalDebounce[keyForDebounce]);
 
@@ -87,6 +89,7 @@ const JournalView = () => {
     };
 
     const handleFormChange = (field, value) => {
+        if (isArchived) return;
         const newFormState = { ...journalForm, [field]: value };
         setJournalForm(newFormState);
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
@@ -99,6 +102,7 @@ const JournalView = () => {
     };
 
     const handleStatusChange = (e) => {
+        if (isArchived) return;
         const newStatus = e.target.value;
         setCourseStatus(newStatus);
         let newFormState;
@@ -113,6 +117,7 @@ const JournalView = () => {
     };
 
     const handleCopyToNextSlotChange = async (e) => {
+        if (isArchived) return;
         const isChecked = e.target.checked;
         setCopyToNextSlot(isChecked);
 
@@ -200,7 +205,7 @@ const JournalView = () => {
     }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments, currentJournal]);
 
     const handleDeleteJournalEntry = useCallback(async () => {
-        if (!currentJournalEntryId) return;
+        if (!currentJournalEntryId || isArchived) return;
         try {
             await deleteJournalEntry(currentJournalEntryId);
             success('Entrée de journal supprimée !');
@@ -208,15 +213,17 @@ const JournalView = () => {
         } catch (err) {
             showError(`Erreur: ${err.message || 'Impossible de supprimer l\'entrée'}`);
         }
-    }, [currentJournalEntryId, deleteJournalEntry, success, showError, handleCloseJournalModal]);
+    }, [currentJournalEntryId, deleteJournalEntry, success, showError, handleCloseJournalModal, isArchived]);
 
     const handleAddAssignment = useCallback(() => {
+        if (isArchived) return;
         setSelectedAssignment(null);
         setAssignmentForm({ id: null, class_id: '', subject: '', type: 'Devoir', description: '', due_date: '', is_completed: false, is_corrected: false });
         setShowAssignmentModal(true);
-    }, []);
+    }, [isArchived]);
 
     const handleEditAssignment = useCallback((assignment) => {
+        if (isArchived) return;
         setSelectedAssignment(assignment);
         setAssignmentForm({
             id: assignment.id,
@@ -229,10 +236,11 @@ const JournalView = () => {
             is_corrected: !!assignment.is_corrected
         });
         setShowAssignmentModal(true);
-    }, []);
+    }, [isArchived]);
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
+        if (isArchived) return;
         if (!assignmentForm.class_id || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.due_date) {
             return showError('Veuillez remplir tous les champs obligatoires.');
         }
@@ -243,10 +251,10 @@ const JournalView = () => {
         } catch (err) {
             showError(err.message || "Erreur lors de la sauvegarde de l'assignation");
         }
-    }, [assignmentForm, upsertAssignment, success, showError]);
+    }, [assignmentForm, upsertAssignment, success, showError, isArchived]);
 
     const handleDeleteAssignment = useCallback(async () => {
-        if (!selectedAssignment?.id) return;
+        if (!selectedAssignment?.id || isArchived) return;
         try {
             await deleteAssignment(selectedAssignment.id);
             success('Assignation supprimée !');
@@ -255,11 +263,12 @@ const JournalView = () => {
         } catch (err) {
             showError(`Erreur: ${err.message || 'Impossible de supprimer l\'assignation'}`);
         }
-    }, [selectedAssignment, deleteAssignment, success, showError, closeConfirmModal]);
+    }, [selectedAssignment, deleteAssignment, success, showError, closeConfirmModal, isArchived]);
 
     const handleDeleteAssignmentConfirm = useCallback(() => {
+        if (isArchived) return;
         setConfirmModal({ isOpen: true, title: 'Supprimer l\'assignation', message: 'Êtes-vous sûr de vouloir supprimer cette assignation ?', onConfirm: handleDeleteAssignment });
-    }, [handleDeleteAssignment]);
+    }, [handleDeleteAssignment, isArchived]);
 
     const isLoading = loadingHours || loadingSchedule || loadingHolidays;
     if (isLoading) return <div className="journal-page"><div className="loading-message">Chargement...</div></div>;
@@ -268,7 +277,10 @@ const JournalView = () => {
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <h1>{currentJournal?.name}</h1>
+                <div className="journal-header-left">
+                    <h1>{currentJournal?.name}</h1>
+                    {isArchived && <span>(Archivé - Lecture seule)</span>}
+                </div>
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
@@ -337,14 +349,14 @@ const JournalView = () => {
                 </div>
                 <div className="assignments-section">
                     <h2>Assignations & Évaluations</h2>
-                    <button className="btn-primary" onClick={handleAddAssignment}>+ Nouvelle Assignation</button>
+                    {!isArchived && <button className="btn-primary" onClick={handleAddAssignment}>+ Nouvelle Assignation</button>}
                     {assignments.length === 0 ? <p>Aucune assignation prévue cette semaine.</p> : (
                         <div className="assignment-list">
                             {assignments.map(assign => {
                                 const assignClass = getClassInfo(assign.class_id);
                                 return (
                                     <div key={assign.id} className={`assignment-item ${assign.is_completed && assign.is_corrected ? 'fully-corrected' : ''}`}>
-                                        <input type="checkbox" checked={assign.is_completed} title="Terminé ?" onChange={() => { const payload = { ...assign, is_completed: !assign.is_completed }; if (!payload.is_completed) payload.is_corrected = false; upsertAssignment(payload); }} />
+                                        <input type="checkbox" checked={assign.is_completed} title="Terminé ?" onChange={() => { if(!isArchived) {const payload = { ...assign, is_completed: !assign.is_completed }; if (!payload.is_completed) payload.is_corrected = false; upsertAssignment(payload); }}} disabled={isArchived} />
                                         <div className="assignment-details">
                                             <h4>{assign.subject} ({assign.type})</h4>
                                             <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
@@ -352,10 +364,10 @@ const JournalView = () => {
                                         {assign.is_completed && (
                                             <div className="corrected-checkbox-wrapper">
                                                 <label htmlFor={`corrected-${assign.id}`}>Corrigé</label>
-                                                <input type="checkbox" id={`corrected-${assign.id}`} title="Corrigé ?" checked={!!assign.is_corrected} onChange={() => upsertAssignment({ id: assign.id, is_corrected: !assign.is_corrected })}/>
+                                                <input type="checkbox" id={`corrected-${assign.id}`} title="Corrigé ?" checked={!!assign.is_corrected} onChange={() => {if(!isArchived) upsertAssignment({ id: assign.id, is_corrected: !assign.is_corrected })}} disabled={isArchived}/>
                                             </div>
                                         )}
-                                        <button className="btn-edit" onClick={() => handleEditAssignment(assign)}>✏️</button>
+                                        {!isArchived && <button className="btn-edit" onClick={() => handleEditAssignment(assign)}>✏️</button>}
                                     </div>
                                 );
                             })}
@@ -404,7 +416,7 @@ const JournalView = () => {
 
                             <div className="form-group">
                                 <label>Statut du cours</label>
-                                <select value={courseStatus} onChange={handleStatusChange} className="status-select">
+                                <select value={courseStatus} onChange={handleStatusChange} className="status-select" disabled={isArchived}>
                                     <option value="given">Cours donné</option>
                                     <option value="cancelled">Cours annulé</option>
                                 </select>
@@ -412,11 +424,11 @@ const JournalView = () => {
 
                             {courseStatus === 'given' ? (
                                 <>
-                                    <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3"/></div>
-                                    <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3"/></div>
-                                    <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2"/></div>
+                                    <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3" disabled={isArchived}/></div>
+                                    <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3" disabled={isArchived}/></div>
+                                    <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2" disabled={isArchived}/></div>
 
-                                    {nextCourseSlot && (
+                                    {nextCourseSlot && !isArchived && (
                                         <div className="form-group checkbox-group copy-next-group">
                                             <input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} />
                                             <label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label>
@@ -426,12 +438,12 @@ const JournalView = () => {
                             ) : (
                                 <div className="form-group">
                                     <label>Raison de l'annulation</label>
-                                    <textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3"/>
+                                    <textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/>
                                 </div>
                             )}
                         </div>
                         <div className="modal-footer">
-                            {currentJournalEntryId && <button type="button" className="btn-danger" onClick={handleDeleteJournalEntry}>Supprimer l'entrée</button>}
+                            {currentJournalEntryId && !isArchived && <button type="button" className="btn-danger" onClick={handleDeleteJournalEntry}>Supprimer l'entrée</button>}
                             <button type="button" className="btn-secondary" onClick={handleCloseJournalModal}>Fermer</button>
                         </div>
                     </div>

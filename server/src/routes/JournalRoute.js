@@ -10,6 +10,7 @@ const upload = multer({ storage: storage });
 router.get('/', JournalController.getAllJournals);
 router.post('/', JournalController.createJournal);
 router.post('/archive/:id', JournalController.archiveJournal);
+router.delete('/archive/:id', JournalController.deleteJournal); // Nouvelle route
 router.post('/import', upload.single('journalFile'), JournalController.importJournal);
 router.get('/current', JournalController.getCurrentJournal);
 router.get('/archived', JournalController.getArchivedJournals);

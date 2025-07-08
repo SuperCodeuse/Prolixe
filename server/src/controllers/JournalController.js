@@ -81,6 +81,22 @@ class JournalController {
         }
     }
 
+    static async deleteJournal(req, res) {
+        const { id } = req.params;
+        try {
+            const [result] = await JournalController.withConnection(async (connection) => {
+                // Assurez-vous que le journal est bien archivé avant de le supprimer pour plus de sécurité
+                return await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
+            });
+            if (result.affectedRows === 0) {
+                return JournalController.handleError(res, new Error('Journal non trouvé ou non archivé'), 'Journal non trouvé ou non archivé.', 404);
+            }
+            res.json({ success: true, message: 'Journal supprimé définitivement.' });
+        } catch (error) {
+            JournalController.handleError(res, error, "Erreur lors de la suppression du journal.");
+        }
+    }
+
     static async importJournal(req, res) {
         if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
 

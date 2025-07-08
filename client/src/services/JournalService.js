@@ -22,6 +22,13 @@ class JournalService {
         });
     }
 
+    // NOUVELLE FONCTION AJOUTÉE
+    static async deleteJournal(id) {
+        return ApiService.request(`${JOURNAL_API_URL}/archive/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     static async importJournal(file, journalId) {
         const formData = new FormData();
         formData.append('journalFile', file);

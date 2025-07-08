@@ -164,5 +164,24 @@
       border-color: var(--red-danger);
     }
   }
+
+  .btn-delete {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--red-danger);
+    border: 1px solid var(--red-danger);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--red-danger);
+      color: white;
+      cursor: pointer;
+    }
+  }
+
 }
+
+
 

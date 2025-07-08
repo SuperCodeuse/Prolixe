@@ -8,7 +8,7 @@ const JournalPicker = () => {
     if (loading) return <div>Chargement des journaux...</div>;
     if (error) return <div>Erreur: {error}</div>;
 
-    const current = journals.find(j => !j.is_archived);
+    const activeJournals = journals.filter(j => !j.is_archived);
     const archived = journals.filter(j => j.is_archived);
 
     return (
@@ -18,26 +18,27 @@ const JournalPicker = () => {
                 <p>Choisissez le journal de classe que vous souhaitez consulter.</p>
 
                 <div className="journal-section">
-                    <h2>Journal Courant</h2>
-                    {current ? (
-                        <button className="journal-button current" onClick={() => selectJournal(current)}>
-                            {current.name} <span>({current.school_year})</span>
-                        </button>
+                    <h2>Journaux Actifs</h2>
+                    {activeJournals.length > 0 ? (
+                        activeJournals.map(journal => (
+                            <button key={journal.id} className="journal-button current" onClick={() => selectJournal(journal)}>
+                                {journal.name} <span>({journal.school_year})</span>
+                            </button>
+                        ))
                     ) : (
-                        <p>Aucun journal courant. Veuillez en créer un dans les paramètres.</p>
+                        <p>Aucun journal actif. Veuillez en créer un dans les paramètres.</p>
                     )}
                 </div>
 
                 {archived.length > 0 && (
                     <div className="journal-section">
-                        <h2>Journaux Archivés</h2>
+                        <h2>Journaux Archivés (Lecture seule)</h2>
                         <div className="archived-list">
                             {archived.map(journal => (
                                 <div key={journal.id} style={{ display: 'flex', gap: '1rem' }}>
                                     <button className="journal-button" onClick={() => selectJournal(journal)}>
                                         {journal.name} <span>({journal.school_year})</span>
                                     </button>
-                                    <button className="journal-button" disabled>Exporter</button>
                                 </div>
                             ))}
                         </div>

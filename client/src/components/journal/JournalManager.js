@@ -14,6 +14,7 @@ const JournalManager = () => {
         selectJournal,
         createJournal,
         archiveJournal,
+        deleteArchivedJournal, // Nouvelle fonction
         clearJournal,
         loading,
         error,
@@ -121,6 +122,24 @@ const JournalManager = () => {
         );
     };
 
+    const handleDelete = (journal) => {
+        showConfirmModal(
+            'Supprimer le journal',
+            `Êtes-vous sûr de vouloir supprimer définitivement le journal archivé "${journal.name}" ? Cette action est irréversible.`,
+            async () => {
+                try {
+                    await deleteArchivedJournal(journal.id);
+                    success('Journal supprimé définitivement.');
+                    loadAllJournals();
+                    closeConfirmModal();
+                } catch (err) {
+                    showError(err.message);
+                    closeConfirmModal();
+                }
+            }
+        );
+    };
+
     const showConfirmModal = (title, message, onConfirm) => {
         setConfirmModal({ isOpen: true, title, message, onConfirm });
     };
@@ -178,7 +197,7 @@ const JournalManager = () => {
             <div className="journal-lists">
                 <div className="journal-list">
                     <h3>Journal Courant</h3>
-                    {currentJournal ? (
+                    {currentJournal && !currentJournal.is_archived ? (
                         <div className="journal-card current">
                             <div className="journal-info">
                                 <strong>{currentJournal.name}</strong>
@@ -191,7 +210,7 @@ const JournalManager = () => {
                             </div>
                         </div>
                     ) : (
-                        <p>Aucun journal courant sélectionné.</p>
+                        <p>Aucun journal courant sélectionné. Choisissez-en un parmi les journaux actifs.</p>
                     )}
                 </div>
 
@@ -227,6 +246,8 @@ const JournalManager = () => {
                                 </div>
                                 <div className="journal-actions">
                                     <span className="status-badge archived">Archivé</span>
+                                    <button onClick={() => selectJournal(journal)} className="btn-select">Visualiser</button>
+                                    <button onClick={() => handleDelete(journal)} className="btn btn-delete">Supprimer</button>
                                 </div>
                             </div>
                         ))

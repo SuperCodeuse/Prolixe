@@ -23,7 +23,14 @@ export const JournalProvider = ({ children }) => {
             const archived = all.filter(j => j.is_archived);
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
             const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
-            setCurrentJournal(lastSelected || current || (all.length > 0 ? all[0] : null));
+
+            // Si le journal sélectionné est archivé, on le garde, sinon on prend le courant
+            if(lastSelected){
+                setCurrentJournal(lastSelected);
+            } else {
+                setCurrentJournal(current || (all.find(j => !j.is_archived)));
+            }
+
             setArchivedJournals(archived);
         } catch (err) {
             setError(err.message || "Erreur lors du chargement des journaux.");
@@ -75,6 +82,16 @@ export const JournalProvider = ({ children }) => {
         }
     }, [loadAllJournals]);
 
+    const deleteArchivedJournal = useCallback(async (journalId) => {
+        try {
+            await JournalService.deleteJournal(journalId);
+            await loadAllJournals();
+        } catch (err) {
+            setError(err.message || "Erreur lors de la suppression du journal.");
+            throw err;
+        }
+    }, [loadAllJournals]);
+
     const fetchJournalEntries = useCallback(async (startDate, endDate) => {
         if (!startDate || !endDate || !currentJournal) return;
         setLoading(true);
@@ -104,6 +121,7 @@ export const JournalProvider = ({ children }) => {
 
     const upsertJournalEntry = useCallback(async (entryData) => {
         if (!currentJournal) throw new Error("Aucun journal sélectionné.");
+        if (currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
         setError(null);
         try {
             const dataWithJournalId = { ...entryData, journal_id: currentJournal.id };
@@ -126,6 +144,7 @@ export const JournalProvider = ({ children }) => {
     }, [currentJournal]);
 
     const deleteJournalEntry = useCallback(async (id) => {
+        if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
         setError(null);
         try {
             await JournalService.deleteJournalEntry(id);
@@ -134,9 +153,10 @@ export const JournalProvider = ({ children }) => {
             setError(err.message || "Erreur lors de la suppression de l'entrée de journal.");
             throw err;
         }
-    }, []);
+    }, [currentJournal]);
 
     const upsertAssignment = useCallback(async (assignmentData) => {
+        if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
         setError(null);
         try {
             const response = await JournalService.upsertAssignment(assignmentData);
@@ -153,9 +173,10 @@ export const JournalProvider = ({ children }) => {
             setError(err.message || "Erreur lors de la sauvegarde du devoir.");
             throw err;
         }
-    }, []);
+    }, [currentJournal]);
 
     const deleteAssignment = useCallback(async (id) => {
+        if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
         setError(null);
         try {
             await JournalService.deleteAssignment(id);
@@ -164,10 +185,10 @@ export const JournalProvider = ({ children }) => {
             setError(err.message || "Erreur lors de la suppression du devoir.");
             throw err;
         }
-    }, []);
+    }, [currentJournal]);
 
     const value = {
-        journals, currentJournal, archivedJournals, selectJournal, loadAllJournals, createJournal, archiveJournal,
+        journals, currentJournal, archivedJournals, selectJournal, loadAllJournals, createJournal, archiveJournal, deleteArchivedJournal,
         journalEntries, assignments, loading, error, fetchJournalEntries, fetchAssignments,
         upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment,clearJournal
     };

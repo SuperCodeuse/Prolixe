@@ -19,11 +19,12 @@ import SaveIcon from '@mui/icons-material/Save';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-export default function SessionCard({ session, onUpdate }) {
+export default function SessionCard({ session, onUpdate, isArchived }) {
     const [editing, setEditing] = useState(false);
     const [editedSession, setEditedSession] = useState(session);
 
     const handleSave = async () => {
+        if (isArchived) return;
         try {
             await onUpdate(editedSession);
             setEditing(false);
@@ -75,14 +76,16 @@ export default function SessionCard({ session, onUpdate }) {
                         </Box>
                     </Box>
 
-                    <Button
-                        startIcon={editing ? <SaveIcon /> : <EditIcon />}
-                        onClick={editing ? handleSave : () => setEditing(true)}
-                        variant={editing ? "contained" : "outlined"}
-                        size="small"
-                    >
-                        {editing ? 'Sauver' : 'Éditer'}
-                    </Button>
+                    {!isArchived && (
+                        <Button
+                            startIcon={editing ? <SaveIcon /> : <EditIcon />}
+                            onClick={editing ? handleSave : () => setEditing(true)}
+                            variant={editing ? "contained" : "outlined"}
+                            size="small"
+                        >
+                            {editing ? 'Sauver' : 'Éditer'}
+                        </Button>
+                    )}
                 </Box>
 
                 {/* Activités du cours (lecture seule) */}
@@ -169,7 +172,7 @@ export default function SessionCard({ session, onUpdate }) {
                                 ...editedSession,
                                 homework: e.target.value
                             })}
-                            disabled={!editing}
+                            disabled={!editing || isArchived}
                             variant={editing ? "outlined" : "filled"}
                         />
                     </AccordionDetails>
@@ -192,7 +195,7 @@ export default function SessionCard({ session, onUpdate }) {
                                 ...editedSession,
                                 preparation: e.target.value
                             })}
-                            disabled={!editing}
+                            disabled={!editing || isArchived}
                             variant={editing ? "outlined" : "filled"}
                         />
                     </AccordionDetails>
@@ -215,7 +218,7 @@ export default function SessionCard({ session, onUpdate }) {
                                     ...editedSession,
                                     quiz: { ...editedSession.quiz, date: e.target.value }
                                 })}
-                                disabled={!editing}
+                                disabled={!editing || isArchived}
                                 InputLabelProps={{ shrink: true }}
                             />
                             <TextField
@@ -226,7 +229,7 @@ export default function SessionCard({ session, onUpdate }) {
                                     ...editedSession,
                                     quiz: { ...editedSession.quiz, topic: e.target.value }
                                 })}
-                                disabled={!editing}
+                                disabled={!editing || isArchived}
                             />
                             <TextField
                                 fullWidth
@@ -238,7 +241,7 @@ export default function SessionCard({ session, onUpdate }) {
                                     ...editedSession,
                                     quiz: { ...editedSession.quiz, description: e.target.value }
                                 })}
-                                disabled={!editing}
+                                disabled={!editing || isArchived}
                             />
                         </Box>
                     </AccordionDetails>
@@ -261,14 +264,14 @@ export default function SessionCard({ session, onUpdate }) {
                                 ...editedSession,
                                 notes: e.target.value
                             })}
-                            disabled={!editing}
+                            disabled={!editing || isArchived}
                             variant={editing ? "outlined" : "filled"}
                         />
                     </AccordionDetails>
                 </Accordion>
 
                 {/* Boutons d'action si en mode édition */}
-                {editing && (
+                {editing && !isArchived && (
                     <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                         <Button onClick={handleCancel} variant="outlined">
                             Annuler
@@ -282,4 +285,3 @@ export default function SessionCard({ session, onUpdate }) {
         </Card>
     );
 }
-
