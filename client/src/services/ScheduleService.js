@@ -1,30 +1,26 @@
 // frontend/src/services/scheduleService.js
-import ApiService from './api'; // Importez votre ApiService
+import ApiService from './api';
 
 class ScheduleService {
-    // Récupérer tout l'emploi du temps
-    static async getSchedule() {
-        return ApiService.request('/schedule');
+    static async getSchedule(journalId) {
+        if (!journalId) return Promise.resolve({ data: {} });
+        return ApiService.request(`/schedule?journal_id=${journalId}`);
     }
 
-    // time_slot_libelle est le libellé du créneau (ex: '08:00-08:50')
-    // time_slot_id est l'ID numérique du créneau dans la table HOURS
-    // courseData contient { subject, classId, room, notes }
-    static async upsertCourse(day, time_slot_id, courseData) {
+    static async upsertCourse(day, time_slot_id, courseData, journalId) {
         return ApiService.request('/schedule', {
-            method: 'PUT', // Méthode HTTP pour l'upsert
-            body: JSON.stringify({ // Stringify le corps de la requête
+            method: 'PUT',
+            body: JSON.stringify({
                 day,
                 time_slot_id,
+                journal_id: journalId, // Ajout du journalId
                 ...courseData
             }),
         });
     }
 
-    // Supprimer un cours
-    static async deleteCourse(day, time_slot_id) {
-        // La route de suppression utilise des paramètres dans l'URL
-        return ApiService.request(`/schedule/${day}/${time_slot_id}`, {
+    static async deleteCourse(day, time_slot_id, journalId) {
+        return ApiService.request(`/schedule/${journalId}/${day}/${time_slot_id}`, {
             method: 'DELETE',
         });
     }

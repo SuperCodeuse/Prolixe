@@ -22,13 +22,15 @@ class JournalService {
         });
     }
 
-    static async importJournal(file) {
+    static async importJournal(file, journalId) {
         const formData = new FormData();
-        formData.append('journalFile', file); // 'journalFile' doit correspondre au nom attendu par Multer
+        formData.append('journalFile', file);
+        formData.append('journal_id', journalId); // Ajout de l'ID du journal
+
+        // Laisser le navigateur gérer le Content-Type pour multipart/form-data
         return ApiService.request(`${JOURNAL_API_URL}/import`, {
             method: 'POST',
             body: formData,
-            // Ne pas définir 'Content-Type', le navigateur le fera pour multipart/form-data
             headers: {}
         });
     }
@@ -41,15 +43,6 @@ class JournalService {
         return ApiService.request(`${JOURNAL_API_URL}/archived`);
     }
 
-    static async importJournal(file) {
-        const formData = new FormData();
-        formData.append('journalFile', file);
-        return ApiService.request(`${JOURNAL_API_URL}/import`, {
-            method: 'POST',
-            body: formData, // Laisse le navigateur définir le Content-Type pour multipart/form-data
-            headers: {} // Ne pas mettre 'Content-Type': 'application/json'
-        });
-    }
 
     // --- Journal Entries ---
     static async getJournalEntries(startDate, endDate, journal_id) {

@@ -25,6 +25,7 @@ const JournalManager = () => {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [selectedFile, setSelectedFile] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [importTargetJournalId, setImportTargetJournalId] = useState(''); // Nouvel état
 
     const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -37,14 +38,17 @@ const JournalManager = () => {
     };
 
     const handleImport = async () => {
-        console.log("here !!");
         if (!selectedFile) {
             showError('Aucun fichier sélectionné.');
             return;
         }
+        if (!importTargetJournalId) {
+            showError('Veuillez sélectionner un journal de destination pour l\'importation.');
+            return;
+        }
         setIsImporting(true);
         try {
-            const response = await JournalService.importJournal(selectedFile);
+            const response = await JournalService.importJournal(selectedFile, importTargetJournalId);
             success(response.message || 'Importation réussie !');
             loadAllJournals(); // Recharger les données après l'import
         } catch (err) {
@@ -52,6 +56,7 @@ const JournalManager = () => {
         } finally {
             setIsImporting(false);
             setSelectedFile(null);
+            setImportTargetJournalId(''); // Réinitialiser la sélection
         }
     };
 
@@ -114,41 +119,42 @@ const JournalManager = () => {
             <div className="section-header">
                 <h2>📚 Gestion des Journaux</h2>
                 <div className="file-container">
-                    <div className="file-input-container">
-                        {!selectedFile && (
-                            <>
-                                <input
-                                    type="file"
-                                    id="import-journal-input"
-                                    accept=".json"
-                                    onChange={handleFileChange}
-                                    className="file-input"
-                                />
-                                <label htmlFor="import-journal-input" className="file-input-label">
-                            <span className="file-input-label-text">
-                              📁 Choisir un fichier
-                            </span>
-                                </label>
-                            </>
-                        )}
-
+                    <div className="import-section">
+                        <select
+                            value={importTargetJournalId}
+                            onChange={(e) => setImportTargetJournalId(e.target.value)}
+                            disabled={isImporting}
+                            className="btn-select"
+                        >
+                            <option value="">Importer dans...</option>
+                            {journals.filter(j => !j.is_archived).map(j => (
+                                <option key={j.id} value={j.id}>{j.name}</option>
+                            ))}
+                        </select>
+                        <input
+                            type="file"
+                            id="import-journal-input"
+                            accept=".json"
+                            onChange={handleFileChange}
+                            className="file-input"
+                        />
+                        <label htmlFor="import-journal-input" className="file-input-label">
+                            <span className="file-input-label-text">📁 Choisir un fichier</span>
+                        </label>
                         {selectedFile && (
                             <button
                                 className="btn-primary"
                                 onClick={handleImport}
-                                disabled={!selectedFile || isImporting}
+                                disabled={!selectedFile || isImporting || !importTargetJournalId}
                             >
-                                {isImporting ? 'Importation...' : 'Importer le journal'}
+                                {isImporting ? 'Importation...' : `Importer`}
                             </button>
                         )}
-
                     </div>
-
                     <button className="btn-primary" onClick={handleOpenModal}>
                         <span>➕</span> Ajouter un journal
                     </button>
                 </div>
-
             </div>
 
             <div className="journal-lists">

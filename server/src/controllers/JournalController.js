@@ -83,7 +83,10 @@ class JournalController {
 
     static async importJournal(req, res) {
         if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
+
+        const { journal_id } = req.body; // Récupérer l'ID du journal depuis le corps de la requête
         let connection;
+
         try {
             const jsonData = JSON.parse(req.file.buffer.toString('utf8'));
             if (!Array.isArray(jsonData)) throw new Error("Le JSON doit être un tableau de sessions.");
@@ -93,15 +96,8 @@ class JournalController {
 
             const [classes] = await connection.execute('SELECT id, name FROM CLASS');
             const [scheduleHours] = await connection.execute('SELECT id, libelle FROM schedule_hours');
-            const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE');
-            const classMap = new Map(classes.map(c => [c.name.toLowerCase(), c.id]));
+            const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE WHERE journal_id = ?', [journal_id]);
             const timeSlotMap = new Map(scheduleHours.map(h => [h.libelle, h.id]));
-
-            const journalName = req.file.originalname.replace(/\.json$/i, '');
-            const schoolYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
-            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
-            const [journalResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)', [journalName, schoolYear]);
-            const journalId = journalResult.insertId;
 
             let importedCount = 0;
             let skippedCount = 0;
@@ -124,19 +120,19 @@ class JournalController {
                     }
                     const scheduleEntry = schedule.find(s => s.day === dayKey && s.time_slot_id === timeSlotId);
                     if (!scheduleEntry) {
-                        console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime}`);
+                        console.warn(`Aucun cours trouvé dans l'horaire pour le ${dayKey} à ${activityTime} dans le journal ${journal_id}`);
                         skippedCount++;
                         continue;
                     }
                     const plannedWorkDescription = activity.description;
                     const notesDescription = sessionData.remediation?.map(r => r.description).join('\n') || '';
-                    await connection.execute(`INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)), notes = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`, [journalId, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]);
+                    await connection.execute(`INSERT INTO JOURNAL_ENTRY (journal_id, schedule_id, date, planned_work, notes) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE planned_work = CONCAT(IFNULL(planned_work, ''), '\\n', VALUES(planned_work)), notes = CONCAT(IFNULL(notes, ''), '\\n', VALUES(notes))`, [journal_id, scheduleEntry.id, sessionDate, plannedWorkDescription, notesDescription]);
                     importedCount++;
                 }
             }
 
             await connection.commit();
-            res.json({ success: true, message: `Journal "${journalName}" importé avec succès. ${importedCount} sessions ajoutées, ${skippedCount} ignorées.`, data: { newJournalId: journalId, itemsImported: importedCount, itemsSkipped: skippedCount, totalItems: jsonData.length } });
+            res.json({ success: true, message: `Importation terminée. ${importedCount} entrées ajoutées, ${skippedCount} ignorées.`, data: { itemsImported: importedCount, itemsSkipped: skippedCount } });
         } catch (error) {
             if (connection) await connection.rollback();
             console.error("Erreur détaillée de l'importation:", error);

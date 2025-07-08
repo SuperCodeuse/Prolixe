@@ -11,6 +11,6 @@ router.get('/', ScheduleController.getSchedule);
 router.put('/', ScheduleController.upsertCourse);
 
 // Route pour supprimer un cours (basé sur le jour et l'ID du créneau horaire)
-router.delete('/:day/:time_slot_id', ScheduleController.deleteCourse);
+router.delete('/:journal_id/:day/:time_slot_id', ScheduleController.deleteCourse);
 
 module.exports = router;
