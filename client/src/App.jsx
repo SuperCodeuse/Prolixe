@@ -12,6 +12,7 @@ import { useToast } from './hooks/useToast'; // Import du hook
 import Toast from './components/Toast';     // Import du composant
 
 import './App.scss';
+import CorrectionView from "./components/Correction/CorrectionView";
 
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     const breakpoint = 1600;
@@ -30,6 +31,7 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/journal" element={<Journal />} />
                     <Route path="/horaire" element={<Horaire />} />
+                    <Route path="/correction" element={<CorrectionView />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
