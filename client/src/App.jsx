@@ -31,7 +31,7 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/journal" element={<Journal />} />
                     <Route path="/horaire" element={<Horaire />} />
-                    <Route path="/correction" element={<CorrectionView />} />
+                    <Route path="/correction" element={<CorrectionList />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

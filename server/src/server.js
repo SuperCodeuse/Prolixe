@@ -189,6 +189,7 @@ app.use('/api/schedule', require('./routes/ScheduleRoute'));
 app.use('/api/journal', require('./routes/JournalRoute'));
 app.use('/api/attributions', require('./routes/AttributionRoute'));
 app.use('/api/evaluations', require('./routes/EvaluationRoute'));
+app.use('/api/students', require('./routes/StudentRoute'));
 
 // Route de test
 app.get('/api/test', async (req, res) => {

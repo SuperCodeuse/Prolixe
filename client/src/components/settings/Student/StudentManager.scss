@@ -1,0 +1,63 @@
+@import '../../../App.scss';
+
+.student-manager {
+  h2 {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 2rem;
+  }
+
+  .add-student-form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+
+    input {
+      flex-grow: 1;
+    }
+  }
+
+  .student-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .student-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-dark-secondary);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+  }
+
+  .btn-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    &:hover {
+      color: var(--red-danger);
+    }
+  }
+}
+
+.btn-select {
+  @include btn-secondary-base;
+  font-size: 0.8rem;
+  padding-inline: 0.5rem !important;
+  margin-left: 0.5rem;
+}
+
+.form-group input {
+  width: 95%;
+  padding: 0.85rem; // Padding légèrement augmenté
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
