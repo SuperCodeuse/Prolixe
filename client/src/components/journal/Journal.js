@@ -1,3 +1,4 @@
+
 // client/src/components/journal/Journal.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './Journal.scss';
@@ -39,7 +40,7 @@ const JournalView = () => {
     const [currentJournalEntryId, setCurrentJournalEntryId] = useState(null);
     const [nextCourseSlot, setNextCourseSlot] = useState(null);
     const [copyToNextSlot, setCopyToNextSlot] = useState(false);
-    const [courseStatus, setCourseStatus] = useState('given'); // 'given' ou 'cancelled'
+    const [courseStatus, setCourseStatus] = useState('given'); // 'given', 'cancelled', ou 'exam'
 
     const isArchived = currentJournal?.is_archived;
 
@@ -76,7 +77,7 @@ const JournalView = () => {
         const timeoutId = setTimeout(async () => {
             try {
                 const savedEntry = await upsertJournalEntry(entryData);
-                if (savedEntry && savedEntry.id && entryData.schedule_id === selectedCourseForJournal.id) {
+                if (savedEntry && savedEntry.id && selectedCourseForJournal && entryData.schedule_id === selectedCourseForJournal.id) {
                     setCurrentJournalEntryId(savedEntry.id);
                 }
             } catch (err) {
@@ -106,14 +107,45 @@ const JournalView = () => {
         const newStatus = e.target.value;
         setCourseStatus(newStatus);
         let newFormState;
+
         if (newStatus === 'cancelled') {
             newFormState = { planned_work: '', actual_work: '[CANCELLED]', notes: journalForm.notes };
-        } else {
+            const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+            setJournalForm(newFormState);
+            debouncedSave(entryData);
+        } else if (newStatus === 'exam') {
+            newFormState = { planned_work: '', actual_work: '[EXAM]', notes: journalForm.notes || 'Sujet : ' };
+            setJournalForm(newFormState);
+            const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+            debouncedSave(entryData);
+
+            // Appliquer à tous les autres cours de la même classe ce jour-là
+            const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
+            const coursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
+            const otherCoursesOfSameClass = coursesForThisDay.filter(c => c.classId === selectedCourseForJournal.classId && c.id !== selectedCourseForJournal.id);
+
+            otherCoursesOfSameClass.forEach(courseToUpdate => {
+                const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
+                const examEntryData = {
+                    id: existingEntry?.id || null,
+                    schedule_id: courseToUpdate.id,
+                    date: selectedDayForJournal.key,
+                    planned_work: '',
+                    actual_work: '[EXAM]',
+                    notes: newFormState.notes,
+                };
+                debouncedSave(examEntryData);
+            });
+            if (otherCoursesOfSameClass.length > 0) {
+                success(`Tous les cours de la classe pour cette journée ont été marqués comme "Examen".`);
+            }
+
+        } else { // Cas 'given'
             newFormState = { planned_work: journalForm.planned_work, actual_work: '', notes: '' };
+            setJournalForm(newFormState);
+            const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+            debouncedSave(entryData);
         }
-        setJournalForm(newFormState);
-        const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
-        debouncedSave(entryData);
     };
 
     const handleCopyToNextSlotChange = async (e) => {
@@ -142,6 +174,9 @@ const JournalView = () => {
         if (entry && entry.actual_work === '[CANCELLED]') {
             setCourseStatus('cancelled');
             setJournalForm({ planned_work: '', actual_work: '[CANCELLED]', notes: entry.notes || '' });
+        } else if (entry && entry.actual_work === '[EXAM]') {
+            setCourseStatus('exam');
+            setJournalForm({ planned_work: '', actual_work: '[EXAM]', notes: entry.notes || '' });
         } else {
             setCourseStatus('given');
             setJournalForm({ planned_work: entry?.planned_work || '', actual_work: entry?.actual_work || '', notes: entry?.notes || '' });
@@ -314,10 +349,12 @@ const JournalView = () => {
                                                     const classInfo = getClassInfo(courseInSchedule.classId);
                                                     const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
                                                     const isCancelled = journalEntry && journalEntry.actual_work === '[CANCELLED]';
+                                                    const isExam = journalEntry && journalEntry.actual_work === '[EXAM]';
                                                     const cancellationReason = isCancelled ? journalEntry.notes : null;
+                                                    const examTopic = isExam ? journalEntry.notes : null;
 
                                                     let journalPreview = { text: null, className: '' };
-                                                    if (journalEntry && !isCancelled) {
+                                                    if (journalEntry && !isCancelled && !isExam) {
                                                         journalPreview.text = journalEntry.actual_work || journalEntry.planned_work;
                                                         journalPreview.className = journalEntry.actual_work ? 'actual-work' : 'planned-work';
                                                     }
@@ -325,8 +362,8 @@ const JournalView = () => {
                                                     return (
                                                         <div
                                                             key={courseInSchedule.id}
-                                                            className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''}`}
-                                                            style={{ backgroundColor: `${getClassColor(courseInSchedule.subject, classInfo?.level)}20`, borderColor: isCancelled ? 'var(--red-danger)' : getClassColor(courseInSchedule.subject, classInfo?.level) }}
+                                                            className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''}`}
+                                                            style={{ borderColor: isCancelled ? 'var(--red-danger)' : isExam ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, classInfo?.level) }}
                                                             onClick={() => handleOpenJournalModal(courseInSchedule, day)}
                                                         >
                                                             {isCancelled ? (
@@ -334,6 +371,12 @@ const JournalView = () => {
                                                                     <span className="cancellation-icon">🚫</span>
                                                                     <p className="cancellation-label">ANNULÉ</p>
                                                                     <p className="cancellation-reason">{cancellationReason}</p>
+                                                                </div>
+                                                            ) : isExam ? (
+                                                                <div className="cancellation-display exam-display">
+                                                                    <span className="cancellation-icon">✍️</span>
+                                                                    <p className="cancellation-label">EXAMEN</p>
+                                                                    <p className="cancellation-reason">{examTopic}</p>
                                                                 </div>
                                                             ) : (
                                                                 <div className="course-summary">
@@ -425,6 +468,7 @@ const JournalView = () => {
                                 <select value={courseStatus} onChange={handleStatusChange} className="status-select" disabled={isArchived}>
                                     <option value="given">Cours donné</option>
                                     <option value="cancelled">Cours annulé</option>
+                                    <option value="exam">Période d'examen</option>
                                 </select>
                             </div>
 
@@ -441,10 +485,15 @@ const JournalView = () => {
                                         </div>
                                     )}
                                 </>
-                            ) : (
+                            ) : courseStatus === 'cancelled' ? (
                                 <div className="form-group">
                                     <label>Raison de l'annulation</label>
                                     <textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/>
+                                </div>
+                            ) : (
+                                <div className="form-group">
+                                    <label>Sujet de l'examen / Informations</label>
+                                    <textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Sujet de l'examen, matériel autorisé..." rows="3" disabled={isArchived}/>
                                 </div>
                             )}
                         </div>
