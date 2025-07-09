@@ -15,6 +15,7 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
         { id: 'journal', label: 'Journal', icon: '📝', path: '/journal' },
         { id: 'horaire', label: 'Emploi du temps', icon: '⏰', path: '/horaire' },
+        { id: 'correction', label: 'Correction', icon: '✅', path: '/correction' },
         { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' }
     ];
 
