@@ -1,5 +1,5 @@
-// dashboard.jsx
-import React from 'react';
+// client/src/components/dashboard/Dashboard.js
+import React, { useEffect } from 'react';
 import { useClasses } from '../../hooks/useClasses';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useJournal } from '../../hooks/useJournal';
@@ -11,7 +11,13 @@ import './dashboard.scss';
 const Dashboard = () => {
     const { classes } = useClasses();
     const { schedule } = useSchedule();
-    const { assignments } = useJournal();
+    const { assignments, fetchAssignments } = useJournal();
+
+    useEffect(() => {
+        // On s'assure de toujours avoir la liste complète des devoirs sur le dashboard
+        fetchAssignments();
+    }, [fetchAssignments]);
+
 
     // --- Statistiques dynamiques ---
     const programmedAssignments = assignments.filter(a => !a.is_completed).length;

@@ -183,6 +183,7 @@
     // background: var(--bg-dark-secondary); /* Un fond pour le conteneur global des jours si besoin */
     border-radius: 0.5rem;
     border: 1px solid var(--border-color); /* Bordure autour de l'ensemble des jours */
+    min-height: 12.5rem;
 
     /* Styles de la scrollbar */
     &::-webkit-scrollbar {
