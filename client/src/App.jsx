@@ -13,7 +13,6 @@ import Toast from './components/Toast';     // Import du composant
 
 import './App.scss';
 
-// ... (le composant AuthenticatedAppContent ne change pas)
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     const breakpoint = 1600;
     return (
@@ -45,15 +44,7 @@ const App = () => {
     const navigate = useNavigate();
     const { toasts, removeToast } = useToast(); // Récupération des toasts
 
-    const breakpoint = 1600;
-    const [isMenuOpen, setIsMenuOpen] = useState(window.innerWidth >= breakpoint);
-
-    useEffect(() => {
-        const handleResize = () => setIsMenuOpen(window.innerWidth >= breakpoint);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
+    const [isMenuOpen, setIsMenuOpen] = useState(true);
     const toggleMenu = () => setIsMenuOpen(prev => !prev);
 
     useEffect(() => {
@@ -89,7 +80,6 @@ const App = () => {
                 </Routes>
             )}
 
-            {/* --- CONTENEUR DE NOTIFICATIONS GLOBAL --- */}
             <div className="toast-container">
                 {toasts.map(toast => (
                     <Toast

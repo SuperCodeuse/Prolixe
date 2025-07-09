@@ -410,27 +410,41 @@
   display: flex;
   min-height: 100vh;
   background-color: var(--bg-dark-blue); /* Couleur de fond principale */
-  transition: all 0.3s ease; /* Transition pour l'ouverture/fermeture du menu */
+  transition: padding-left 0.3s ease; /* Transition pour l'ouverture/fermeture du menu */
+}
+
+.app.menu-open{
+  @media (min-width: 1600px) {
+    padding-left: 280px;
+  }
 }
 
 /* Styles pour le menu latéral */
 .sidemenu {
-  width: 280px; /* Largeur fixe du menu */
-  min-height: 100vh; /* Prend toute la hauteur de la fenêtre */
-  height: auto;
-  flex-shrink: 0; /* Empêche le menu de rétrécir */
+  width: 280px;
+  height: 100vh;
+  position: fixed; /* Le menu est maintenant toujours fixé */
+  left: 0;
+  top: 0;
   background: var(--bg-dark-secondary);
-  border-right: 1px solid var(--border-color); /* Utilise la variable */
-  position: relative; /* Par défaut, dans le flux pour grand écran */
-  transition: transform 0.3s ease-in-out; /* Transition pour le glissement */
+  border-right: 1px solid var(--border-color);
+  transform: translateX(0); /* Le menu est visible par défaut */
+  transition: transform 0.3s ease-in-out;
   z-index: 1000;
 
-  /* Styles existants pour les éléments internes du sidemenu (header, nav, footer, etc.) */
+  @media (max-width: 1599px) {
+    transform: translateX(-100%); /* Caché par défaut sur les petits écrans */
+    &.open {
+      transform: translateX(0); /* Visible si l'état 'open' est appliqué */
+    }
+  }
+
   .sidemenu-header {
     padding: 1.5rem;
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-dark-tertiary);
   }
+
   .logo { display: flex; align-items: center; gap: 0.75rem; }
   .logo-icon { font-size: 1.5rem; filter: brightness(1.2); }
   .logo-text { font-size: 1.25rem; font-weight: 600; color: var(--text-light); text-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
@@ -469,31 +483,16 @@
 /* Styles pour le contenu principal */
 .main-content {
   flex-grow: 1; /* Prend tout l'espace restant */
-  padding-left: 2rem; /* Padding par défaut */
-  padding-right: 2rem;
-  padding-top: 2rem;
-  padding-bottom: 2rem;
-  transition: all 0.3s ease; /* Transition pour le padding/marges */
-  position: relative; /* Pour le bouton burger */
+  padding: 2rem; /* Padding uniforme */
+  width: 100%; /* S'assure de prendre toute la largeur disponible */
+  transition: all 0.3s ease;
+  overflow-y: auto; /* Ajouté pour gérer le défilement vertical interne */
+  position: relative;
 
-  /* Sur les grands écrans (>= 768px) */
-  @media (min-width: 1600px) {
-    /* Quand le menu est ouvert (par défaut sur grand écran) */
-    .app.menu-open & {
-      padding-left: 2rem/* Décale le contenu à droite du menu (280px + 2rem padding interne) */
-    }
-    /* Quand le menu est fermé (sur grand écran) */
-    .app.menu-closed & {
-      padding-left: 2rem; /* Revient au padding normal (menu masqué ne pousse pas le contenu) */
-    }
-  }
-
-  /* Sur les petits écrans (< 1599px) */
   @media (max-width: 1599px) {
-    padding-left: 1rem; /* Padding réduit sur mobile */
-    padding-right: 0;
-    padding-top: 3rem;
-    margin-left: 0; /* Toujours 0, le menu est en absolute/fixed et ne pousse pas */
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 5rem; /* Espace pour le bouton burger */
   }
 }
 

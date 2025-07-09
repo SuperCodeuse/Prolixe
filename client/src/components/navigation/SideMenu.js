@@ -5,13 +5,9 @@ import { useAuth } from '../../hooks/useAuth'; // Hook d'authentification
 
 import './SideMenu.scss'; // Styles du SideMenu
 
-// Composant SideMenu
-// Reçoit l'état d'ouverture/fermeture du menu principal (isMenuOpen)
-// et la fonction pour basculer (toggleMenu)
 const SideMenu = ({ isMenuOpen, toggleMenu }) => {
 
     const { logout, user } = useAuth()
-    const breakpoint = 1600;
     const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = useState(false);
 
     // Liste des éléments du menu de navigation
@@ -24,21 +20,13 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
 
     // Gère le clic sur un élément du menu de navigation
     const handleMenuItemClick = () => {
-        if (window.innerWidth < breakpoint) {
-            toggleMenu();
-        }
         setIsLogoutDropdownOpen(false);
     };
 
     // Gère la déconnexion
     const handleLogout = () => {
         logout();
-        // Ferme le menu déroulant de déconnexion
         setIsLogoutDropdownOpen(false);
-        // Ferme le menu principal si sur mobile après déconnexion
-        if (window.innerWidth < breakpoint) {
-            toggleMenu();
-        }
     };
 
     // Gère le clic sur la zone du profil utilisateur pour basculer le menu déroulant

@@ -279,7 +279,6 @@ const JournalView = () => {
             <div className="journal-header">
                 <div className="journal-header-left">
                     <h1>{currentJournal?.name}</h1>
-                    {isArchived && <span>(Archivé - Lecture seule)</span>}
                 </div>
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
