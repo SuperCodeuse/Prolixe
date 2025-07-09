@@ -89,9 +89,11 @@ class JournalController {
             connection = await pool.getConnection();
             await connection.beginTransaction(); // Démarrer une transaction
             await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?', [id]);
+
             const [result] = await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
 
             if (result.affectedRows === 0) {
+                // Si rien n'a été supprimé, c'est que le journal n'a pas été trouvé ou n'était pas archivé
                 await connection.rollback(); // Annuler la transaction
                 return JournalController.handleError(res, new Error('Journal non trouvé ou non archivé'), 'Journal non trouvé ou non archivé.', 404);
             }
@@ -106,7 +108,6 @@ class JournalController {
             if (connection) connection.release(); // Libérer la connexion
         }
     }
-
     static async importJournal(req, res) {
         if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
 
@@ -340,7 +341,15 @@ class JournalController {
             if (!class_id || !subject || !type || !due_date) return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides.', 400);
             try {
                 const formattedDueDate = JournalController.formatDateForDatabase(due_date);
-                const result = await JournalController.withConnection(async (c) => c.execute('INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)', [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]));
+
+                console.log("date :", formattedDueDate);
+                console.log("class_id :", class_id);
+                console.log("subject :", subject);
+                console.log("type :", type);
+                console.log("description :", description);
+                console.log("is_completed :", is_completed);
+
+                const [result] = await JournalController.withConnection(async (c) => c.execute('INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)', [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]));
                 const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [result.insertId]));
                 res.status(201).json({ success: true, message: 'Assignation créée avec succès.', data: assignment[0] });
             } catch (error) {

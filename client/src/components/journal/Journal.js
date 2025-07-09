@@ -140,7 +140,7 @@ const JournalView = () => {
                 success(`Tous les cours de la classe pour cette journée ont été marqués comme "Examen".`);
             }
 
-        } else { // Cas 'given'
+        } else {
             newFormState = { planned_work: journalForm.planned_work, actual_work: '', notes: '' };
             setJournalForm(newFormState);
             const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
