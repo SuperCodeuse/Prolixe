@@ -1,55 +1,56 @@
 // Fichier: src/components/correction/CorrectionView.js
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { getEvaluationForGrading, saveGrades } from '../../services/EvaluationService';
-import './CorrectionView.scss'; // On va créer un fichier de style
+import { useToast } from '../../hooks/useToast';
+import './CorrectionView.scss';
 
-const CorrectionView = ({ evaluationId }) => {
+const CorrectionView = () => {
+    const { evaluationId } = useParams();
     const [evaluation, setEvaluation] = useState(null);
     const [criteria, setCriteria] = useState([]);
     const [students, setStudents] = useState([]);
-    const [grades, setGrades] = useState({}); // Format: { 'studentId-criterionId': score }
+    const [grades, setGrades] = useState({});
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
+    const { success, error: showError } = useToast();
+
+    const fetchData = useCallback(async () => {
+        if (!evaluationId) return;
+        try {
+            setIsLoading(true);
+            const { data } = await getEvaluationForGrading(evaluationId);
+            setEvaluation(data.evaluation);
+            setCriteria(data.criteria);
+            setStudents(data.students);
+
+            const gradesObject = data.grades.reduce((acc, grade) => {
+                acc[`${grade.student_id}-${grade.criterion_id}`] = grade.score;
+                return acc;
+            }, {});
+            setGrades(gradesObject);
+            setError('');
+        } catch (err) {
+            setError('Impossible de charger les données de correction.');
+            showError(err.message || 'Erreur de chargement');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [evaluationId, showError]);
 
     useEffect(() => {
-        if (!evaluationId) return;
-
-        const fetchData = async () => {
-            try {
-                setIsLoading(true);
-                const { data } = await getEvaluationForGrading(evaluationId);
-                setEvaluation(data.evaluation);
-                setCriteria(data.criteria);
-                setStudents(data.students);
-
-                const gradesObject = data.grades.reduce((acc, grade) => {
-                    acc[`${grade.student_id}-${grade.criterion_id}`] = grade.score;
-                    return acc;
-                }, {});
-                setGrades(gradesObject);
-                setError('');
-            } catch (err) {
-                setError('Impossible de charger les données de correction.');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
-    }, [evaluationId]);
+    }, [fetchData]);
 
     const handleGradeChange = (studentId, criterionId, value) => {
         const criterion = criteria.find(c => c.id === criterionId);
-        let newScore = parseFloat(value);
+        let newScore = value === '' ? null : parseFloat(value);
 
-        // Gérer le cas où le champ est vidé
-        if (isNaN(newScore)) {
-            newScore = '';
-        } else if (newScore > criterion.max_score) {
-            newScore = criterion.max_score; // Plafonne à la note max
-        } else if (newScore < 0) {
-            newScore = 0; // Empêche les notes négatives
+        if (newScore !== null) {
+            if (isNaN(newScore)) return;
+            newScore = Math.max(0, Math.min(newScore, criterion.max_score));
         }
 
         setGrades(prevGrades => ({
@@ -70,32 +71,36 @@ const CorrectionView = ({ evaluationId }) => {
     }, [students, criteria, grades]);
 
     const handleSave = async () => {
-        const gradesToSave = Object.keys(grades)
-            .filter(key => grades[key] !== '' && grades[key] !== null) // N'envoie que les notes saisies
-            .map(key => {
+        setIsSaving(true);
+        const gradesToSave = Object.entries(grades)
+            .filter(([, score]) => score !== null && score !== '')
+            .map(([key, score]) => {
                 const [student_id, criterion_id] = key.split('-');
-                return { student_id: Number(student_id), criterion_id: Number(criterion_id), score: Number(grades[key]) };
+                return { student_id: Number(student_id), criterion_id: Number(criterion_id), score: Number(score) };
             });
 
         try {
             await saveGrades(evaluationId, gradesToSave);
-            alert('Notes sauvegardées avec succès !');
+            success('Notes sauvegardées avec succès !');
         } catch (err) {
-            alert('Erreur lors de la sauvegarde des notes.');
-            console.error(err);
+            showError('Erreur lors de la sauvegarde des notes.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    if (isLoading) return <div>Chargement de la grille de correction...</div>;
+    if (isLoading) return <div className="loading-fullscreen">Chargement de la grille de correction...</div>;
     if (error) return <div className="error-message">{error}</div>;
     if (!evaluation) return <div>Aucune évaluation sélectionnée.</div>;
+
+    const totalMaxScore = criteria.reduce((sum, c) => sum + c.max_score, 0);
 
     return (
         <div className="correction-view">
             <div className="header">
-                <h1>Correction : {evaluation.name}</h1>
-                <button onClick={handleSave} className="save-button">
-                    Sauvegarder les notes
+                <h1>Correction : {evaluation.name} ({evaluation.class_name})</h1>
+                <button onClick={handleSave} className="save-button" disabled={isSaving}>
+                    {isSaving ? 'Sauvegarde...' : 'Sauvegarder les notes'}
                 </button>
             </div>
             <div className="table-container">
@@ -106,7 +111,7 @@ const CorrectionView = ({ evaluationId }) => {
                         {criteria.map(c => (
                             <th key={c.id}>{c.label} <span>/{c.max_score}</span></th>
                         ))}
-                        <th>Total</th>
+                        <th>Total <span>/{totalMaxScore}</span></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -120,8 +125,10 @@ const CorrectionView = ({ evaluationId }) => {
                                         value={grades[`${student.id}-${criterion.id}`] ?? ''}
                                         placeholder="-"
                                         onChange={(e) => handleGradeChange(student.id, criterion.id, e.target.value)}
+                                        onBlur={(e) => handleGradeChange(student.id, criterion.id, e.target.value)}
                                         max={criterion.max_score}
                                         min="0"
+                                        step="0.5"
                                     />
                                 </td>
                             ))}

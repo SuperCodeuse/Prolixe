@@ -1,5 +1,20 @@
 const db = require('../../config/database'); // Assurez-vous que le chemin vers votre connexion db est correct
 
+exports.getEvaluations = async (req, res) => {
+    try {
+        const [evaluations] = await db.query(`
+            SELECT e.id, e.name, e.date, c.name as class_name
+            FROM evaluations e
+            JOIN class c ON e.class_id = c.id
+            ORDER BY e.date DESC
+        `);
+        res.json({ data: evaluations });
+    } catch (error) {
+        console.error("Erreur dans getEvaluations:", error);
+        res.status(500).json({ message: "Erreur serveur", error: error.message });
+    }
+};
+
 // Obtenir les détails complets d'une évaluation pour la grille de correction
 exports.getEvaluationForGrading = async (req, res) => {
     const { id } = req.params;

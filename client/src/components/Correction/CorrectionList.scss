@@ -1,0 +1,39 @@
+.correction-list-view {
+  padding: 2rem;
+
+  h1 {
+    margin-bottom: 2rem;
+  }
+
+  .evaluations-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .evaluation-card {
+    display: block;
+    background: var(--bg-dark-secondary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent-blue);
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+  }
+}

@@ -1,9 +1,16 @@
-import api from './api'; // En supposant que vous avez un client axios configuré dans './api'
+import ApiService from './api';
+
+export const getEvaluations = () => {
+    return ApiService.request(`/evaluations`);
+};
 
 export const getEvaluationForGrading = (id) => {
-    return api.get(`/evaluations/${id}/grading`);
+    return ApiService.request(`/evaluations/${id}/grading`);
 };
 
 export const saveGrades = (evaluationId, grades) => {
-    return api.post(`/evaluations/${evaluationId}/grades`, { grades });
+    return ApiService.request(`/evaluations/${evaluationId}/grades`, {
+        method: 'POST',
+        body: JSON.stringify({ grades }),
+    });
 };

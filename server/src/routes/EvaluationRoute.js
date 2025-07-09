@@ -4,6 +4,9 @@ const express = require('express');
 const router = express.Router();
 const evaluationController = require('../controllers/EvaluationController');
 
+// Route pour lister toutes les évaluations
+router.get('/', evaluationController.getEvaluations);
+
 // Route pour récupérer toutes les données nécessaires à l'affichage de la grille
 router.get('/:id/grading', evaluationController.getEvaluationForGrading);
 
