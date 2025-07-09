@@ -83,17 +83,27 @@ class JournalController {
 
     static async deleteJournal(req, res) {
         const { id } = req.params;
+        let connection; // Déclarer la connexion ici pour la visibilité dans le catch/finally
+
         try {
-            const [result] = await JournalController.withConnection(async (connection) => {
-                // Assurez-vous que le journal est bien archivé avant de le supprimer pour plus de sécurité
-                return await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
-            });
+            connection = await pool.getConnection();
+            await connection.beginTransaction(); // Démarrer une transaction
+            await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?', [id]);
+            const [result] = await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
+
             if (result.affectedRows === 0) {
+                await connection.rollback(); // Annuler la transaction
                 return JournalController.handleError(res, new Error('Journal non trouvé ou non archivé'), 'Journal non trouvé ou non archivé.', 404);
             }
+
+            await connection.commit(); // Valider la transaction
             res.json({ success: true, message: 'Journal supprimé définitivement.' });
+
         } catch (error) {
+            if (connection) await connection.rollback(); // En cas d'erreur, annuler toutes les opérations
             JournalController.handleError(res, error, "Erreur lors de la suppression du journal.");
+        } finally {
+            if (connection) connection.release(); // Libérer la connexion
         }
     }
 

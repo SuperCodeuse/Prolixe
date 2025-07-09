@@ -204,6 +204,13 @@ const JournalView = () => {
         }
     }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments, currentJournal]);
 
+    useEffect(() => {
+        if (currentJournal) {
+            const endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1, locale: fr });
+            fetchJournalEntries(format(currentWeekStart, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'));
+        }
+    }, [currentJournal, fetchJournalEntries, currentWeekStart]);
+
     const handleDeleteJournalEntry = useCallback(async () => {
         if (!currentJournalEntryId || isArchived) return;
         try {

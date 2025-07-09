@@ -184,4 +184,18 @@
 }
 
 
+.journal-card {
+    border-left: 4px solid var(--accent-green);
+  }
+
+.journal-actions {
+  .status-badge {
+    // AJOUT : Style pour le badge "Visualisé"
+    &.selected {
+      background-color: rgba(var(--accent-cyan-rgb), 0.15); // Utilisez une couleur distincte
+      color: var(--accent-cyan);
+    }
+  }
+}
+
 

@@ -551,3 +551,47 @@ textarea {
     cursor: pointer;
   }
 }
+
+// client/src/components/journal/Journal.scss
+
+// ... (tous les styles existants)
+
+/* Styles des cellules de cours individuelles */
+.journal-slot {
+  // ...
+  &.is-cancelled {
+    // ...
+  }
+
+  // AJOUT : Styles pour un créneau d'examen
+  &.is-exam {
+    background-color: rgba(var(--accent-orange-rgb), 0.1);
+    .course-summary { display: none; } // Masquer les détails du cours
+  }
+}
+
+.cancellation-display { // Style générique pour les statuts spéciaux
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  .cancellation-icon { font-size: 1.5rem; }
+  .cancellation-label {
+    font-weight: 700;
+    margin: 0.25rem 0;
+    letter-spacing: 1px;
+  }
+  .cancellation-reason {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  &.exam-display {
+    .cancellation-label { color: var(--accent-orange); }
+  }
+}

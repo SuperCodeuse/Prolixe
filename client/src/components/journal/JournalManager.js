@@ -196,21 +196,27 @@ const JournalManager = () => {
 
             <div className="journal-lists">
                 <div className="journal-list">
-                    <h3>Journal Courant</h3>
-                    {currentJournal && !currentJournal.is_archived ? (
-                        <div className="journal-card current">
+                    <h3>Journal Courant / Visualisé</h3>
+                    {currentJournal ? (
+                        <div className={`journal-card ${currentJournal.is_archived ? 'archived current' : 'current'}`}>
                             <div className="journal-info">
                                 <strong>{currentJournal.name}</strong>
                                 <span>{currentJournal.school_year}</span>
                             </div>
                             <div className="journal-actions">
-                                <span className="status-badge current">Actif</span>
-                                <button onClick={() => handleClear(currentJournal)} className="btn-clear">Vider</button>
-                                <button onClick={() => handleArchive(currentJournal)} className="btn-archive" disabled={journals.filter(j => !j.is_archived).length <= 1}>Archiver</button>
+                                {currentJournal.is_archived ? (
+                                    <span className="status-badge archived">Lecture seule</span>
+                                ) : (
+                                    <>
+                                        <span className="status-badge current">Actif</span>
+                                        <button onClick={() => handleClear(currentJournal)} className="btn-clear">Vider</button>
+                                        <button onClick={() => handleArchive(currentJournal)} className="btn-archive" disabled={journals.filter(j => !j.is_archived).length <= 1}>Archiver</button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     ) : (
-                        <p>Aucun journal courant sélectionné. Choisissez-en un parmi les journaux actifs.</p>
+                        <p>Aucun journal courant sélectionné. Choisissez-en un ci-dessous.</p>
                     )}
                 </div>
 
@@ -239,14 +245,17 @@ const JournalManager = () => {
                     <h3>Journaux Archivés</h3>
                     {archivedJournals.length > 0 ? (
                         archivedJournals.map(journal => (
-                            <div key={journal.id} className="journal-card archived">
+                            <div key={journal.id} className={`journal-card archived ${journal.id === currentJournal?.id ? 'current' : ''}`}>
                                 <div className="journal-info">
                                     <strong>{journal.name}</strong>
                                     <span>{journal.school_year}</span>
                                 </div>
                                 <div className="journal-actions">
-                                    <span className="status-badge archived">Archivé</span>
-                                    <button onClick={() => selectJournal(journal)} className="btn-select">Visualiser</button>
+                                    {journal.id === currentJournal?.id ? (
+                                        <span className="status-badge selected">Visualisé</span>
+                                    ) : (
+                                        <button onClick={() => selectJournal(journal)} className="btn-select">Visualiser</button>
+                                    )}
                                     <button onClick={() => handleDelete(journal)} className="btn btn-delete">Supprimer</button>
                                 </div>
                             </div>
