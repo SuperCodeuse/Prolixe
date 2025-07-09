@@ -138,6 +138,21 @@ async function initDatabase() {
             ) ENGINE=InnoDB;
         `);
 
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS \`attributions\` (
+                                                            \`id\` INT NOT NULL AUTO_INCREMENT,
+                                                            \`school_year\` VARCHAR(100) NOT NULL,
+                                                            \`school_name\` VARCHAR(255) NOT NULL,
+                                                            \`start_date\` DATE NOT NULL,
+                                                            \`end_date\` DATE NOT NULL,
+                                                            \`esi_hours\` INT DEFAULT 0,
+                                                            \`ess_hours\` INT DEFAULT 0,
+                                                            \`created_at\` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                                                            \`updated_at\` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                            PRIMARY KEY (\`id\`)
+            ) ENGINE=InnoDB;
+        `);
+
         console.log('✅ Tables créées ou déjà existantes.');
 
         // Insertion des données par défaut si la table des heures est vide
@@ -172,7 +187,7 @@ app.use('/api/classes', require('./routes/classRoutes'));
 app.use('/api/hours', require('./routes/ScheduleHours'));
 app.use('/api/schedule', require('./routes/ScheduleRoute'));
 app.use('/api/journal', require('./routes/JournalRoute'));
-
+app.use('/api/attributions', require('./routes/AttributionRoute'));
 
 // Route de test
 app.get('/api/test', async (req, res) => {

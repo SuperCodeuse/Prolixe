@@ -5,6 +5,7 @@ import ScheduleManager from "./Schedule/ScheduleManager";
 import HolidaysManager from "./holidays/HolidaysManager";
 import './Settings.scss';
 import JournalManager from "../journal/JournalManager";
+import AttributionManager from "./Attribution/AttributionManager";
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('classes');
@@ -14,6 +15,7 @@ const Settings = () => {
         { id: 'schedule', label: 'Horaire', icon: '⏰' },
         { id: 'journals', label: 'Journaux', icon: '📚' },
         { id: 'holidays', label: 'Calendrier', icon: '📅' },
+        { id: 'attributions', label: 'Attributions', icon: '💼' },
 
     ];
 
@@ -23,6 +25,7 @@ const Settings = () => {
             case 'schedule': return <ScheduleManager />;
             case 'holidays': return <HolidaysManager />;
             case 'journals': return <JournalManager />;
+            case 'attributions': return <AttributionManager />;
             default: return <ClassesManager />;
         }
     };
