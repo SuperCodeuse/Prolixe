@@ -6,7 +6,7 @@ const evaluationController = require('../controllers/EvaluationController');
 router.get('/', evaluationController.getEvaluations);
 router.get('/:id', evaluationController.getEvaluationById);
 router.get('/:id/grading', evaluationController.getEvaluationForGrading);
-router.get('/templates/:currentJournalId', evaluationController.getEvaluationTemplates);
+router.get('/templates/:school_year', evaluationController.getEvaluationTemplates);
 
 
 router.post('/', evaluationController.createEvaluation);

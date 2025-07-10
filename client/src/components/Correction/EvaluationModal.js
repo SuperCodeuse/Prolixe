@@ -68,7 +68,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             // Mode création : on charge les templates
             else if (currentJournal?.id) {
                 try {
-                    const response = await getEvaluationTemplates(currentJournal.id);
+                    const response = await getEvaluationTemplates(currentJournal.school_year);
                     setTemplates(response.data || []);
                     setDate(new Date().toISOString().split('T')[0]); // Pré-remplir la date
                 } catch (err) { showError("Impossible de charger les modèles."); }

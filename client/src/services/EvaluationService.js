@@ -40,6 +40,9 @@ export const saveGrades = (evaluationId, grades) => {
     });
 };
 
-export const getEvaluationTemplates = (currentJournalId) => {
-    return ApiService.request(`/evaluations/templates/${currentJournalId}`);
+export const getEvaluationTemplates = (schoolYear) => {
+    if (!schoolYear) {
+        return Promise.resolve({ data: [] }); // Retourne une liste vide si pas d'année
+    }
+    return ApiService.request(`/evaluations/templates/${schoolYear}`);
 };

@@ -83,19 +83,26 @@ exports.createEvaluation = async (req, res) => {
 };
 
 exports.getEvaluationTemplates = async (req, res) => {
-    const { currentJournalId } = req.params; // On reçoit l'ID du journal actuel
+    const { school_year } = req.params;
+
+    if (!school_year) {
+        return res.status(400).json({ success: false, message: "L'année scolaire est requise pour trouver des modèles." });
+    }
 
     try {
         const query = `
-            SELECT e.id, e.name
-            FROM evaluations e
-            ORDER BY e.name;
+            SELECT id, name, school_year
+            FROM evaluations
+            WHERE school_year != ?
+            ORDER BY school_year DESC, name ASC;
         `;
-        const [templates] = await db.query(query, [currentJournalId]);
+
+        const [templates] = await db.query(query, [school_year]);
         res.json({ success: true, data: templates });
+
     } catch (error) {
         console.error("Erreur dans getEvaluationTemplates:", error);
-        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
+        res.status(500).json({ success: false, message: "Erreur serveur lors de la récupération des modèles.", error: error.message });
     }
 };
 
