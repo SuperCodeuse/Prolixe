@@ -1,6 +1,6 @@
 // Fichier: src/components/correction/CorrectionView.js
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEvaluationForGrading, saveGrades } from '../../services/EvaluationService';
 import { useToast } from '../../hooks/useToast';
@@ -17,13 +17,13 @@ const CorrectionView = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const { success, error: showError } = useToast();
+    const tableRef = useRef(null);
 
     const fetchData = useCallback(async () => {
         if (!evaluationId) return;
         try {
             setIsLoading(true);
-            const response = await getEvaluationForGrading(evaluationId);
-            const data = response.data;
+            const { data } = await getEvaluationForGrading(evaluationId);
             setEvaluation(data.evaluation);
             setCriteria(data.criteria);
             setStudents(data.students);
@@ -74,30 +74,21 @@ const CorrectionView = () => {
         return 'success';
     };
 
-    const selectedStudentTotal = useMemo(() => {
-        if (!selectedStudentId) return 0;
-        return criteria.reduce((total, criterion) => {
-            const score = grades[`${selectedStudentId}-${criterion.id}`] ?? 0;
-            return total + Number(score);
-        }, 0);
-    }, [selectedStudentId, criteria, grades]);
-
-    const criteriaAverages = useMemo(() => {
-        const averages = {};
-        criteria.forEach(criterion => {
-            const scores = students
-                .map(student => grades[`${student.id}-${criterion.id}`])
-                .filter(score => score !== null && score !== undefined && score !== '');
-
-            if (scores.length === 0) {
-                averages[criterion.id] = { average: 0, count: 0 };
-            } else {
-                const sum = scores.reduce((total, score) => total + Number(score), 0);
-                averages[criterion.id] = { average: sum / scores.length, count: scores.length };
-            }
+    const studentTotals = useMemo(() => {
+        const totals = {};
+        students.forEach(student => {
+            totals[student.id] = criteria.reduce((total, criterion) => {
+                const score = grades[`${student.id}-${criterion.id}`] ?? 0;
+                return total + Number(score);
+            }, 0);
         });
-        return averages;
+        return totals;
     }, [students, criteria, grades]);
+
+    const selectedStudentTotal = useMemo(() => {
+        return studentTotals[selectedStudentId] || 0;
+    }, [selectedStudentId, studentTotals]);
+
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -152,7 +143,6 @@ const CorrectionView = () => {
                         </select>
                     </div>
 
-
                     {selectedStudent && (
                         <div className="criteria-list">
                             {criteria.map(criterion => (
@@ -184,14 +174,13 @@ const CorrectionView = () => {
                 </div>
 
                 <div className="class-summary-panel">
-                    <h3>Moyennes de la classe</h3>
-                    <div className="averages-list">
-                        {criteria.map(criterion => (
-                            <div className="average-row" key={criterion.id}>
-                                <span className="criterion-label">{criterion.label}</span>
-                                <span className={`average-score ${getGradeClass(criteriaAverages[criterion.id].average, criterion.max_score)}`}>
-                                    {criteriaAverages[criterion.id].average.toFixed(2)}
-                                    <span className="average-max-score"> / {criterion.max_score}</span>
+                    <h3>Résultats de la classe</h3>
+                    <div className="student-totals-list">
+                        {students.map(student => (
+                            <div className="student-result-row" key={student.id}>
+                                <span className="student-name">{student.lastname} {student.firstname}</span>
+                                <span className={`total-score ${getGradeClass(studentTotals[student.id], totalMaxScore)}`}>
+                                    {studentTotals[student.id].toFixed(2)}
                                 </span>
                             </div>
                         ))}

@@ -53,13 +53,13 @@
     }
   }
 
-  .criteria-list, .averages-list {
+  .criteria-list, .student-totals-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
 
-  .criterion-row, .average-row {
+  .criterion-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -120,33 +120,40 @@
     justify-content: space-between;
     align-items: baseline;
     margin-top: 1.5rem;
-    padding-top: 1.5rem;
+    padding: 1.5rem;
     border-top: 2px solid var(--border-color);
     font-size: 1.2rem;
     font-weight: bold;
-
-    .total-score {
-      font-size: 1.5rem;
-      &.fail { color: var(--red-danger); }
-      &.pass { color: var(--accent-orange); }
-      &.success { color: var(--accent-green); }
-    }
+    background-color: var(--bg-dark-blue);
+    border-radius: 0.5rem;
   }
 
-  .average-score {
-    font-size: 1.1rem;
-    font-weight: bold;
-
+  .total-score {
+    font-size: 1.5rem;
     &.fail { color: var(--red-danger); }
     &.pass { color: var(--accent-orange); }
     &.success { color: var(--accent-green); }
+  }
 
-    .average-max-score {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      font-weight: normal;
+  .student-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--bg-dark-blue);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--border-color);
+
+    .student-name {
+      color: var(--text-secondary);
+    }
+
+    .total-score {
+      font-size: 1.1rem;
+      font-weight: bold;
     }
   }
+}
 
   .form-group {
     .btn-select{
@@ -156,5 +163,3 @@
       margin-left: 0.5rem;
     }
   }
-
-}
