@@ -4,16 +4,12 @@ const express = require('express');
 const router = express.Router();
 const evaluationController = require('../controllers/EvaluationController');
 
-// Route pour lister toutes les évaluations
 router.get('/', evaluationController.getEvaluations);
-
-// Route pour créer une évaluation
 router.post('/', evaluationController.createEvaluation);
+router.put('/:id', evaluationController.updateEvaluation);     // <-- AJOUT
+router.delete('/:id', evaluationController.deleteEvaluation); // <-- AJOUT
 
-// Route pour récupérer toutes les données nécessaires à l'affichage de la grille
 router.get('/:id/grading', evaluationController.getEvaluationForGrading);
-
-// Route pour sauvegarder les notes d'une évaluation
 router.post('/:evaluationId/grades', evaluationController.saveGrades);
 
 module.exports = router;

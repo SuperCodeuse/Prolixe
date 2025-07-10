@@ -133,3 +133,63 @@ exports.saveGrades = async (req, res) => {
         connection.release();
     }
 };
+
+
+exports.updateEvaluation = async (req, res) => {
+    const { id } = req.params;
+    const { name, date, criteria } = req.body;
+
+    if (!name || !date || !Array.isArray(criteria)) {
+        return res.status(400).json({ success: false, message: "Les champs nom, date et critères sont requis." });
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.query(
+            'UPDATE evaluations SET name = ?, evaluation_date = ? WHERE id = ?',
+            [name, date, id]
+        );
+
+        // Simple approach: delete existing criteria and re-insert
+        await connection.query('DELETE FROM evaluation_criteria WHERE evaluation_id = ?', [id]);
+
+        for (const criterion of criteria) {
+            if (!criterion.label || criterion.max_score == null) {
+                throw new Error("Chaque critère doit avoir un label et un score maximum.");
+            }
+            await connection.query(
+                'INSERT INTO evaluation_criteria (evaluation_id, label, max_score) VALUES (?, ?, ?)',
+                [id, criterion.label, criterion.max_score]
+            );
+        }
+
+        await connection.commit();
+
+        const [updatedEvaluation] = await connection.query(
+            'SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name FROM evaluations e JOIN class c ON e.class_id = c.id WHERE e.id = ?',
+            [id]
+        );
+
+        res.status(200).json({ success: true, message: "Évaluation mise à jour.", data: updatedEvaluation[0] });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("Erreur dans updateEvaluation:", error);
+        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
+exports.deleteEvaluation = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.query('DELETE FROM evaluations WHERE id = ?', [id]);
+        res.status(200).json({ success: true, message: 'Évaluation supprimée avec succès.' });
+    } catch (error) {
+        console.error("Erreur dans deleteEvaluation:", error);
+        res.status(500).json({ success: false, message: "Erreur lors de la suppression de l'évaluation.", error: error.message });
+    }
+};

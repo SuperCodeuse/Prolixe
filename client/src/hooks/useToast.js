@@ -4,10 +4,10 @@ const ToastContext = createContext(null);
 
 export const ToastProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
-    const idCounter = useRef(0); // Utilisation de useRef pour un compteur persistant
+    const idCounter = useRef(0);
 
     const addToast = useCallback((type, message, duration = 3000) => {
-        const id = idCounter.current++; // Incrémente le compteur et assigne l'ID
+        const id = idCounter.current++;
         setToasts(currentToasts => [...currentToasts, { id, message, type, duration }]);
     }, []);
 
@@ -30,9 +30,10 @@ export const ToastProvider = ({ children }) => {
 };
 
 export const useToast = () => {
+    // La correction est ici : on utilise bien ToastContext
     const context = useContext(ToastContext);
     if (!context) {
-        throw new Error('useToast doit être utilisé à l\'intérieur d\'un ToastProvider');
+        throw new Error('useToast must be used within a ToastProvider');
     }
     return context;
 };

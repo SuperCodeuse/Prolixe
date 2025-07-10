@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { getEvaluations, createEvaluation } from '../../services/EvaluationService';
+import { getEvaluations, createEvaluation, updateEvaluation, deleteEvaluation } from '../../services/EvaluationService';
 import EvaluationModal from './EvaluationModal';
+import ConfirmModal from '../ConfirmModal';
 import { useToast } from '../../hooks/useToast';
 import './CorrectionList.scss';
 
@@ -10,49 +11,81 @@ const CorrectionList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingEvaluation, setEditingEvaluation] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [selectedYear, setSelectedYear] = useState('');
     const { success, error: showError } = useToast();
 
-    useEffect(() => {
-        const fetchEvaluations = async () => {
-            try {
-                setLoading(true);
-                const response = await getEvaluations();
-                const data = response.data || [];
-                setEvaluations(data);
-                if (data.length > 0) {
-                    // Sélectionne l'année scolaire la plus récente par défaut
-                    setSelectedYear(data[0].school_year);
-                }
-            } catch (err) {
-                setError('Impossible de charger les évaluations.');
-                showError(err.message || 'Erreur de chargement');
-            } finally {
-                setLoading(false);
+    const fetchEvaluations = async () => {
+        try {
+            setLoading(true);
+            const response = await getEvaluations();
+            const data = response.data || [];
+            setEvaluations(data);
+            if (data.length > 0 && !selectedYear) {
+                setSelectedYear(data[0].school_year);
             }
-        };
+        } catch (err) {
+            setError('Impossible de charger les évaluations.');
+            showError(err.message || 'Erreur de chargement');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchEvaluations();
     }, [showError]);
 
+    const handleOpenCreateModal = () => {
+        setEditingEvaluation(null);
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEditModal = (ev) => {
+        setEditingEvaluation(ev);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteClick = (ev) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Confirmer la suppression',
+            message: `Êtes-vous sûr de vouloir supprimer l'évaluation "${ev.name}" ? Cette action est irréversible.`,
+            onConfirm: () => performDelete(ev.id),
+        });
+    };
+
+    const performDelete = async (id) => {
+        try {
+            await deleteEvaluation(id);
+            setEvaluations(prev => prev.filter(e => e.id !== id));
+            success('Évaluation supprimée.');
+        } catch (err) {
+            showError(err.message || 'Erreur de suppression');
+        } finally {
+            setConfirmModal({ isOpen: false });
+        }
+    };
+
     const handleSaveEvaluation = async (evaluationData) => {
         try {
-            const response = await createEvaluation(evaluationData);
-            // Ajoute la nouvelle évaluation et retri la liste
-            const newEvaluations = [...evaluations, response.data].sort((a, b) => {
-                if (a.school_year !== b.school_year) {
-                    return b.school_year.localeCompare(a.school_year);
+            if (editingEvaluation) {
+                const response = await updateEvaluation(editingEvaluation.id, evaluationData);
+                setEvaluations(prev => prev.map(e => (e.id === editingEvaluation.id ? response.data : e)));
+                success('Évaluation mise à jour !');
+            } else {
+                const response = await createEvaluation(evaluationData);
+                setEvaluations(prev => [response.data, ...prev]);
+                success('Évaluation créée avec succès !');
+                if (!schoolYears.includes(response.data.school_year)) {
+                    setSelectedYear(response.data.school_year);
                 }
-                return new Date(b.date) - new Date(a.date);
-            });
-            setEvaluations(newEvaluations);
-            setIsModalOpen(false);
-            success('Évaluation créée avec succès !');
-            // Met à jour l'année sélectionnée si c'est une nouvelle année
-            if (!schoolYears.includes(response.data.school_year)) {
-                setSelectedYear(response.data.school_year);
             }
+            setIsModalOpen(false);
+            setEditingEvaluation(null);
         } catch (err) {
-            showError(err.message || 'Erreur lors de la création de l\'évaluation');
+            showError(err.message || "Erreur lors de la sauvegarde de l'évaluation");
         }
     };
 
@@ -61,7 +94,7 @@ const CorrectionList = () => {
     }, [evaluations]);
 
     const filteredEvaluations = useMemo(() => {
-        if (!selectedYear) return [];
+        if (!selectedYear) return evaluations;
         return evaluations.filter(e => e.school_year === selectedYear);
     }, [evaluations, selectedYear]);
 
@@ -77,12 +110,11 @@ const CorrectionList = () => {
                 </div>
                 <div className="header-actions">
                     <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="year-filter">
-                        <option value="">Toutes les années</option>
                         {schoolYears.map(year => (
                             <option key={year} value={year}>Année {year}</option>
                         ))}
                     </select>
-                    <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+                    <button className="btn-primary" onClick={handleOpenCreateModal}>
                         + Créer une évaluation
                     </button>
                 </div>
@@ -91,23 +123,29 @@ const CorrectionList = () => {
             {filteredEvaluations.length > 0 ? (
                 <div className="evaluations-container">
                     {filteredEvaluations.map(ev => (
-                        <Link to={`/correction/${ev.id}`} key={ev.id} className="evaluation-card">
+                        <div key={ev.id} className="evaluation-card">
                             <div className="card-header">
                                 <h2>{ev.name}</h2>
-                                <span className="card-date">{new Date(ev.date).toLocaleDateString('fr-FR')}</span>
+                                <div className="card-actions">
+                                    <button onClick={(e) => { e.stopPropagation(); handleOpenEditModal(ev); }} className="btn-edit">✏️</button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(ev); }} className="btn-delete">🗑️</button>
+                                </div>
                             </div>
-                            <div className="card-body">
-                                <p><strong>Classe:</strong> {ev.class_name}</p>
-                            </div>
-                            <div className="card-footer">
-                                <span>Corriger</span>
-                            </div>
-                        </Link>
+                            <Link to={`/correction/${ev.id}`} className="card-link-area">
+                                <div className="card-body">
+                                    <p><strong>Classe:</strong> {ev.class_name}</p>
+                                    <span className="card-date">{new Date(ev.evaluation_date).toLocaleDateString('fr-FR')}</span>
+                                </div>
+                                <div className="card-footer">
+                                    <span>Corriger</span>
+                                </div>
+                            </Link>
+                        </div>
                     ))}
                 </div>
             ) : (
                 <div className="empty-state">
-                    <h3>Aucune évaluation pour l'année {selectedYear}</h3>
+                    <h3>Aucune évaluation pour l'année {selectedYear || ''}</h3>
                     <p>Créez votre première évaluation pour commencer.</p>
                 </div>
             )}
@@ -116,6 +154,15 @@ const CorrectionList = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSave={handleSaveEvaluation}
+                evaluation={editingEvaluation}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onClose={() => setConfirmModal({ isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
             />
         </div>
     );

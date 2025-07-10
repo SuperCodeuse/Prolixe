@@ -130,7 +130,7 @@ const CorrectionView = () => {
                 <div className="header-title">
                     <Link to="/correction" className="back-link">← Retour aux évaluations</Link>
                     <h1>{evaluation.name}</h1>
-                    <p>{evaluation.class_name} - {new Date(evaluation.date).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</p>
+                    <p>{evaluation.class_name} - {new Date(evaluation.evaluation_date).toLocaleDateString('fr-FR', { dateStyle: 'long' })}</p>
                 </div>
                 <button onClick={handleSave} className="btn-primary save-button" disabled={isSaving}>
                     {isSaving ? 'Sauvegarde...' : '💾 Sauvegarder'}

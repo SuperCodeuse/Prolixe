@@ -6,6 +6,7 @@
 
 .modal {
   @include modal-base;
+  max-width: 45rem;
 
   .class-form {
     padding: 1.5rem;
@@ -29,7 +30,7 @@
     }
 
     input[type="number"] {
-      width: 120px;
+      width: 5rem;
     }
 
     .btn-delete {
