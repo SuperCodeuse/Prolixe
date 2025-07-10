@@ -82,6 +82,22 @@ exports.createEvaluation = async (req, res) => {
     }
 };
 
+exports.getEvaluationTemplates = async (req, res) => {
+    const { currentJournalId } = req.params; // On reçoit l'ID du journal actuel
+
+    try {
+        const query = `
+            SELECT e.id, e.name
+            FROM evaluations e
+            ORDER BY e.name;
+        `;
+        const [templates] = await db.query(query, [currentJournalId]);
+        res.json({ success: true, data: templates });
+    } catch (error) {
+        console.error("Erreur dans getEvaluationTemplates:", error);
+        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
+    }
+};
 
 // Obtenir les détails complets d'une évaluation pour la grille de correction
 exports.getEvaluationForGrading = async (req, res) => {

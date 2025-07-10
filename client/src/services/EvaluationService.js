@@ -39,3 +39,7 @@ export const saveGrades = (evaluationId, grades) => {
         body: JSON.stringify({ grades }),
     });
 };
+
+export const getEvaluationTemplates = (currentJournalId) => {
+    return ApiService.request(`/evaluations/templates/${currentJournalId}`);
+};
