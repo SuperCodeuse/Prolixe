@@ -1,29 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useClasses } from '../../../hooks/useClasses';
+import { useJournal } from '../../../hooks/useJournal'; // Utilisation du hook Journal
 import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
 import './StudentManager.scss';
 
 const StudentManager = () => {
     const { classes } = useClasses();
+    const { currentJournal } = useJournal(); // Récupère le journal actif
     const [selectedClass, setSelectedClass] = useState('');
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({ firstname: '', lastname: '' });
     const { success, error } = useToast();
 
+    // Recharge les élèves si la classe ou le journal actif change
     useEffect(() => {
-        if (selectedClass) {
-            fetchStudents(selectedClass);
+        if (selectedClass && currentJournal) {
+            fetchStudents(selectedClass, currentJournal.school_year);
         } else {
             setStudents([]);
         }
-    }, [selectedClass]);
+    }, [selectedClass, currentJournal]);
 
-    const fetchStudents = async (classId) => {
+    const fetchStudents = async (classId, schoolYear) => {
         setIsLoading(true);
         try {
-            const response = await StudentService.getStudentsByClass(classId);
+            const response = await StudentService.getStudentsByClass(classId, schoolYear);
             setStudents(response.data);
         } catch (err) {
             error('Erreur de chargement des élèves.');
@@ -34,13 +37,17 @@ const StudentManager = () => {
 
     const handleAddStudent = async (e) => {
         e.preventDefault();
-        const currentYear = new Date().getFullYear();
-        const school_year = `${currentYear}-${currentYear + 1}`;
+        if (!currentJournal) {
+            error("Veuillez sélectionner un journal de classe actif dans les paramètres.");
+            return;
+        }
+
         try {
-            await StudentService.createStudent({ ...formData, class_id: selectedClass, school_year });
+            // L'année scolaire est maintenant celle du journal actif
+            await StudentService.createStudent({ ...formData, class_id: selectedClass, school_year: currentJournal.school_year });
             success('Élève ajouté !');
             setFormData({ firstname: '', lastname: '' });
-            fetchStudents(selectedClass);
+            fetchStudents(selectedClass, currentJournal.school_year);
         } catch (err) {
             error('Erreur lors de l\'ajout de l\'élève.');
         }
@@ -51,7 +58,9 @@ const StudentManager = () => {
             try {
                 await StudentService.deleteStudent(studentId);
                 success('Élève supprimé.');
-                fetchStudents(selectedClass);
+                if (selectedClass && currentJournal) {
+                    fetchStudents(selectedClass, currentJournal.school_year);
+                }
             } catch (err) {
                 error('Erreur lors de la suppression.');
             }
@@ -61,15 +70,32 @@ const StudentManager = () => {
     return (
         <div className="student-manager">
             <h2>👥 Gestion des Élèves</h2>
+
+            {currentJournal && !currentJournal.is_archived ? (
+                <p className="current-year-info">Gestion pour l'année scolaire : <strong>{currentJournal.school_year}</strong></p>
+            ) : (
+                <div className="error-message">
+                    {currentJournal?.is_archived
+                        ? `Le journal "${currentJournal.name}" est archivé. La gestion des élèves est désactivée.`
+                        : "Aucun journal de classe actif. Veuillez en définir un dans l'onglet 'Journaux'."
+                    }
+                </div>
+            )}
+
             <div className="form-group">
                 <label>Sélectionnez une classe</label>
-                <select className="btn-select" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+                <select
+                    className="btn-select"
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    disabled={!currentJournal || currentJournal.is_archived}
+                >
                     <option value="">-- Choisissez une classe --</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>
 
-            {selectedClass && (
+            {selectedClass && currentJournal && !currentJournal.is_archived && (
                 <>
                     <form onSubmit={handleAddStudent} className="add-student-form form-group">
                         <input
@@ -96,6 +122,7 @@ const StudentManager = () => {
                                 <button onClick={() => handleDeleteStudent(student.id)} className="btn-delete">🗑️</button>
                             </div>
                         ))}
+                        {students.length === 0 && !isLoading && <p>Aucun élève dans cette classe pour l'année en cours.</p>}
                     </div>
                 </>
             )}

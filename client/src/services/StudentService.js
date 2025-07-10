@@ -1,8 +1,9 @@
 import ApiService from './api';
 
 class StudentService {
-    static async getStudentsByClass(classId) {
-        return ApiService.request(`/students/class/${classId}`);
+    static async getStudentsByClass(classId, schoolYear) {
+        // Ajout de l'année scolaire comme paramètre de la requête
+        return ApiService.request(`/students/class/${classId}?school_year=${schoolYear}`);
     }
 
     static async createStudent(studentData) {

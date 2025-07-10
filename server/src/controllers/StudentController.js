@@ -3,14 +3,25 @@ const pool = require('../../config/database');
 class StudentController {
     static async getStudentsByClass(req, res) {
         const { classId } = req.params;
+        const { school_year } = req.query; // Récupère l'année scolaire depuis les paramètres
+
+        if (!school_year) {
+            return res.status(400).json({ success: false, message: "L'année scolaire est requise." });
+        }
+
         try {
-            const [rows] = await pool.execute('SELECT * FROM students WHERE class_id = ? ORDER BY lastname, firstname', [classId]);
+            // La requête filtre maintenant aussi par school_year
+            const [rows] = await pool.execute(
+                'SELECT * FROM students WHERE class_id = ? AND school_year = ? ORDER BY lastname, firstname',
+                [classId, school_year]
+            );
             res.json({ success: true, data: rows });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Erreur lors de la récupération des élèves.' });
         }
     }
 
+    // ... Le reste des fonctions (create, update, delete) reste inchangé car elles gèrent déjà school_year ...
     static async createStudent(req, res) {
         const { class_id, firstname, lastname, school_year } = req.body;
         if (!class_id || !firstname || !lastname || !school_year) {

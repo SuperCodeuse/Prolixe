@@ -61,3 +61,18 @@
   font-size: 1rem;
   transition: all 0.3s ease;
 }
+
+.current-year-info {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background-color: var(--white-transparent-sm);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+
+  strong {
+    color: var(--accent-cyan);
+    font-weight: 600;
+  }
+}
