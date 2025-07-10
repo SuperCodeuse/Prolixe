@@ -129,18 +129,20 @@ async function initDatabase() {
 
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS \`student_grades\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`student_id\` int NOT NULL,
-                \`criterion_id\` int NOT NULL,
-                \`score\` decimal(5,2) DEFAULT NULL,
-                PRIMARY KEY (\`id\`),
-                UNIQUE KEY \`uq_student_criterion\` (\`student_id\`,\`criterion_id\`),
-                KEY \`fk_grades_student_idx\` (\`student_id\`),
-                KEY \`fk_grades_criterion_idx\` (\`criterion_id\`),
-                CONSTRAINT \`fk_grades_student\` FOREIGN KEY (\`student_id\`) REFERENCES \`students\` (\`id\`) ON DELETE CASCADE,
-                CONSTRAINT \`fk_grades_criterion\` FOREIGN KEY (\`criterion_id\`) REFERENCES \`evaluation_criteria\` (\`id\`) ON DELETE CASCADE
+                                                              \`id\` int NOT NULL AUTO_INCREMENT,
+                                                              \`student_id\` int NOT NULL,
+                                                              \`criterion_id\` int NOT NULL,
+                                                              \`score\` decimal(5,2) DEFAULT NULL,
+                                                              \`comment\` text,
+                                                              PRIMARY KEY (\`id\`),
+                                                              UNIQUE KEY \`uq_student_criterion\` (\`student_id\`,\`criterion_id\`),
+                                                              KEY \`fk_grades_student_idx\` (\`student_id\`),
+                                                              KEY \`fk_grades_criterion_idx\` (\`criterion_id\`),
+                                                              CONSTRAINT \`fk_grades_student\` FOREIGN KEY (\`student_id\`) REFERENCES \`students\` (\`id\`) ON DELETE CASCADE,
+                                                              CONSTRAINT \`fk_grades_criterion\` FOREIGN KEY (\`criterion_id\`) REFERENCES \`evaluation_criteria\` (\`id\`) ON DELETE CASCADE
             ) ENGINE=InnoDB;
         `);
+
 
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS \`schedule\` (
