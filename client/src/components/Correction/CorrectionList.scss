@@ -172,3 +172,53 @@
     }
   }
 }
+
+.correction-header .header-actions .btn-copy {
+  @include btn-action-base;
+  font-size: 0.9rem;
+  padding: 0.4rem;
+  background-color: var(--white-transparent-md);
+  color: var(--accent-cyan);
+  &:hover {
+    background: var(--cyan-transparent-sm);
+    border-color: var(--accent-cyan);
+  }
+}
+
+.archive-warning {
+  background-color: var(--accent-dark-orange);
+  color: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.correction-list-view {
+  .archive-warning {
+    background-color: rgba(var(--accent-orange-rgb), 0.2);
+    color: var(--accent-orange);
+    border: 1px solid var(--accent-orange);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .evaluation-card .card-header .card-actions {
+    .btn-copy { // Style pour le bouton copier
+      @include btn-action-base;
+      font-size: 0.9rem;
+      padding: 0.4rem;
+      background-color: var(--white-transparent-md);
+      color: var(--accent-cyan);
+
+      &:hover {
+        background: rgba(var(--accent-cyan-rgb), 0.15);
+        border-color: var(--accent-cyan);
+      }
+    }
+  }
+}

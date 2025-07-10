@@ -1,11 +1,11 @@
 // server/src/controllers/EvaluationController.js
 
-const db = require('../../config/database'); // Assurez-vous que le chemin vers votre connexion db est correct
+const db = require('../../config/database');
 
 exports.getEvaluations = async (req, res) => {
     try {
         const [evaluations] = await db.query(`
-            SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name
+            SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name, c.id as class_id
             FROM evaluations e
             JOIN class c ON e.class_id = c.id
             ORDER BY e.school_year DESC, e.evaluation_date DESC
@@ -17,7 +17,27 @@ exports.getEvaluations = async (req, res) => {
     }
 };
 
-// ... le reste du fichier reste inchangé
+// NOUVELLE FONCTION : Récupérer une évaluation et ses critères par ID
+exports.getEvaluationById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [evaluationResult] = await db.query('SELECT * FROM evaluations WHERE id = ?', [id]);
+        const evaluation = evaluationResult[0];
+
+        if (!evaluation) {
+            return res.status(404).json({ success: false, message: "Évaluation non trouvée." });
+        }
+
+        const [criteria] = await db.query('SELECT label, max_score FROM evaluation_criteria WHERE evaluation_id = ? ORDER BY id', [id]);
+
+        res.json({ success: true, data: { ...evaluation, criteria } });
+    } catch (error) {
+        console.error("Erreur dans getEvaluationById:", error);
+        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
+    }
+};
+
+// ... le reste du fichier (createEvaluation, getEvaluationForGrading, etc.) reste identique ...
 exports.createEvaluation = async (req, res) => {
     const { name, class_id, school_year, date, criteria } = req.body;
 

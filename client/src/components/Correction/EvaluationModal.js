@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useClasses } from '../../hooks/useClasses';
 import { useJournal } from '../../hooks/useJournal';
-import { getEvaluationForGrading } from '../../services/EvaluationService'; // Import du service
+import { getEvaluationForGrading, getEvaluationById } from '../../services/EvaluationService';
 import { useToast } from '../../hooks/useToast';
 import './EvaluationModal.scss';
 import {TextField} from "@mui/material";
 
-const EvaluationModal = ({ isOpen, onClose, onSave, evaluation }) => {
+const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy }) => {
     const { classes } = useClasses();
     const { currentJournal } = useJournal();
     const { error: showError } = useToast();
@@ -20,26 +20,31 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation }) => {
 
     useEffect(() => {
         const loadEvaluationDetails = async () => {
-            if (evaluation && evaluation.id) {
+            if (evaluation || evaluationToCopy) {
                 setIsLoading(true);
+                const idToLoad = evaluation?.id || evaluationToCopy?.id;
                 try {
-                    // On va chercher les détails complets, y compris les critères
-                    const response = await getEvaluationForGrading(evaluation.id);
-                    const { evaluation: evalDetails, criteria: evalCriteria } = response.data;
+                    const response = await getEvaluationById(idToLoad);
+                    const { name: evalName, class_id, evaluation_date, criteria: evalCriteria } = response.data;
 
-                    setName(evalDetails.name);
-                    setClassId(evalDetails.class_id);
-                    setDate(new Date(evalDetails.evaluation_date).toISOString().split('T')[0]);
-                    setCriteria(evalCriteria.length ? evalCriteria : [{ label: '', max_score: '' }]);
+                    if (evaluationToCopy) {
+                        setName(`Copie de ${evalName}`);
+                        setClassId(class_id); // On garde la même classe par défaut
+                    } else {
+                        setName(evalName);
+                        setClassId(class_id);
+                    }
+                    setDate(evaluationToCopy ? new Date().toISOString().split('T')[0] : new Date(evaluation_date).toISOString().split('T')[0]);
+                    setCriteria(evalCriteria.length ? evalCriteria.map(c => ({label: c.label, max_score: c.max_score})) : [{ label: '', max_score: '' }]);
 
                 } catch (err) {
                     showError("Impossible de charger les détails de l'évaluation.");
-                    onClose(); // On ferme la modale en cas d'erreur
+                    onClose();
                 } finally {
                     setIsLoading(false);
                 }
             } else {
-                // On initialise pour une nouvelle évaluation
+                // Initialisation pour une nouvelle évaluation
                 setName('');
                 setClassId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -50,7 +55,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation }) => {
         if (isOpen) {
             loadEvaluationDetails();
         }
-    }, [isOpen, evaluation, showError, onClose]);
+    }, [isOpen, evaluation, evaluationToCopy, showError, onClose]);
 
     const handleCriterionChange = (index, field, value) => {
         const newCriteria = [...criteria];
@@ -63,7 +68,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation }) => {
     };
 
     const removeCriterion = (index) => {
-        if (criteria.length > 1) { // Empêche de supprimer le dernier critère
+        if (criteria.length > 1) {
             const newCriteria = criteria.filter((_, i) => i !== index);
             setCriteria(newCriteria);
         }
@@ -89,7 +94,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation }) => {
         <div className="modal-overlay">
             <div className="modal">
                 <div className="modal-header">
-                    <h3>{evaluation ? "Modifier l'évaluation" : 'Nouvelle Évaluation'}</h3>
+                    <h3>{evaluation ? "Modifier l'évaluation" : evaluationToCopy ? "Copier l'évaluation" : 'Nouvelle Évaluation'}</h3>
                     <button className="modal-close" onClick={onClose}>×</button>
                 </div>
                 {isLoading ? (

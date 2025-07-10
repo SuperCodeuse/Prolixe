@@ -4,6 +4,11 @@ export const getEvaluations = () => {
     return ApiService.request(`/evaluations`);
 };
 
+// NOUVELLE FONCTION
+export const getEvaluationById = (id) => {
+    return ApiService.request(`/evaluations/${id}`);
+};
+
 export const createEvaluation = (evaluationData) => {
     return ApiService.request(`/evaluations`, {
         method: 'POST',
