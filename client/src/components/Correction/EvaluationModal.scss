@@ -1,0 +1,78 @@
+@import '../../App.scss';
+
+.modal-overlay {
+  @include modal-overlay-base;
+}
+
+.modal {
+  @include modal-base;
+
+  .class-form {
+    padding: 1.5rem;
+  }
+
+  h4 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+  }
+
+  .criterion-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    input[type="text"] {
+      flex-grow: 1;
+    }
+
+    input[type="number"] {
+      width: 120px;
+    }
+
+    .btn-delete {
+      @include btn-danger-base;
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 40px;
+      height: 40px;
+      line-height: 1;
+    }
+  }
+
+  .btn-add-criterion {
+    @include btn-secondary-base;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    background: var(--blue-transparent-sm);
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
+
+    &:hover {
+      background: var(--blue-transparent-lg);
+    }
+  }
+
+  .form-actions {
+    @include modal-form-actions-base;
+  }
+
+  .modal-close {
+    @include modal-close-btn-base;
+    background: none; /* Override de fond */
+    border: none; /* Override de bordure */
+    color: #9ca3af; /* Couleur spécifique */
+
+    &:hover {
+      background: var(--red-transparent-sm);
+      color: var(--red-danger);
+    }
+  }
+
+  .modal-header {
+    @include modal-header-base;
+  }
+}

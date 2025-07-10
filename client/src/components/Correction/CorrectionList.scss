@@ -1,39 +1,114 @@
-.correction-list-view {
-  padding: 2rem;
+@import '../../App.scss';
 
-  h1 {
-    margin-bottom: 2rem;
+.correction-list-view {
+  @include page-container-base;
+
+  .correction-header {
+    @include page-header-base;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+
+    .header-title {
+      h1 {
+        @include section-title-h1;
+        margin: 0 0 0.25rem 0;
+      }
+      p {
+        @include section-paragraph;
+        margin: 0;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+
+      .year-filter {
+        @include btn-secondary-base;
+        padding: 0.75rem 1rem;
+        background-color: var(--bg-dark-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+      }
+
+      .btn-primary {
+        @include btn-primary-base;
+      }
+    }
   }
 
   .evaluations-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
+    margin-top: 2rem;
   }
 
   .evaluation-card {
-    display: block;
-    background: var(--bg-dark-secondary);
-    padding: 1.5rem;
-    border-radius: 8px;
+    @include card-base;
     text-decoration: none;
     color: var(--text-light);
-    border: 1px solid var(--border-color);
-    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-left: 4px solid var(--accent-cyan);
 
-    &:hover {
-      transform: translateY(-5px);
-      border-color: var(--accent-blue);
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+
+      h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--text-light);
+      }
+
+      .card-date {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        background-color: var(--white-transparent-sm);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
     }
 
-    h2 {
-      margin-top: 0;
-      margin-bottom: 0.5rem;
-    }
-
-    p {
+    .card-body p {
       margin: 0;
-      color: var(--text-muted);
+      color: var(--text-secondary);
+    }
+
+    .card-footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+      text-align: right;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      transition: color 0.2s;
+    }
+
+    &:hover .card-footer {
+      color: var(--text-light);
+    }
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    background: var(--bg-dark-secondary);
+    border-radius: 1rem;
+    border: 1px dashed var(--border-color);
+
+    h3 {
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
     }
   }
 }

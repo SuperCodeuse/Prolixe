@@ -7,6 +7,9 @@ const evaluationController = require('../controllers/EvaluationController');
 // Route pour lister toutes les évaluations
 router.get('/', evaluationController.getEvaluations);
 
+// Route pour créer une évaluation
+router.post('/', evaluationController.createEvaluation);
+
 // Route pour récupérer toutes les données nécessaires à l'affichage de la grille
 router.get('/:id/grading', evaluationController.getEvaluationForGrading);
 

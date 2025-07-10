@@ -1,80 +1,160 @@
-// Fichier: src/components/correction/CorrectionView.scss
+@import '../../App.scss';
 
-.correction-view {
-  padding: 20px;
-  font-family: sans-serif;
+.correction-view-focused {
+  @include page-container-base;
 
-  .header {
+  .correction-header {
+    @include page-header-base;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    text-align: left;
 
-    h1 {
-      margin: 0;
-    }
-
-    .save-button {
-      padding: 10px 20px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-
-      &:hover {
-        background-color: #45a049;
+    .header-title {
+      .back-link {
+        display: block; color: var(--accent-blue); text-decoration: none;
+        font-size: 0.9rem; margin-bottom: 0.5rem;
+        &:hover { text-decoration: underline; }
       }
+      h1 { @include section-title-h1; font-size: 2rem; margin: 0; }
+      p { @include section-paragraph; margin-top: 0.25rem; }
+    }
+    .save-button { @include btn-primary-base; }
+  }
+
+  .correction-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
     }
   }
 
-  .table-container {
-    overflow-x: auto;
+  .student-correction-panel, .class-summary-panel {
+    @include card-base;
+    padding: 2rem;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
+  h3 {
+    font-size: 1.5rem; margin-top: 0; margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
 
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+  .student-selector {
+    @include form-group-base;
+    margin-bottom: 2rem;
+    select {
+      font-size: 1.1rem;
+      padding: 0.8rem;
+    }
+  }
+
+  .criteria-list, .averages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .criterion-row, .average-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-dark-blue);
+    border-radius: 0.5rem;
+  }
+
+  .criterion-label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    flex-grow: 1;
+  }
+
+  .grade-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .grade-input {
+      width: 80px;
+      padding: 0.6rem;
+      background: var(--bg-dark-tertiary);
+      color: var(--text-light);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
       text-align: center;
-    }
-
-    th {
-      background-color: #f2f2f2;
-      span {
-        font-weight: normal;
-        color: #666;
-      }
-    }
-
-    td:first-child {
-      text-align: left;
+      font-size: 1.1rem;
       font-weight: bold;
-    }
+      transition: all 0.2s ease;
 
-    input[type="number"] {
-      width: 60px;
-      padding: 5px;
-      text-align: center;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      &.fail { border-color: #ef444499; color: var(--red-danger); }
+      &.pass { border-color: #f59e0b99; color: var(--accent-orange); }
+      &.success { border-color: #10b98199; color: var(--accent-green); }
+      &.neutral { border-color: var(--border-color); }
 
-      // Cache les flèches sur les inputs de type number
-      &::-webkit-outer-spin-button,
-      &::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
+      &:focus {
+        outline: none;
+        transform: scale(1.05);
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px var(--blue-transparent-sm);
       }
+      &::placeholder { color: var(--text-gray); font-weight: normal; }
+      &::-webkit-outer-spin-button, &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
       -moz-appearance: textfield;
     }
 
-    .total-cell {
-      font-weight: bold;
-      background-color: #f9f9f9;
+    .max-score {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      width: 40px;
+      text-align: left;
     }
   }
+
+  .student-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+
+    .total-score {
+      font-size: 1.5rem;
+      &.fail { color: var(--red-danger); }
+      &.pass { color: var(--accent-orange); }
+      &.success { color: var(--accent-green); }
+    }
+  }
+
+  .average-score {
+    font-size: 1.1rem;
+    font-weight: bold;
+
+    &.fail { color: var(--red-danger); }
+    &.pass { color: var(--accent-orange); }
+    &.success { color: var(--accent-green); }
+
+    .average-max-score {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+  }
+
+  .form-group {
+    .btn-select{
+      @include btn-secondary-base;
+      font-size: 0.8rem;
+      padding-inline: 0.5rem !important;
+      margin-left: 0.5rem;
+    }
+  }
+
 }

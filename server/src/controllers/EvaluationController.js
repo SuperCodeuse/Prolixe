@@ -1,26 +1,74 @@
+// server/src/controllers/EvaluationController.js
+
 const db = require('../../config/database'); // Assurez-vous que le chemin vers votre connexion db est correct
 
 exports.getEvaluations = async (req, res) => {
     try {
         const [evaluations] = await db.query(`
-            SELECT e.id, e.name, e.date, c.name as class_name
+            SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name
             FROM evaluations e
             JOIN class c ON e.class_id = c.id
-            ORDER BY e.date DESC
+            ORDER BY e.school_year DESC, e.evaluation_date DESC
         `);
-        res.json({ data: evaluations });
+        res.json({ success: true, data: evaluations });
     } catch (error) {
         console.error("Erreur dans getEvaluations:", error);
         res.status(500).json({ message: "Erreur serveur", error: error.message });
     }
 };
 
+// ... le reste du fichier reste inchangé
+exports.createEvaluation = async (req, res) => {
+    const { name, class_id, school_year, date, criteria } = req.body;
+
+    if (!name || !class_id || !school_year || !date || !Array.isArray(criteria) || criteria.length === 0) {
+        return res.status(400).json({ success: false, message: "Les champs nom, classe, année scolaire, date et au moins un critère sont requis." });
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [evalResult] = await connection.query(
+            'INSERT INTO evaluations (name, class_id, school_year, evaluation_date) VALUES (?, ?, ?, ?)',
+            [name, class_id, school_year, date]
+        );
+        const evaluationId = evalResult.insertId;
+
+        for (const criterion of criteria) {
+            if (!criterion.label || criterion.max_score == null) {
+                throw new Error("Chaque critère doit avoir un label et un score maximum.");
+            }
+            await connection.query(
+                'INSERT INTO evaluation_criteria (evaluation_id, label, max_score) VALUES (?, ?, ?)',
+                [evaluationId, criterion.label, criterion.max_score]
+            );
+        }
+
+        await connection.commit();
+
+        const [newEvaluation] = await connection.query(
+            'SELECT e.id, e.name, e.evaluation_date, c.name as class_name FROM evaluations e JOIN class c ON e.class_id = c.id WHERE e.id = ?',
+            [evaluationId]
+        );
+
+        res.status(201).json({ success: true, message: "Évaluation créée avec succès.", data: newEvaluation[0] });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Erreur dans createEvaluation:", error);
+        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
+    } finally {
+        connection.release();
+    }
+};
+
+
 // Obtenir les détails complets d'une évaluation pour la grille de correction
 exports.getEvaluationForGrading = async (req, res) => {
     const { id } = req.params;
     try {
         // 1. Récupérer l'évaluation
-        const [evaluationResult] = await db.query('SELECT * FROM evaluations WHERE id = ?', [id]);
+        const [evaluationResult] = await db.query('SELECT e.*, c.name as class_name FROM evaluations e JOIN class c ON e.class_id = c.id WHERE e.id = ?', [id]);
         const evaluation = evaluationResult[0];
 
         if (!evaluation) {
@@ -45,10 +93,10 @@ exports.getEvaluationForGrading = async (req, res) => {
             [id]
         );
 
-        res.json({ evaluation, criteria, students, grades });
+        res.json({ success: true, data: { evaluation, criteria, students, grades } });
     } catch (error) {
         console.error("Erreur dans getEvaluationForGrading:", error);
-        res.status(500).json({ message: "Erreur serveur", error: error.message });
+        res.status(500).json({ success: false, message: "Erreur serveur", error: error.message });
     }
 };
 
