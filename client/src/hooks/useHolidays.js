@@ -2,15 +2,19 @@
 import { useState, useEffect, useCallback } from 'react';
 // 1. Importer la fonction 'endOfDay'
 import { isWithinInterval, parseISO, endOfDay } from 'date-fns';
+import { useJournal } from './useJournal'; // Importer le hook de journal
+
 
 export const useHolidays = () => {
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { currentJournal } = useJournal();
+
 
     // Charge les congés depuis le localStorage au démarrage
     useEffect(() => {
         try {
-            const storedData = localStorage.getItem('schoolHolidays');
+            const storedData = localStorage.getItem(`${currentJournal.name}-schoolHolidays`);
             if (storedData) {
                 setHolidays(JSON.parse(storedData));
             }

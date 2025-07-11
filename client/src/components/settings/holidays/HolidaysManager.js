@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { useToast } from '../../../hooks/useToast';
+import { useJournal } from '../../../hooks/useJournal'; // Importer le hook de journal
+
 import './HolidaysManager.scss';
 
 const HolidaysManager = () => {
     const { success, error: showError } = useToast();
     const [fileName, setFileName] = useState('');
+    const { currentJournal } = useJournal();
+
 
     const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -27,7 +31,7 @@ const HolidaysManager = () => {
                 }
 
                 // Stocker les données dans le localStorage
-                localStorage.setItem('schoolHolidays', JSON.stringify(holidays));
+                localStorage.setItem(`${currentJournal.name}-schoolHolidays`, JSON.stringify(holidays));
                 success(`Calendrier "${file.name}" importé avec succès !`);
 
             } catch (err) {
