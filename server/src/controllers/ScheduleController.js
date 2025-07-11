@@ -31,7 +31,7 @@ class ScheduleController {
     static validateCourseData(data) {
         // ... (la validation ne change pas)
         const errors = {};
-        const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
         if (!data.day || !validDays.includes(data.day)) errors.day = 'Jour de la semaine invalide.';
         if (!data.time_slot_id || isNaN(parseInt(data.time_slot_id)) || parseInt(data.time_slot_id) <= 0) errors.time_slot_id = 'ID de créneau horaire invalide.';
         if (!data.subject || typeof data.subject !== 'string' || !data.subject.trim()) errors.subject = 'La matière est requise.';

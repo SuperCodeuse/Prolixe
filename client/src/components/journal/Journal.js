@@ -47,7 +47,7 @@ const JournalView = () => {
     // --- MEMOS & CALLBACKS ---
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
     const assignmentTypes = ['Interro', 'Devoir', 'Projet', 'Examen', 'Autre'];
-    const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday','saturday':'saturday','dimanche':'sunday'}[dayName]||dayName),[]);
+    const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday'}[dayName]||dayName),[]);
 
     const weekDays = useMemo(() => Array.from({ length: 5 }).map((_, i) => {
         const date = addDays(currentWeekStart, i);

@@ -24,7 +24,7 @@ const Dashboard = () => {
     const pendingCorrections = assignments.filter(a => a.is_completed && !a.is_corrected).length;
 
     // --- Emploi du temps du jour ---
-    const dayOfWeekMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeekMap = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
     const todayKey = dayOfWeekMap[getDay(new Date())];
     const todaySchedule = Object.values(schedule.data || {}).filter(course => course.day === todayKey);
 

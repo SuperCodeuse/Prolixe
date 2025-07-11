@@ -11,7 +11,7 @@ const parseFrenchDate = (dateStr) => {
     return new Date(year, month, day);
 };
 
-const getDayKeyFromDate = (date) => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+const getDayKeyFromDate = (date) => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'][date.getDay()];
 
 class JournalController {
     static async withConnection(operation) {
