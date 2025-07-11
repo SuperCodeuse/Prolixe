@@ -43,7 +43,8 @@ async function initDatabase() {
         console.log('📝 Vérification et création des tables si nécessaire...');
 
         // Tables sans dépendances externes
-        await connection.execute(`
+  /*      
+await connection.execute(`
             CREATE TABLE IF NOT EXISTS \`journal\` (
                 \`id\` int NOT NULL AUTO_INCREMENT,
                 \`name\` varchar(255) NOT NULL,
@@ -207,7 +208,7 @@ async function initDatabase() {
             `);
             console.log('👍 Créneaux horaires insérés.');
         }
-
+*/
         connection.release();
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation de la base de données:', error);
