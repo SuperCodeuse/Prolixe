@@ -63,18 +63,20 @@ const NotesSection = () => {
 
             <div className="note-content-wrapper">
 
-                <div className="note-header">
-                    {note.date && (
-                        <span className="note-date">
-                        🗓️ {new Date(note.date).toLocaleDateString('fr-FR')}
-                    </span>
-                    )}
-                    {(note.state && note.state.toLowerCase() !== 'autre') && (
-                        <strong className={`note-category state-${note.state.replace(/\s+/g, '-').toLowerCase()}`}>
-                            {note.state}
-                        </strong>
-                    )}
-                </div>
+                {(note.date || (note.state && note.state.toLowerCase() !== 'autre')) && (
+                    <div className="note-header">
+                        {note.date && (
+                            <span className="note-date">
+                🗓️ {new Date(note.date).toLocaleDateString('fr-FR')}
+            </span>
+                        )}
+                        {(note.state && note.state.toLowerCase() !== 'autre') && (
+                            <strong className={`note-category state-${note.state.replace(/\s+/g, '-').toLowerCase()}`}>
+                                {note.state}
+                            </strong>
+                        )}
+                    </div>
+                )}
 
                 {note.text && (
                     <p className="note-text">{note.text}</p>
