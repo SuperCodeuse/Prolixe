@@ -46,8 +46,7 @@ const Horaire = () => {
         { key: 'tuesday', label: 'Mardi' },
         { key: 'wednesday', label: 'Mercredi' },
         { key: 'thursday', label: 'Jeudi' },
-        { key: 'friday', label: 'Vendredi' },
-        { key: 'saturday', label: 'Samedi' }
+        { key: 'friday', label: 'Vendredi' }
     ];
 
     const handleSlotClick = (day, time_libelle) => {
