@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+
 require('dotenv').config();
 
 const app = express();
@@ -252,6 +253,7 @@ app.get('/api/test', async (req, res) => {
         });
     }
 });
+
 
 // Route racine avec documentation
 app.get('/', (req, res) => {

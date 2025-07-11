@@ -61,7 +61,7 @@ const App = () => {
                 }
             } else {
                 if (currentPath !== '/login') {
-                    navigate('/login', { replace: true });
+                    navigate('./login', { replace: true });
                 }
             }
         }
