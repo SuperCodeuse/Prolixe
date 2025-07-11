@@ -1,22 +1,25 @@
 /* Dashboard.scss - Styles spécifiques au tableau de bord */
 @import '../../App';
 
+/* =============================================== */
+/* =============== BASE & LAYOUT ================= */
+/* =============================================== */
+
 .dashboard {
     @include page-container-base;
 }
 
-/* Header */
 .dashboard-header {
     @include page-header-base;
-    display: flex; /* Override pour le flexbox spécifique au dashboard */
+    display: flex;
     justify-content: space-between;
     align-items: center;
-    text-align: left; /* Override pour le texte non centré */
+    text-align: left;
 }
 
 .header-content h1 {
     @include section-title-h1;
-    font-size: 2.5rem; /* Re-spécifié si la taille est différente */
+    font-size: 2.5rem;
     margin: 0 0 0.5rem 0;
 }
 
@@ -31,7 +34,53 @@
     font-weight: 500;
 }
 
-/* Statistics Grid */
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 2rem;
+}
+
+.dashboard-section {
+    @include card-base;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 0;
+    background: none;
+    border: none;
+
+    h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 0;
+    }
+}
+
+.view-all-btn {
+    background: var(--blue-transparent-sm);
+    color: var(--accent-blue);
+    border: 1px solid var(--blue-transparent-lg);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: var(--blue-transparent-lg);
+    }
+}
+
+/* =============================================== */
+/* ============= WIDGETS SPÉCIFIQUES ============= */
+/* =============================================== */
+
+/* -- Statistiques -- */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -43,33 +92,21 @@
     @include card-base;
     position: relative;
     overflow: hidden;
-}
 
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent-blue), var(--accent-dark-blue)); /* Valeur générique */
-    border-radius: 1rem 1rem 0 0;
-}
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 1rem 1rem 0 0;
+    }
 
-.stat-card.primary::before {
-    background: linear-gradient(90deg, var(--accent-blue), var(--accent-dark-blue));
-}
-
-.stat-card.info::before {
-    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-dark-cyan));
-}
-
-.stat-card.warning::before {
-    background: linear-gradient(90deg, var(--accent-orange), var(--accent-dark-orange));
-}
-
-.stat-card.success::before {
-    background: linear-gradient(90deg, var(--accent-green), var(--accent-dark-green));
+    &.primary::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-dark-blue)); }
+    &.info::before { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-dark-cyan)); }
+    &.warning::before { background: linear-gradient(90deg, var(--accent-orange), var(--accent-dark-orange)); }
+    &.success::before { background: linear-gradient(90deg, var(--accent-green), var(--accent-dark-green)); }
 }
 
 .stat-header {
@@ -107,72 +144,32 @@
     font-size: 1rem;
 }
 
-/* Dashboard Content */
-.dashboard-content {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
-    gap: 2rem;
-}
 
-.dashboard-section {
-    @include card-base;
-}
-
-.section-header { /* Utilise pour le h2 interne des sections du dashboard */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 0; /* Override car déjà dans la .dashboard-section */
-    background: none; /* Override */
-    border: none; /* Override */
-}
-
-.section-header h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-light);
-    margin: 0;
-}
-
-.view-all-btn {
-    background: var(--blue-transparent-sm);
-    color: var(--accent-blue);
-    border: 1px solid var(--blue-transparent-lg);
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-}
-
-.view-all-btn:hover {
-    background: var(--blue-transparent-lg);
-}
-
-/* Schedule List */
-.schedule-list {
+/* -- Listes (Emploi du temps, Tâches) -- */
+.schedule-list, .tasks-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.schedule-item {
+.schedule-item, .task-item {
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1rem;
     background: var(--white-transparent-sm);
     border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+        background: var(--white-transparent-md);
+    }
+}
+
+.schedule-item {
     border-left: 4px solid var(--accent-blue);
-}
-
-.schedule-item.tp {
-    border-left-color: #8b5cf6; /* Couleur spécifique */
-}
-
-.schedule-item.evaluation {
-    border-left-color: var(--accent-orange);
+    &.tp { border-left-color: #8b5cf6; }
+    &.evaluation { border-left-color: var(--accent-orange); }
 }
 
 .schedule-time {
@@ -184,51 +181,13 @@
 
 .schedule-details {
     flex: 1;
-}
-
-.schedule-details h4 {
-    margin: 0 0 0.25rem 0;
-    color: var(--text-light);
-    font-size: 1.1rem;
-}
-
-.schedule-details p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-.schedule-type {
-    font-size: 1.5rem;
-}
-
-/* Tasks List */
-.tasks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.task-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--white-transparent-sm);
-    border-radius: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.task-item:hover {
-    background: var(--white-transparent-md);
+    h4 { margin: 0 0 0.25rem 0; color: var(--text-light); font-size: 1.1rem; }
+    p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
 }
 
 .task-item.completed {
     opacity: 0.6;
-}
-
-.task-item.completed .task-content h4 {
-    text-decoration: line-through;
+    .task-content h4 { text-decoration: line-through; }
 }
 
 .task-checkbox input {
@@ -239,30 +198,207 @@
 
 .task-content {
     flex: 1;
+    h4 { margin: 0 0 0.25rem 0; color: var(--text-light); font-size: 1rem; }
+    p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
 }
 
-.task-content h4 {
-    margin: 0 0 0.25rem 0;
+textarea, .note-state-select, .note-date-input {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
     color: var(--text-light);
+    font-family: inherit;
     font-size: 1rem;
+    transition: all 0.3s ease;
+
+    &:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        background-color: var(--bg-dark);
+        box-shadow: 0 0 0 3px var(--blue-transparent-sm);
+    }
 }
 
-.task-content p {
-    margin: 0;
+.note-date-input {
+    height: 0.8rem;
+}
+
+.notes-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .note-input-area {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    // Styles partagés pour les champs de formulaire du widget
+    /* Dans _dashboard.scss, à l'intérieur de .notes-widget */
+
+    .note-state-select {
+        flex-grow: 1;
+        background-color: var(--bg-light);
+        border: 1px solid var(--border-color);
+        border-left: 5px solid var(--text-muted);
+        border-radius: 0.5rem;
+        padding: 0.6rem 1rem;
+        color: var(--text-light);
+        font-family: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        -webkit-appearance: none; // Pour un meilleur contrôle du style
+
+        &:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background-color: var(--bg-dark);
+        }
+
+        option {
+            background: var(--border-color);
+            color: var(--text-light);
+        }
+
+        &.state-autre {
+            border-left-color: var(--accent-cyan);
+        }
+        &.state-conseil-de-classe {
+            border-left-color: var(--accent-orange);
+        }
+        &.state-réunions-de-parents {
+            border-left-color: var(--red-danger);
+        }
+    }
+
+    textarea {
+        min-height: 80px;
+        resize: vertical;
+        border-radius: 10px;
+    }
+
+    .note-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .note-state-select { flex-grow: 1; }
+
+    .add-note-btn {
+        padding: 0.6rem 1.25rem;
+        background: var(--accent-blue);
+        color: var(--white);
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: var(--accent-dark-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        &:disabled {
+            background-color: var(--bg-light);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    }
+}
+
+.notes-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+
+    &::-webkit-scrollbar { width: 6px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; }
+    &::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.note-item {
+    background-color: var(--white-transparent-sm);
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    animation: slideIn 0.4s ease-out;
+    transition: background-color 0.3s ease;
+    border-left: 4px solid var(--text-muted); // Couleur par défaut
+
+    // CORRECTION : Utilisation de sélecteurs composés.
+    // Cible l'élément qui a LA FOIS .note-item ET .state-autre
+    // Pas besoin de !important
+    &.state-autre { border-left-color: var(--accent-cyan); }
+    &.state-conseil-de-classe { border-left-color: var(--accent-orange); }
+    &.state-réunions-de-parents { border-left-color: var(--red-danger); }
+
+    &:hover {
+        background-color: var(--white-transparent-md);
+    }
+}
+
+.delete-note-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    padding: 0.25rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+
+    svg { width: 18px; height: 18px; }
+
+    &:hover {
+        color: var(--accent-orange);
+        background-color: var(--blue-transparent-sm);
+    }
 }
 
-.task-priority {
-    font-size: 1.2rem;
+.empty-notes-message {
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 2px dashed var(--border-color);
+    border-radius: 0.5rem;
+
+    p {
+        color: var(--text-light);
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin: 0 0 0.5rem 0;
+    }
+    span {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
 }
 
-/* Responsive Design (reste spécifique au dashboard) */
+/* =============================================== */
+/* ================== RESPONSIVE ================= */
+/* =============================================== */
+
 @media (max-width: 1600px) {
     .dashboard-content {
         grid-template-columns: 1fr;
     }
-
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
@@ -274,99 +410,55 @@
     }
 }
 
-.tasks-list h4 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    color: var(--text-light);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
-}
+/* Styles à ajouter ou modifier dans _dashboard.scss */
 
-.task-item .task-content {
-    flex-grow: 1;
-}
-
-.notes-widget {
+// Cible le conteneur principal du contenu de la note
+.note-content-wrapper {
+    flex-grow: 1; // Permet au contenu de prendre tout l'espace disponible
     display: flex;
     flex-direction: column;
-
-    textarea {
-        width: 100%;
-        min-height: 80px;
-        padding: 10px;
-        border: 1px solid #dfe1e6;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 1rem;
-        margin-bottom: 10px;
-        resize: vertical;
-
-        &:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
-        }
-    }
-
-    .add-note-btn {
-        align-self: flex-end;
-        padding: 8px 16px;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: background-color 0.2s ease;
-
-        &:hover {
-            background-color: darken(#007bff, 10%); // Adaptez la couleur si besoin
-        }
-    }
+    gap: 0.75rem; // Espace entre l'en-tête et le texte
 }
 
-.notes-list {
-    margin-top: 20px;
-}
-
-.note-item {
-    background-color: #f8f9fa;
-    border-left: 4px solid var(--info-color);
-    padding: 12px 15px;
-    border-radius: 4px;
-    margin-bottom: 10px;
+// Style pour le nouvel en-tête de la note
+.note-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; // Aligne les éléments aux extrémités
     align-items: center;
+    gap: 1rem; // Espace si les éléments sont proches
+}
 
-    p {
-        margin: 0;
-        flex-grow: 1;
-        white-space: pre-wrap; // Pour respecter les sauts de ligne
+// Style amélioré pour la catégorie, pour qu'elle ressemble à une "étiquette"
+.note-category {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    background-color: rgba(255, 255, 255, 0.1); // Fond semi-transparent
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem; // Pour un effet "pilule"
+    white-space: nowrap; // Empêche le retour à la ligne
+
+    &.state-autre {
+        background-color: var(--accent-cyan);
     }
-
-    .delete-note-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1.2rem;
-        color: #adb5bd;
-        margin-left: 15px;
-        padding: 5px;
-
-        &:hover {
-            color: var(--warning-color);
-        }
+    &.state-conseil-de-classe {
+        background-color: var(--accent-orange);
+    }
+    &.state-réunions-de-parents {
+        background-color: var(--red-danger);
     }
 }
 
-.empty-notes-message {
-    color: #6c757d;
-    text-align: center;
-    padding: 20px;
+
+
+.note-date {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
-.description-task{
-    text-align: justify;
-    padding-bottom: 0.5rem;
+.note-text {
+    margin: 0;
+    color: var(--text-light);
+    line-height: 1.6;
 }
