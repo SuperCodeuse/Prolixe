@@ -151,7 +151,13 @@ const ScheduleManager = () => {
 
             <div className="schedule-manager">
                 <div className="section-header">
-                    <h3>Créneaux horaires ({sortedHours.length})</h3>
+                    <div className="section-header">
+                <h3>Créneaux horaires ({sortedHours.length})</h3>
+                {/* --- CORRECTION : Bouton ajouté ici --- */}
+                <button className="btn btn-primary" onClick={handleAdd}>
+                    ➕ Ajouter un créneau
+                </button>
+            </div>
                 </div>
 
                 {sortedHours.length === 0 ? (
