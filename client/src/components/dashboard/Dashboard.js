@@ -7,6 +7,7 @@ import { format, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import '../../App.scss';
 import './dashboard.scss';
+import NotesSection from "./NoteSection";
 
 const Dashboard = () => {
     const { classes } = useClasses();
@@ -63,7 +64,7 @@ const Dashboard = () => {
     return (
         <div className="dashboard">
             {/* Header */}
-            <div className="dashboard-header">
+             <div className="dashboard-header">
                 <div className="header-content">
                     <h1>📊 Tableau de bord</h1>
                     <p>Vue d'ensemble de vos activités d'enseignement</p>
@@ -149,6 +150,8 @@ const Dashboard = () => {
                         ) : <p>Aucun devoir programmé.</p>}
                     </div>
                 </div>
+
+                <NotesSection />
             </div>
         </div>
     );
