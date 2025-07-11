@@ -59,7 +59,7 @@ const NotesSection = () => {
 
     // Le composant Note individuel
     const NoteItem = ({ note, onDelete }) => (
-        <div className={`note-item state-${note.state.replace(/\s+/g, '-',).toLowerCase()}`}>
+        <div className={`note-item state-${note.state?.replace(/\s+/g, '-',).toLowerCase()}`}>
 
             <div className="note-content-wrapper">
 
@@ -69,7 +69,7 @@ const NotesSection = () => {
                         🗓️ {new Date(note.date).toLocaleDateString('fr-FR')}
                     </span>
                     )}
-                    <strong className={`note-category state-${note.state.replace(/\s+/g, '-',).toLowerCase()}`}> {note.state}</strong>
+                    <strong className={`note-category state-${note.state?.replace(/\s+/g, '-',).toLowerCase()}`}> {note.state}</strong>
                 </div>
 
                 {note.text && (
