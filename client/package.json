@@ -44,5 +44,5 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "https://https://unknown-liege.com/islw/prolixe_/server/"
+  "proxy": "https://localhost:5000"
 }
