@@ -22,11 +22,11 @@ const createNote = async (req, res) => {
     }
 
     try {
-        const { rows } = await db.query(
+        const [rows] = await db.query(
             'INSERT INTO notes (text) VALUES (?)',
             [text]
         );
-        res.status(201).json(rows[0]);
+        res.status(201).json(rows);
     } catch (error) {
         console.error("Erreur lors de la création de la note:", error);
         res.status(500).json({ message: "Erreur serveur" });
