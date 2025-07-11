@@ -438,9 +438,6 @@ textarea, .note-state-select, .note-date-input {
     border-radius: 2rem; // Pour un effet "pilule"
     white-space: nowrap; // Empêche le retour à la ligne
 
-    &.state-autre {
-        background-color: var(--accent-cyan);
-    }
     &.state-conseil-de-classe {
         background-color: var(--accent-orange);
     }

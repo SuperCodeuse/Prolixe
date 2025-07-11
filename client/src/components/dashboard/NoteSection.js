@@ -69,7 +69,11 @@ const NotesSection = () => {
                         🗓️ {new Date(note.date).toLocaleDateString('fr-FR')}
                     </span>
                     )}
-                    <strong className={`note-category state-${note.state?.replace(/\s+/g, '-',).toLowerCase()}`}> {note.state}</strong>
+                    {(note.state && note.state.toLowerCase() !== 'autre') && (
+                        <strong className={`note-category state-${note.state.replace(/\s+/g, '-').toLowerCase()}`}>
+                            {note.state}
+                        </strong>
+                    )}
                 </div>
 
                 {note.text && (
