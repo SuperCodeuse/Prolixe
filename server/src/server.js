@@ -219,8 +219,8 @@ async function initDatabase() {
 const upload = multer({ dest: 'uploads/' });
 
 // Routes
-app.use('/api/auth', require('./routes/authRoute'));
-app.use('/api/classes', require('./routes/classRoutes'));
+app.use('/api/auth', require('./routes/AuthRoute'));
+app.use('/api/classes', require('./routes/ClassRoutes'));
 app.use('/api/hours', require('./routes/ScheduleHours'));
 app.use('/api/schedule', require('./routes/ScheduleRoute'));
 app.use('/api/journal', require('./routes/JournalRoute'));
