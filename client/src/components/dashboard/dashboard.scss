@@ -110,7 +110,7 @@
 /* Dashboard Content */
 .dashboard-content {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;
     gap: 2rem;
 }
 
@@ -364,4 +364,9 @@
     color: #6c757d;
     text-align: center;
     padding: 20px;
+}
+
+.description-task{
+    text-align: justify;
+    padding-bottom: 0.5rem;
 }

@@ -60,7 +60,6 @@ const Dashboard = () => {
     const assignmentsToCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
     const upcomingAssignments = assignments.filter(a => !a.is_completed).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 5);
 
-
     return (
         <div className="dashboard">
             {/* Header */}
@@ -131,6 +130,9 @@ const Dashboard = () => {
                                 <div key={task.id} className="task-item">
                                     <div className="task-content">
                                         <h4>{task.subject} - {classes.find(c => c.id === task.class_id)?.name}</h4>
+                                        {task.description?.length > 0 ? (
+                                            <p className="description-task">{task.description} </p>) : ''
+                                        }
                                         <p>Remis le: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
                                     </div>
                                 </div>
@@ -143,6 +145,9 @@ const Dashboard = () => {
                                 <div key={task.id} className="task-item">
                                     <div className="task-content">
                                         <h4>{task.subject} - {classes.find(c => c.id === task.class_id)?.name}</h4>
+                                        {task.description?.length > 0 ? (
+                                            <p className="description-task">{task.description} </p>) : ''
+                                        }
                                         <p>À rendre le: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
                                     </div>
                                 </div>
