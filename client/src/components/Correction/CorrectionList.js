@@ -113,10 +113,7 @@ const CorrectionList = () => {
 
     const schoolYears = () => {
         console.log("journal : ", journals);
-        journals.map(j => {
-            console.log("j : ", j);
-            j.name
-        });
+        return journals.map(j => j.name);
     }
 
     const filteredEvaluations = useMemo(() => {
