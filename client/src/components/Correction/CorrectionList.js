@@ -112,8 +112,7 @@ const CorrectionList = () => {
     };
 
     const schoolYears = useMemo(() => {
-        console.log(" Journal : ", journals);
-               return journals.map(j => j.school_year).sort((a, b) => b.localeCompare(a));
+        return journals.map(j => j.name).sort((a, b) => b.localeCompare(a));
     }, [evaluations]);
 
     const filteredEvaluations = useMemo(() => {
@@ -136,7 +135,7 @@ const CorrectionList = () => {
                 <div className="header-actions">
                     <select value={selectedYear} className="year-filter" readOnly>
                         {schoolYears.map(year => (
-                            <option key={year} value={selectedYear}>Année {selectedYear}</option>
+                            <option key={year} value={selectedYear}>{selectedYear}</option>
                         ))}
                     </select>
                     {!isArchivedYear && (
