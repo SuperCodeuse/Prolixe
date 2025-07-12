@@ -44,8 +44,7 @@ const CorrectionList = () => {
 
     // Effet pour synchroniser l'année sélectionnée
     useEffect(() => {
-        setSelectedYear(currentJournal?.school_year);
-
+        setSelectedYear(currentJournal?.name);
     }, [evaluations, currentJournal, selectedYear]);
 
 
@@ -98,10 +97,6 @@ const CorrectionList = () => {
                 const response = await createEvaluation(evaluationData);
                 await fetchEvaluations(); // Re-fetch pour avoir la liste à jour
                 success('Évaluation créée avec succès !');
-                // Sélectionner la nouvelle année si elle n'existait pas
-                if (!schoolYears.includes(response.data.school_year)) {
-                    setSelectedYear(response.data.school_year);
-                }
             }
             setIsModalOpen(false);
             setEditingEvaluation(null);
@@ -111,10 +106,7 @@ const CorrectionList = () => {
         }
     };
 
-    const schoolYears = () => {
-        console.log("journal : ", journals);
-        return journals.map(j => j.name);
-    }
+    const schoolYears = journals.map(j => j.name);
 
     const filteredEvaluations = useMemo(() => {
         if (!selectedYear) return []; // Retourne un tableau vide si aucune année n'est sélectionnée
