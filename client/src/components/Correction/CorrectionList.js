@@ -108,7 +108,9 @@ const CorrectionList = () => {
     };
 
     const schoolYears = useMemo(() => {
-        return [...new Set(evaluations.map(e => e.school_year))].sort((a, b) => b.localeCompare(a));
+        console.log(" evaluation : ", evaluations);
+        console.log(" currentJournal : ", currentJournal);
+               return evaluations.length>0 ? [...new Set(evaluations.map(e => e.school_year))].sort((a, b) => b.localeCompare(a)) : currentJournal.school_year
     }, [evaluations]);
 
     const filteredEvaluations = useMemo(() => {

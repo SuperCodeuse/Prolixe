@@ -7,7 +7,7 @@ exports.getEvaluations = async (req, res) => {
         const [evaluations] = await db.query(`
             SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name, c.id as class_id
             FROM evaluations e
-            JOIN class c ON e.class_id = c.id
+            JOIN CLASS c ON e.class_id = c.id
             ORDER BY e.school_year DESC, e.evaluation_date DESC
         `);
         res.json({ success: true, data: evaluations });
