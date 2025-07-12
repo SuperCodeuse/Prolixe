@@ -111,7 +111,13 @@ const CorrectionList = () => {
         }
     };
 
-    const schoolYears = journals.map(j => j.name);
+    const schoolYears = () => {
+        console.log("journal : ", journals);
+        journals.map(j => {
+            console.log("j : ", j);
+            j.name
+        });
+    }
 
     const filteredEvaluations = useMemo(() => {
         if (!selectedYear) return []; // Retourne un tableau vide si aucune année n'est sélectionnée
