@@ -7,7 +7,7 @@ class ScheduleHoursController {
     static async getAllHours(req, res) {
         try {
             const [rows] = await pool.execute(
-                'SELECT * FROM schedule_hours ORDER BY libelle ASC'
+                'SELECT * FROM SCHEDULE_HOURS ORDER BY libelle ASC'
             );
 
             res.status(200).json({
@@ -40,7 +40,7 @@ class ScheduleHoursController {
             }
 
             const [rows] = await pool.execute(
-                'SELECT * FROM schedule_hours WHERE id = ?',
+                'SELECT * FROM SCHEDULE_HOURS WHERE id = ?',
                 [id]
             );
 
@@ -100,7 +100,7 @@ class ScheduleHoursController {
 
             // Vérifier que le créneau n'existe pas déjà
             const [existingHours] = await pool.execute(
-                'SELECT id FROM schedule_hours WHERE libelle = ?',
+                'SELECT id FROM SCHEDULE_HOURS WHERE libelle = ?',
                 [libelle]
             );
 
@@ -113,13 +113,13 @@ class ScheduleHoursController {
 
             // Créer le créneau horaire
             const [result] = await pool.execute(
-                'INSERT INTO schedule_hours (libelle) VALUES (?)',
+                'INSERT INTO SCHEDULE_HOURS (libelle) VALUES (?)',
                 [libelle]
             );
 
             // Récupérer le créneau créé
             const [newHour] = await pool.execute(
-                'SELECT * FROM schedule_hours WHERE id = ?',
+                'SELECT * FROM SCHEDULE_HOURS WHERE id = ?',
                 [result.insertId]
             );
 
@@ -181,7 +181,7 @@ class ScheduleHoursController {
 
             // Vérifier que le créneau existe
             const [existingHour] = await pool.execute(
-                'SELECT id FROM schedule_hours WHERE id = ?',
+                'SELECT id FROM SCHEDULE_HOURS WHERE id = ?',
                 [id]
             );
 
@@ -194,7 +194,7 @@ class ScheduleHoursController {
 
             // Vérifier que le nouveau libellé n'existe pas déjà (sauf pour le créneau actuel)
             const [duplicateHour] = await pool.execute(
-                'SELECT id FROM schedule_hours WHERE libelle = ? AND id != ?',
+                'SELECT id FROM SCHEDULE_HOURS WHERE libelle = ? AND id != ?',
                 [libelle, id]
             );
 
@@ -207,13 +207,13 @@ class ScheduleHoursController {
 
             // Mettre à jour le créneau horaire
             await pool.execute(
-                'UPDATE schedule_hours SET libelle = ? WHERE id = ?',
+                'UPDATE SCHEDULE_HOURS SET libelle = ? WHERE id = ?',
                 [libelle, id]
             );
 
             // Récupérer le créneau mis à jour
             const [updatedHour] = await pool.execute(
-                'SELECT * FROM schedule_hours WHERE id = ?',
+                'SELECT * FROM SCHEDULE_HOURS WHERE id = ?',
                 [id]
             );
 
@@ -248,7 +248,7 @@ class ScheduleHoursController {
 
             // Vérifier que le créneau existe
             const [existingHour] = await pool.execute(
-                'SELECT id FROM schedule_hours WHERE id = ?',
+                'SELECT id FROM SCHEDULE_HOURS WHERE id = ?',
                 [id]
             );
 
@@ -259,22 +259,9 @@ class ScheduleHoursController {
                 });
             }
 
-            // TODO: Vérifier si le créneau est utilisé dans des cours
-            // const [usedInSchedule] = await pool.execute(
-            //     'SELECT COUNT(*) as count FROM schedule WHERE hour_id = ?',
-            //     [id]
-            // );
-            //
-            // if (usedInSchedule[0].count > 0) {
-            //     return res.status(409).json({
-            //         success: false,
-            //         message: 'Ce créneau horaire est utilisé dans l\'horaire et ne peut pas être supprimé'
-            //     });
-            // }
-
             // Supprimer le créneau horaire
             await pool.execute(
-                'DELETE FROM schedule_hours WHERE id = ?',
+                'DELETE FROM SCHEDULE_HOURS WHERE id = ?',
                 [id]
             );
 

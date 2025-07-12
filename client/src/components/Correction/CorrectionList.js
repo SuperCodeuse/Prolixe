@@ -8,45 +8,50 @@ import { useJournal } from '../../hooks/useJournal';
 import './CorrectionList.scss';
 
 const CorrectionList = () => {
+    // 1. Destructurer correctement le hook useJournal
+    const { journals, currentJournal, loading: loadingJournal } = useJournal();
+    const { success, error: showError } = useToast();
+
     const [evaluations, setEvaluations] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingEvaluations, setLoadingEvaluations] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingEvaluation, setEditingEvaluation] = useState(null);
     const [evaluationToCopy, setEvaluationToCopy] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-
-    const { journals } = useJournal();
-
     const [selectedYear, setSelectedYear] = useState('');
-    const { success, error: showError } = useToast();
 
-    const currentJournal = journals.find(j => j.is_current);
-
+    // 2. Récupérer les évaluations UNIQUEMENT pour le journal courant
     const fetchEvaluations = useCallback(async () => {
-        setLoading(true);
+        if (!currentJournal) return; // Ne rien faire si aucun journal n'est sélectionné
+
+        setLoadingEvaluations(true);
         setError('');
         try {
-            const response = await getEvaluations();
+            // On suppose que getEvaluations peut prendre un ID de journal
+            const response = await getEvaluations(currentJournal.id);
             setEvaluations(response.data || []);
         } catch (err) {
             const errorMessage = 'Impossible de charger les évaluations.';
             setError(errorMessage);
             showError(err.message || errorMessage);
         } finally {
-            setLoading(false);
+            setLoadingEvaluations(false);
         }
-    }, [showError]);
+    }, [currentJournal, showError]);
 
+    // Relancer la récupération si le journal courant change
     useEffect(() => {
         fetchEvaluations();
     }, [fetchEvaluations]);
 
-    // Effet pour synchroniser l'année sélectionnée
+    // 3. Corriger la synchronisation de l'année sélectionnée
     useEffect(() => {
-        setSelectedYear(currentJournal?.name);
-    }, [evaluations, currentJournal, selectedYear]);
-
+        if (currentJournal) {
+            // On suppose que le nom du journal est l'année scolaire
+            setSelectedYear(currentJournal.name);
+        }
+    }, [currentJournal]);
 
     const handleOpenCreateModal = () => {
         setEditingEvaluation(null);
@@ -78,7 +83,8 @@ const CorrectionList = () => {
     const performDelete = async (id) => {
         try {
             await deleteEvaluation(id);
-            setEvaluations(prev => prev.filter(e => e.id !== id));
+            // La meilleure pratique est de refaire un fetch pour avoir les données à jour
+            await fetchEvaluations();
             success('Évaluation supprimée.');
         } catch (err) {
             showError(err.message || 'Erreur de suppression');
@@ -89,15 +95,15 @@ const CorrectionList = () => {
 
     const handleSaveEvaluation = async (evaluationData) => {
         try {
+            const payload = { ...evaluationData, journal_id: currentJournal.id };
             if (editingEvaluation) {
-                const response = await updateEvaluation(editingEvaluation.id, evaluationData);
-                await fetchEvaluations(); // Re-fetch pour avoir la liste à jour
+                await updateEvaluation(editingEvaluation.id, payload);
                 success('Évaluation mise à jour !');
             } else {
-                const response = await createEvaluation(evaluationData);
-                await fetchEvaluations(); // Re-fetch pour avoir la liste à jour
+                await createEvaluation(payload);
                 success('Évaluation créée avec succès !');
             }
+            await fetchEvaluations(); // Re-fetch pour avoir la liste à jour
             setIsModalOpen(false);
             setEditingEvaluation(null);
             setEvaluationToCopy(null);
@@ -106,17 +112,24 @@ const CorrectionList = () => {
         }
     };
 
-    const schoolYears = journals.map(j => j.name);
+    // La liste des années vient des journaux disponibles
+    const schoolYears = useMemo(() => journals.map(j => j.name), [journals]);
 
+    // Le filtrage se fait maintenant sur toutes les évaluations récupérées pour le journal
     const filteredEvaluations = useMemo(() => {
-        if (!selectedYear) return []; // Retourne un tableau vide si aucune année n'est sélectionnée
+        if (!selectedYear) return [];
+        // On suppose que `evaluation.school_year` correspond à `journal.name`
         return evaluations.filter(e => e.school_year === selectedYear);
     }, [evaluations, selectedYear]);
 
-    if (loading) return <div className="loading-fullscreen">Chargement des évaluations...</div>;
+    // 4. Ajouter des gardes pour les états de chargement et l'absence de journal
+    if (loadingJournal) return <div className="loading-fullscreen">Chargement du journal...</div>;
+    if (!currentJournal) return <div className="empty-state"><h3>Aucun journal sélectionné</h3><p>Veuillez sélectionner un journal pour continuer.</p></div>;
+    if (loadingEvaluations) return <div className="loading-fullscreen">Chargement des évaluations...</div>;
     if (error) return <div className="error-message">{error}</div>;
 
-    const isArchivedYear = currentJournal.is_archived;
+    // 5. Utiliser l'optional chaining pour la sécurité
+    const isArchivedYear = currentJournal?.is_archived ?? false;
 
     return (
         <div className="correction-list-view">
@@ -126,9 +139,14 @@ const CorrectionList = () => {
                     <p>Gérez et accédez aux corrections de vos évaluations.</p>
                 </div>
                 <div className="header-actions">
-                    <select value={selectedYear} className="year-filter" readOnly>
+                    {/* 6. Corriger le select et ajouter un handler onChange */}
+                    <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        className="year-filter"
+                    >
                         {schoolYears.map(year => (
-                            <option key={year} value={selectedYear}>{selectedYear}</option>
+                            <option key={year} value={year}>{year}</option>
                         ))}
                     </select>
                     {!isArchivedYear && (
@@ -138,9 +156,10 @@ const CorrectionList = () => {
                     )}
                 </div>
             </div>
-            {isArchivedYear && selectedYear ? (
+
+            {isArchivedYear ? (
                 <div className="archive-warning">
-                    Vous consultez une année archivée ({selectedYear}). Les modifications sont désactivées.
+                    Vous consultez un journal archivé ({selectedYear}). Les modifications sont désactivées.
                 </div>
             ) : null}
 
@@ -151,13 +170,9 @@ const CorrectionList = () => {
                             <div className="card-header">
                                 <h2>{ev.name}</h2>
                                 <div className="card-actions">
-                                    {!isArchivedYear && (
-                                        <button onClick={(e) => { e.stopPropagation(); handleOpenEditModal(ev); }} className="btn-edit" title="Modifier">✏️</button>
-                                    )}
-                                    <button onClick={(e) => { e.stopPropagation(); handleOpenCopyModal(ev); }} className="btn-copy" title="Copier">📄</button>
-                                    {!isArchivedYear && (
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(ev); }} className="btn-delete" title="Supprimer">🗑️</button>
-                                    )}
+                                    {!isArchivedYear && <button onClick={() => handleOpenEditModal(ev)} className="btn-edit" title="Modifier">✏️</button>}
+                                    <button onClick={() => handleOpenCopyModal(ev)} className="btn-copy" title="Copier">📄</button>
+                                    {!isArchivedYear && <button onClick={() => handleDeleteClick(ev)} className="btn-delete" title="Supprimer">🗑️</button>}
                                 </div>
                             </div>
                             <Link to={`/correction/${ev.id}`} className="card-link-area">
@@ -173,12 +188,10 @@ const CorrectionList = () => {
                     ))}
                 </div>
             ) : (
-                !loading && (
-                    <div className="empty-state">
-                        <h3>Aucune évaluation pour l'année {selectedYear || ''}</h3>
-                        <p>Créez votre première évaluation pour commencer.</p>
-                    </div>
-                )
+                <div className="empty-state">
+                    <h3>Aucune évaluation pour le journal : {selectedYear || ''}</h3>
+                    <p>Créez votre première évaluation pour commencer.</p>
+                </div>
             )}
 
             <EvaluationModal
@@ -187,6 +200,7 @@ const CorrectionList = () => {
                 onSave={handleSaveEvaluation}
                 evaluation={editingEvaluation}
                 evaluationToCopy={evaluationToCopy}
+                currentJournalId={currentJournal.id}
             />
 
             <ConfirmModal

@@ -46,7 +46,7 @@ class ScheduleController {
             const [rows] = await conn.execute(`
                 SELECT s.id, s.day, s.time_slot_id, h.libelle AS time_slot_libelle, s.subject, s.class_id, c.name AS class_name, c.level AS class_level, s.room, s.notes
                 FROM SCHEDULE s
-                JOIN schedule_hours h ON s.time_slot_id = h.id
+                JOIN SCHEDULE_HOURS h ON s.time_slot_id = h.id
                 JOIN CLASS c ON s.class_id = c.id
                 WHERE s.journal_id = ?
             `, [journal_id]);

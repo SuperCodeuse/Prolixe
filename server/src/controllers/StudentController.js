@@ -12,7 +12,7 @@ class StudentController {
         try {
             // La requête filtre maintenant aussi par school_year
             const [rows] = await pool.execute(
-                'SELECT * FROM students WHERE class_id = ? AND school_year = ? ORDER BY lastname, firstname',
+                'SELECT * FROM STUDENTS WHERE class_id = ? AND school_year = ? ORDER BY lastname, firstname',
                 [classId, school_year]
             );
             res.json({ success: true, data: rows });
@@ -29,7 +29,7 @@ class StudentController {
         }
         try {
             const [result] = await pool.execute(
-                'INSERT INTO students (class_id, firstname, lastname, school_year) VALUES (?, ?, ?, ?)',
+                'INSERT INTO STUDENTS (class_id, firstname, lastname, school_year) VALUES (?, ?, ?, ?)',
                 [class_id, firstname, lastname, school_year]
             );
             res.status(201).json({ success: true, message: 'Élève ajouté.', data: { id: result.insertId, ...req.body } });
@@ -43,7 +43,7 @@ class StudentController {
         const { firstname, lastname, class_id } = req.body;
         try {
             const [result] = await pool.execute(
-                'UPDATE students SET firstname = ?, lastname = ?, class_id = ? WHERE id = ?',
+                'UPDATE STUDENTS SET firstname = ?, lastname = ?, class_id = ? WHERE id = ?',
                 [firstname, lastname, class_id, id]
             );
             if (result.affectedRows === 0) {
@@ -58,7 +58,7 @@ class StudentController {
     static async deleteStudent(req, res) {
         const { id } = req.params;
         try {
-            const [result] = await pool.execute('DELETE FROM students WHERE id = ?', [id]);
+            const [result] = await pool.execute('DELETE FROM STUDENTS WHERE id = ?', [id]);
             if (result.affectedRows === 0) {
                 return res.status(404).json({ success: false, message: 'Élève non trouvé.' });
             }

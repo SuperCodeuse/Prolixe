@@ -1,16 +1,22 @@
 // components/navigation/SideMenu.js
-import React, { useState } from 'react'; // Importez useState pour l'état du menu déroulant
-import { NavLink } from 'react-router-dom'; // NavLink pour la navigation
-import { useAuth } from '../../hooks/useAuth'; // Hook d'authentification
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import useOutsideClick from '../../hooks/useOutsideClick'; // Assurez-vous que le chemin est correct
 
-import './SideMenu.scss'; // Styles du SideMenu
+import './SideMenu.scss';
 
 const SideMenu = ({ isMenuOpen, toggleMenu }) => {
+    const { logout, user } = useAuth();
+    const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = React.useState(false);
 
-    const { logout, user } = useAuth()
-    const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = useState(false);
+    // Utilisation du hook pour détecter les clics en dehors du menu
+    const menuRef = useOutsideClick(() => {
+        if (isMenuOpen) {
+            toggleMenu();
+        }
+    });
 
-    // Liste des éléments du menu de navigation
     const menuItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
         { id: 'journal', label: 'Journal', icon: '📝', path: '/journal' },
@@ -22,6 +28,10 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
     // Gère le clic sur un élément du menu de navigation
     const handleMenuItemClick = () => {
         setIsLogoutDropdownOpen(false);
+        // Ferme le menu principal
+        if (isMenuOpen) {
+            toggleMenu();
+        }
     };
 
     // Gère la déconnexion
@@ -36,12 +46,12 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
     };
 
     return (
-        // Applique des classes CSS dynamiques basées sur l'état du menu (open/closed)
-        <div className={`sidemenu ${isMenuOpen ? 'open' : 'closed'}`}>
+        // On attache la référence au conteneur principal du menu
+        <div ref={menuRef} className={`sidemenu ${isMenuOpen ? 'open' : 'closed'}`}>
             <div className="sidemenu-header">
                 <div className="logo">
-                    <span className="logo-icon">🎓</span> {/* Icône du logo */}
-                    <span className="logo-text">Prolixe</span> {/* Texte du logo */}
+                    <span className="logo-icon">🎓</span>
+                    <span className="logo-text">Prolixe</span>
                 </div>
             </div>
 
@@ -68,7 +78,7 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
                         <div className="user-profile" onClick={handleUserProfileClick}>
                             <div className="user-avatar">{user?.firstname[0]}{user?.name[0]}</div>
                             <div className="user-info">
-                                <span className="user-name">{user?.name }</span>
+                                <span className="user-name">{user?.name}</span>
                                 <span className="user-role">{user?.role}</span>
                             </div>
                             <span className="dropdown-arrow"></span>

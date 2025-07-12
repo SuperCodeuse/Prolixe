@@ -4,7 +4,7 @@ const db = require('../../config/database');
 // Récupérer les notes (avec état et date)
 const getNotes = async (req, res) => {
     try {
-        const [notes] = await db.query('SELECT id, text, state, date FROM notes');
+        const [notes] = await db.query('SELECT id, text, state, date FROM NOTES');
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).json({ message: "Erreur serveur" });
@@ -25,13 +25,13 @@ const createNote = async (req, res) => {
 
     try {
         const [insertResult] = await db.query(
-            'INSERT INTO notes (text, state, date) VALUES (?, ?, ?)',
+            'INSERT INTO NOTES (text, state, date) VALUES (?, ?, ?)',
             [text, noteState, noteDate]
         );
         const newNoteId = insertResult.insertId;
 
         const [newNoteRows] = await db.query(
-            'SELECT id, text, state, date FROM notes WHERE id = ?',
+            'SELECT id, text, state, date FROM NOTES WHERE id = ?',
             [newNoteId]
         );
 
@@ -45,7 +45,7 @@ const createNote = async (req, res) => {
 const deleteNote = async (req, res) => {
     const { id } = req.params;
     try {
-        const [result] = await db.query('DELETE FROM notes WHERE id = ?', [id]);
+        const [result] = await db.query('DELETE FROM NOTES WHERE id = ?', [id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Note non trouvée." });
         }

@@ -122,7 +122,7 @@ class JournalController {
             await connection.beginTransaction();
 
             const [classes] = await connection.execute('SELECT id, name FROM CLASS');
-            const [scheduleHours] = await connection.execute('SELECT id, libelle FROM schedule_hours');
+            const [scheduleHours] = await connection.execute('SELECT id, libelle FROM SCHEDULE_HOURS');
             const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE WHERE journal_id = ?', [journal_id]);
             const timeSlotMap = new Map(scheduleHours.map(h => [h.libelle, h.id]));
 
@@ -204,7 +204,7 @@ class JournalController {
                     SELECT je.id, je.date, je.planned_work, je.actual_work, je.notes, je.journal_id, s.id AS schedule_id, s.day, s.time_slot_id, sh.libelle AS time_slot_libelle, s.subject AS course_subject, c.id AS class_id, c.name AS class_name, c.level AS class_level, s.room
                     FROM JOURNAL_ENTRY je
                     JOIN SCHEDULE s ON je.schedule_id = s.id
-                    JOIN schedule_hours sh ON s.time_slot_id = sh.id
+                    JOIN SCHEDULE_HOURS sh ON s.time_slot_id = sh.id
                     JOIN CLASS c ON s.class_id = c.id
                     WHERE je.journal_id = ? AND je.date BETWEEN ? AND ?`, [journal_id, startDate, endDate]);
                 return rows;
@@ -233,7 +233,7 @@ class JournalController {
             const [entry] = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
                     SELECT je.id, je.date, je.planned_work, je.actual_work, je.notes, je.journal_id, s.id AS schedule_id, s.day, s.time_slot_id, sh.libelle AS time_slot_libelle, s.subject AS course_subject, c.id AS class_id, c.name AS class_name, c.level AS class_level, s.room
-                    FROM JOURNAL_ENTRY je JOIN SCHEDULE s ON je.schedule_id = s.id JOIN schedule_hours sh ON s.time_slot_id = sh.id JOIN CLASS c ON s.class_id = c.id
+                    FROM JOURNAL_ENTRY je JOIN SCHEDULE s ON je.schedule_id = s.id JOIN SCHEDULE_HOURS sh ON s.time_slot_id = sh.id JOIN CLASS c ON s.class_id = c.id
                     WHERE je.id = ?`, [result.id]);
                 return rows;
             });
