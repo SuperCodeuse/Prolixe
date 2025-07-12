@@ -15,9 +15,13 @@ const CorrectionList = () => {
     const [editingEvaluation, setEditingEvaluation] = useState(null);
     const [evaluationToCopy, setEvaluationToCopy] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-    const { currentJournal } = useJournal();
+
+    const { journals } = useJournal();
+
     const [selectedYear, setSelectedYear] = useState('');
     const { success, error: showError } = useToast();
+
+    const currentJournal = journals.find(j => j.is_current);
 
     const fetchEvaluations = useCallback(async () => {
         setLoading(true);
@@ -108,9 +112,8 @@ const CorrectionList = () => {
     };
 
     const schoolYears = useMemo(() => {
-        console.log(" evaluation : ", evaluations);
-        console.log(" currentJournal : ", currentJournal);
-               return evaluations.length>0 ? [...new Set(evaluations.map(e => e.school_year))].sort((a, b) => b.localeCompare(a)) : currentJournal.school_year
+        console.log(" Journal : ", journals);
+               return journals.map(j => j.school_year).sort((a, b) => b.localeCompare(a));
     }, [evaluations]);
 
     const filteredEvaluations = useMemo(() => {

@@ -1,25 +1,21 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-
-// Assuming your providers are in a contexts or hooks folder
-import { JournalProvider } from './components/journal/Journal'; // <--- 1. IMPORT THE PROVIDER
-import { useAuth } from './hooks/useAuth';
-import { useToast } from './hooks/useToast';
-
 import SideMenu from './components/navigation/SideMenu';
 import Settings from './components/settings/Settings';
 import Dashboard from './components/dashboard/Dashboard';
 import Horaire from "./components/horaire/Horaire";
 import Journal from "./components/journal/Journal";
 import Login from './components/authentification/login';
-import Toast from './components/Toast';
-import CorrectionList from "./components/Correction/CorrectionList";
-import CorrectionView from "./components/Correction/CorrectionView";
+import { useAuth } from './hooks/useAuth';
+import { useToast } from './hooks/useToast'; // Import du hook
+import Toast from './components/Toast';     // Import du composant
+import CorrectionList from "./components/Correction/CorrectionList"; // Ajout de l'import
+import CorrectionView from "./components/Correction/CorrectionView"; // Ajout de l'import
+
 
 import './App.scss';
 
-// This component doesn't need to change
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     const breakpoint = 1600;
     return (
@@ -51,7 +47,7 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
 const App = () => {
     const { isAuthenticated, loadingAuth } = useAuth();
     const navigate = useNavigate();
-    const { toasts, removeToast } = useToast();
+    const { toasts, removeToast } = useToast(); // Récupération des toasts
 
     const [isMenuOpen, setIsMenuOpen] = useState(true);
     const toggleMenu = () => setIsMenuOpen(prev => !prev);
@@ -78,12 +74,10 @@ const App = () => {
     return (
         <div className={`app ${isMenuOpen ? 'menu-open' : 'menu-closed'}`}>
             {isAuthenticated ? (
-                <JournalProvider>
-                    <AuthenticatedAppContent
-                        isMenuOpen={isMenuOpen}
-                        toggleMenu={toggleMenu}
-                    />
-                </JournalProvider>
+                <AuthenticatedAppContent
+                    isMenuOpen={isMenuOpen}
+                    toggleMenu={toggleMenu}
+                />
             ) : (
                 <Routes>
                     <Route path="/login" element={<Login />} />
