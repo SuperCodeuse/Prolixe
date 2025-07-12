@@ -112,7 +112,7 @@ const CorrectionList = () => {
     };
 
     const schoolYears = useMemo(() => {
-        return journals.map(j => j.name).sort((a, b) => b.localeCompare(a));
+        return journals.map(j => j.name);
     }, [evaluations]);
 
     const filteredEvaluations = useMemo(() => {
