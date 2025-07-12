@@ -111,9 +111,7 @@ const CorrectionList = () => {
         }
     };
 
-    const schoolYears = useMemo(() => {
-        return journals.map(j => j.name);
-    }, [evaluations]);
+    const schoolYears = journals.map(j => j.name);
 
     const filteredEvaluations = useMemo(() => {
         if (!selectedYear) return []; // Retourne un tableau vide si aucune année n'est sélectionnée
