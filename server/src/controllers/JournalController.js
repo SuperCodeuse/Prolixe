@@ -53,6 +53,12 @@ class JournalController {
         let connection;
         try {
             connection = await pool.getConnection();
+
+            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year = ?', [school_year]);
+            if (existingJournal.length > 0) {
+                return JournalController.handleError(res, new Error('Conflit'), 'Un journal avec cette année scolaire là existe déjà', 409);
+            }
+
             await connection.beginTransaction();
             await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
             const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)', [name, school_year]);

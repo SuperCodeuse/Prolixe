@@ -3,6 +3,7 @@ const pool = require('../../config/database');
 class AttributionController {
     static async getAttributions(req, res) {
         try {
+            // Pas de changement ici
             const [rows] = await pool.execute('SELECT * FROM ATTRIBUTIONS ORDER BY start_date DESC');
             res.json({ success: true, data: rows });
         } catch (error) {
@@ -11,14 +12,16 @@ class AttributionController {
     }
 
     static async createAttribution(req, res) {
-        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours } = req.body;
+        // Ajout de 'className' depuis le corps de la requête
+        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
         if (!school_year || !school_name || !start_date || !end_date) {
-            return res.status(400).json({ success: false, message: 'Tous les champs sont requis.' });
+            return res.status(400).json({ success: false, message: 'Les champs school_year, school_name, start_date et end_date sont requis.' });
         }
         try {
+            // Mise à jour de la requête SQL pour inclure la colonne 'class'
             const [result] = await pool.execute(
-                'INSERT INTO attributions (school_year, school_name, start_date, end_date, esi_hours, ess_hours) VALUES (?, ?, ?, ?, ?, ?)',
-                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0]
+                'INSERT INTO attributions (school_year, school_name, start_date, end_date, esi_hours, ess_hours, class) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null] // On utilise la variable 'className'
             );
 
             const [created] = await pool.execute('SELECT * FROM ATTRIBUTIONS WHERE id = ?', [result.insertId]);
@@ -31,12 +34,14 @@ class AttributionController {
 
     static async updateAttribution(req, res) {
         const { id } = req.params;
-        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours } = req.body;
+        // Ajout de 'className' depuis le corps de la requête
+        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
 
         try {
+            // Mise à jour de la requête SQL pour inclure le champ 'class'
             const [result] = await pool.execute(
-                'UPDATE attributions SET school_year = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ? WHERE id = ?',
-                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, id]
+                'UPDATE attributions SET school_year = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ?, class = ? WHERE id = ?',
+                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null, id] // On utilise la variable 'className'
             );
 
             if (result.affectedRows === 0) {
@@ -53,6 +58,7 @@ class AttributionController {
     static async deleteAttribution(req, res) {
         const { id } = req.params;
         try {
+            // Pas de changement ici
             const [result] = await pool.execute('DELETE FROM ATTRIBUTIONS WHERE id = ?', [id]);
             if (result.affectedRows === 0) {
                 return res.status(404).json({ success: false, message: 'Attribution non trouvée.' });

@@ -10,13 +10,15 @@ const AttributionManager = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
+    // --- MODIFICATION : 'class' renommé en 'className' pour éviter les conflits JS ---
     const [formData, setFormData] = useState({
         school_year: '',
         school_name: '',
         start_date: '',
         end_date: '',
         esi_hours: 0,
-        ess_hours: 0
+        ess_hours: 0,
+        className: '' // Renommé ici
     });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const { success, error } = useToast();
@@ -47,7 +49,8 @@ const AttributionManager = () => {
             start_date: '',
             end_date: '',
             esi_hours: 0,
-            ess_hours: 0
+            ess_hours: 0,
+            className: '', // Modifié ici
         });
         setShowForm(true);
     };
@@ -60,6 +63,8 @@ const AttributionManager = () => {
             school_name: attribution.school_name,
             start_date: format(new Date(attribution.start_date), 'yyyy-MM-dd'),
             end_date: format(new Date(attribution.end_date), 'yyyy-MM-dd'),
+            // --- MODIFICATION : Mappe la propriété 'class' de l'objet vers 'className' dans le state ---
+            className: attribution.class || '', // Le champ de la BDD s'appelle 'class'
             esi_hours: attribution.esi_hours || 0,
             ess_hours: attribution.ess_hours || 0,
         });
@@ -79,7 +84,9 @@ const AttributionManager = () => {
         }
 
         try {
+            // Pas de changement nécessaire ici, formData contient déjà 'className'
             const dataToSave = editing ? { ...formData, id: editing.id } : formData;
+            // AttributionService doit envoyer { ..., className: '...' } au backend
             await AttributionService.saveAttribution(dataToSave);
             success(`Attribution sauvegardée avec succès.`);
             setShowForm(false);
@@ -94,7 +101,7 @@ const AttributionManager = () => {
         setConfirmModal({
             isOpen: true,
             title: 'Confirmer la suppression',
-            message: `Êtes-vous sûr de vouloir supprimer cette attribution (${attribution.school_name} - ${attribution.school_year}) ?`,
+            message: `Êtes-vous sûr de vouloir supprimer l'attribution pour la classe ${attribution.class} à ${attribution.school_name} ?`,
             onConfirm: async () => {
                 try {
                     await AttributionService.deleteAttribution(attribution.id);
@@ -113,7 +120,6 @@ const AttributionManager = () => {
         setConfirmModal({ isOpen: false });
     };
 
-    // Logique pour grouper par année scolaire
     const groupedAttributions = attributions.reduce((acc, curr) => {
         const year = curr.school_year;
         (acc[year] = acc[year] || []).push(curr);
@@ -149,6 +155,11 @@ const AttributionManager = () => {
                             <div className="form-group">
                                 <label>Nom de l'école</label>
                                 <input type="text" value={formData.school_name} onChange={(e) => setFormData({ ...formData, school_name: e.target.value })} placeholder="Ex: Institut Saint-Laurent" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Classe</label>
+                                {/* --- MODIFICATION : 'value' et 'onChange' utilisent 'className' --- */}
+                                <input type="text" value={formData.className} onChange={(e) => setFormData({ ...formData, className: e.target.value })} placeholder="Ex: 3TTINFO" />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
@@ -187,7 +198,8 @@ const AttributionManager = () => {
                             {groupedAttributions[year].map(item => (
                                 <div className="attribution-item" key={item.id}>
                                     <div className="item-details">
-                                        <strong>{item.school_name}</strong>
+                                        {/* --- AJOUT : Affichage du nom de la classe --- */}
+                                        <strong>{item.school_name} {item.class && ` - ${item.class}`}</strong>
                                         <p>Du {format(new Date(item.start_date), 'dd/MM/yyyy')} au {format(new Date(item.end_date), 'dd/MM/yyyy')}</p>
                                         <p><strong>ESI:</strong> {item.esi_hours}h | <strong>ESS:</strong> {item.ess_hours}h</p>
                                     </div>

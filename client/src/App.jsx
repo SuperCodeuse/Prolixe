@@ -50,7 +50,11 @@ const App = () => {
     const { toasts, removeToast } = useToast(); // Récupération des toasts
 
     const [isMenuOpen, setIsMenuOpen] = useState(true);
-    const toggleMenu = () => setIsMenuOpen(prev => !prev);
+    const toggleMenu = () => {
+        if(window.innerWidth < 1600){
+            setIsMenuOpen(prev => !prev);
+        }
+    }
 
     useEffect(() => {
         if (!loadingAuth) {
