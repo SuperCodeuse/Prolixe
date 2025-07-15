@@ -3,6 +3,7 @@ import { useClasses } from '../../../hooks/useClasses'; // Votre hook pour les c
 import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
 import { useJournal } from '../../../hooks/useJournal';
+import ConfirmModal from '../../ConfirmModal'; // Assurez-vous d'importer votre modale
 import './StudentManager.scss';
 
 const StudentManager = () => {
@@ -16,6 +17,13 @@ const StudentManager = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({ firstname: '', lastname: '' });
     const { success, error } = useToast();
+
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null,
+    });
 
     // Charge les élèves pour la classe et le journal sélectionnés.
     const fetchStudents = useCallback(async () => {
@@ -44,6 +52,8 @@ const StudentManager = () => {
         setSelectedClass('');
     }, [classes]);
 
+
+
     // Gère l'ajout d'un élève.
     const handleAddStudent = async (e) => {
         e.preventDefault();
@@ -65,18 +75,31 @@ const StudentManager = () => {
         }
     };
 
-    // Gère la suppression d'un élève.
-    const handleDeleteStudent = async (studentId, studentName) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${studentName} ?`)) {
-            try {
-                await StudentService.deleteStudent(studentId);
-                success(`${studentName} a été supprimé.`);
-                await fetchStudents();
-            } catch (err) {
-                error(err.response?.data?.message || 'Erreur lors de la suppression.');
-            }
+    const performDelete = async (studentId, studentName) => {
+        try {
+            await StudentService.deleteStudent(studentId);
+            success(`${studentName} a été supprimé.`);
+            await fetchStudents();
+        } catch (err) {
+            error(err.response?.data?.message || 'Erreur lors de la suppression.');
+        } finally {
+            closeConfirmModal();
         }
     };
+
+    const handleDeleteStudent = (studentId, studentName) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Supprimer l\'élève',
+            message: `Êtes-vous sûr de vouloir supprimer ${studentName} ? Cette action est définitive.`,
+            onConfirm: () => performDelete(studentId, studentName),
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
+    };
+
 
     // Vérifie si l'interface doit être désactivée.
     const isUiDisabled = !currentJournal || currentJournal.is_archived;
@@ -142,6 +165,18 @@ const StudentManager = () => {
                     </div>
                 </>
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                confirmText="Confirmer la suppression"
+                cancelText="Annuler"
+                type="danger"
+            />
+
         </div>
     );
 };
