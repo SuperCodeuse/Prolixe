@@ -2,8 +2,12 @@
 import ApiService from './api';
 
 class ClassService {
-    static async getClasses() {
-        return ApiService.request('/classes');
+
+    static async getClasses(schoolYearId) {
+        if (!schoolYearId) {
+            return Promise.resolve({ data: [] });
+        }
+        return ApiService.request(`/classes?school_year_id=${schoolYearId}`);
     }
 
     static async getClass(id) {

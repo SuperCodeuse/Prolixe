@@ -77,6 +77,12 @@ class ClassController {
             }
         }
 
+        if (!isUpdate || data.school_year_id !== undefined) {
+            if (!data.school_year_id || isNaN(parseInt(data.school_year_id))) {
+                errors.school_year_id = "L'année scolaire est requise.";
+            }
+        }
+
         // Validation du nombre d'étudiants
         if (!isUpdate || data.students !== undefined) {
             const studentsNum = parseInt(data.students);
@@ -113,18 +119,20 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async getAllClasses(req, res) {
+        const { school_year_id } = req.query; // Récupération depuis les paramètres de la requête
+
+        if (!school_year_id) {
+            return ClassController.handleError(res, new Error('ID de l\'année scolaire manquant'), 'Un ID d\'année scolaire est requis.', 400);
+        }
+
         try {
             const data = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT
-                        id,
-                        name,
-                        students,
-                        level,
-                        lesson AS subject
+                    SELECT id, name, students, level, lesson AS subject
                     FROM CLASS
+                    WHERE school_year_id = ?
                     ORDER BY name ASC
-                `);
+                `, [school_year_id]);
                 return rows;
             });
 
@@ -132,13 +140,12 @@ class ClassController {
                 success: true,
                 data: data,
                 count: data.length,
-                message: data.length === 0 ? 'Aucune classe trouvée.' : `${data.length} classe(s) récupérée(s).`
+                message: data.length === 0 ? 'Aucune classe trouvée pour cette année scolaire.' : `${data.length} classe(s) récupérée(s).`
             });
         } catch (error) {
             ClassController.handleError(res, error, 'Erreur lors de la récupération des classes.');
         }
     }
-
     /**
      * Récupère une classe par son ID.
      * @param {Request} req - L'objet requête Express (contient req.params.id).
@@ -187,32 +194,29 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async createClass(req, res) {
-        // Inclure 'level' dans la déstructuration
-        const { name, students, subject, level } = req.body;
-
-        // Validation des données (maintenant incluant 'level')
-        const validationErrors = ClassController.validateClassData({ name, students, subject, level });
+        const { name, students, subject, level, school_year_id } = req.body;
+        const validationErrors = ClassController.validateClassData({ name, students, subject, level, school_year_id });
         if (Object.keys(validationErrors).length > 0) {
-            return ClassController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
+            return ClassController.handleError(res, new Error('Données invalides'), 'Données invalides.', 400, validationErrors);
         }
+
 
         try {
             const newClass = await ClassController.withConnection(async (connection) => {
-                // Vérifier l'unicité du nom
                 const [existing] = await connection.execute(
-                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?)',
-                    [name.trim()]
+                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND school_year_id = ?',
+                    [name.trim(), school_year_id]
                 );
 
                 if (existing.length > 0) {
-                    const err = new Error('Une classe avec ce nom existe déjà.');
-                    err.name = 'DUPLICATE_NAME'; // Nommer l'erreur pour la gestion spécifique
+                    const err = new Error('Une classe avec ce nom existe déjà pour cette année scolaire.');
+                    err.name = 'DUPLICATE_NAME';
                     throw err;
                 }
 
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, lesson, level) VALUES (?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), subject.trim(), parseInt(level)]
+                    'INSERT INTO CLASS (name, students, lesson, level, school_year_id) VALUES (?, ?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), subject.trim(), parseInt(level), parseInt(school_year_id)]
                 );
 
                 const [newClassData] = await connection.execute(
@@ -277,15 +281,14 @@ class ClassController {
                 const values = [];
 
                 if (updateData.name !== undefined) {
-                    const trimmedName = updateData.name.trim();
-                    // Vérifier l'unicité du nom (sauf pour la classe actuelle)
+                    const schoolYearIdForCheck = updateData.school_year_id || existing[0].school_year_id;
                     const [duplicate] = await connection.execute(
-                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ?',
-                        [trimmedName, parseInt(id)]
+                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ? AND school_year_id = ?',
+                        [updateData.name.trim(), parseInt(id), schoolYearIdForCheck]
                     );
 
                     if (duplicate.length > 0) {
-                        const err = new Error('Une autre classe avec ce nom existe déjà.');
+                        const err = new Error('Une autre classe avec ce nom existe déjà pour cette année scolaire.');
                         err.name = 'DUPLICATE_NAME';
                         throw err;
                     }
@@ -296,6 +299,11 @@ class ClassController {
                 if (updateData.students !== undefined) {
                     fieldsToUpdate.push('students = ?');
                     values.push(parseInt(updateData.students));
+                }
+
+                if (updateData.school_year_id !== undefined) {
+                    fieldsToUpdate.push('school_year_id = ?');
+                    values.push(parseInt(updateData.school_year_id));
                 }
 
                 if (updateData.subject !== undefined) {

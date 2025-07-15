@@ -1,139 +1,218 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useClasses } from '../../../hooks/useClasses';
-import ConfirmModal from '../../ConfirmModal';
 import { useToast } from '../../../hooks/useToast';
+import ConfirmModal from '../../ConfirmModal';
+// Supposons que vous ayez un service pour gérer les années scolaires.
+// Vous devrez créer ce fichier et les routes API correspondantes.
+// import SchoolYearService from '../../../services/schoolYearService';
+
+// Placeholder pour le service des années scolaires en attendant sa création.
+const SchoolYearService = {
+    getSchoolYears: () => Promise.resolve({ data: [{id: 1, name: "2024-2025"}, {id: 2, name: "2025-2026"}] })
+};
+
 
 const ClassesManager = () => {
-    const { classes, loading, error, addClass, updateClass, removeClass } = useClasses();
-    // On ne récupère que ce qui est nécessaire du hook useToast
-    const { success, error: showError, warning } = useToast();
+    // State pour la gestion des années scolaires
+    const [schoolYears, setSchoolYears] = useState([]);
+    const [selectedYear, setSelectedYear] = useState('');
+    const [isYearLoading, setIsYearLoading] = useState(true);
 
-    // ... (toute votre logique existante reste la même)
+    // Le hook useClasses est maintenant piloté par l'année scolaire sélectionnée
+    const { classes, loading, error, addClass, updateClass, removeClass } = useClasses(selectedYear);
+    const { success, error: showError } = useToast();
+
+    // State pour le formulaire et la modale
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
     const [formData, setFormData] = useState({ name: '', students: '', subject: '', level: '' });
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
 
-    const lesson = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
-    const levels = [3, 4, 5, 6];
+    const lessonOptions = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
+    const levelOptions = [3, 4, 5, 6];
 
-    const showConfirmModal = (title, message, onConfirm) => setConfirmModal({ isOpen: true, title, message, onConfirm });
-    const closeConfirmModal = () => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
-    const resetForm = () => {
-        setFormData({ name: '', students: '', subject: '', level: '' });
-        setEditingClass(null);
-        setShowAddForm(false);
-    };
-    const validateForm = () => {
-        const errors = [];
-        if (!formData.name.trim() || formData.name.trim().length < 2) errors.push('Le nom de la classe doit contenir au moins 2 caractères.');
-        if (!formData.students || isNaN(formData.students) || parseInt(formData.students) <= 0 || parseInt(formData.students) > 50) errors.push('Le nombre d\'élèves doit être entre 1 et 50.');
-        if (!formData.subject) errors.push('La matière principale est requise.');
-        if (!formData.level || !levels.includes(parseInt(formData.level))) errors.push('Le niveau est invalide.');
-        if (classes.some(cls => cls.name.toLowerCase().trim() === formData.name.toLowerCase().trim() && (!editingClass || cls.id !== editingClass.id))) errors.push(`Une classe avec le nom "${formData.name}" existe déjà.`);
-        if (errors.length > 0) {
-            errors.forEach(errorMsg => showError(errorMsg, 4000));
-            return false;
-        }
-        return true;
-    };
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-        if (field === 'students' && value) {
-            const numStudents = parseInt(value);
-            if (isNaN(numStudents) || numStudents <= 0) warning('Le nombre d\'élèves doit être un nombre positif');
-            else if (numStudents > 50) warning('Attention : nombre d\'élèves très élevé (max recommandé: 50)');
-        }
-    };
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) return;
-        try {
-            if (editingClass) {
-                await updateClass(editingClass.id, formData);
-                success(`Classe "${formData.name}" modifiée avec succès !`);
-            } else {
-                await addClass(formData);
-                success(`Classe "${formData.name}" ajoutée avec succès !`);
+    // Charger les années scolaires au montage du composant
+    useEffect(() => {
+        const fetchYears = async () => {
+            try {
+                const response = await SchoolYearService.getSchoolYears();
+                setSchoolYears(response.data || []);
+                if (response.data && response.data.length > 0) {
+                    // Sélectionner la première année par défaut
+                    setSelectedYear(response.data[0].id);
+                }
+            } catch (err) {
+                showError("Impossible de charger les années scolaires.");
+            } finally {
+                setIsYearLoading(false);
             }
-            resetForm();
-        } catch (err) {
-            showError(`Erreur lors de ${editingClass ? 'la modification' : 'l\'ajout'}: ${err.message}`);
-        }
-    };
+        };
+        fetchYears();
+    }, [showError]); // showError est une dépendance car c'est une fonction d'un hook externe
+
+    // Les fonctions de gestion du formulaire et de la modale restent similaires
+    const resetForm = () => { setFormData({ name: '', students: '', subject: '', level: '' }); setEditingClass(null); setShowAddForm(false); };
+    const closeConfirmModal = () => setConfirmModal({ isOpen: false, onConfirm: null });
+    const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+
     const handleEdit = (classItem) => {
         setEditingClass(classItem);
         setFormData({
             name: classItem.name || '',
             students: classItem.students || '',
-            subject: classItem.subject || classItem.lesson || '',
+            subject: classItem.subject || '',
             level: classItem.level || '',
         });
         setShowAddForm(true);
     };
-    const handleCancelForm = () => {
-        const isFormDirty = formData.name.trim() || formData.students || formData.subject || formData.level;
-        if (isFormDirty) {
-            showConfirmModal('Annuler les modifications', 'Êtes-vous sûr de vouloir annuler ?', () => {
-                resetForm();
-                closeConfirmModal();
-            });
-        } else {
-            resetForm();
-        }
-    };
+
     const handleDelete = (classItem) => {
-        const studentCount = classItem.students;
-        const warningMessage = studentCount > 0 ? `Cette classe contient ${studentCount} élève${studentCount > 1 ? 's' : ''}.\n\n` : '';
-        showConfirmModal('Supprimer la classe', `${warningMessage}Êtes-vous sûr de vouloir supprimer la classe "${classItem.name}" ?`, () => performDelete(classItem.id, classItem.name));
+        setConfirmModal({
+            isOpen: true,
+            title: 'Supprimer la classe',
+            message: `Êtes-vous sûr de vouloir supprimer la classe "${classItem.name}" ?`,
+            onConfirm: () => performDelete(classItem.id, classItem.name),
+        });
     };
+
     const performDelete = async (id, className) => {
         try {
             await removeClass(id);
-            success(`Classe "${className}" supprimée avec succès !`);
+            success(`Classe "${className}" supprimée.`);
             closeConfirmModal();
         } catch (err) {
-            showError(`Erreur lors de la suppression: ${err.message}`);
+            showError(err.message);
             closeConfirmModal();
         }
     };
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        // La validation est déléguée au backend, on vérifie juste que les champs sont remplis
+        if (!formData.name || !formData.students || !formData.subject || !formData.level) {
+            showError("Tous les champs du formulaire sont requis.");
+            return;
+        }
 
-    if (loading) return <div className="classes-manager"><div className="loading"><div className="spinner"></div><p>Chargement...</p></div></div>;
-    if (error) return <div className="classes-manager"><div className="error"><h3>❌ Erreur</h3><p>{error}</p><button onClick={() => window.location.reload()}>Réessayer</button></div></div>;
+        const classData = {
+            ...formData,
+            students: parseInt(formData.students, 10),
+            level: parseInt(formData.level, 10),
+        };
+
+        try {
+            if (editingClass) {
+                await updateClass(editingClass.id, classData);
+                success(`Classe "${classData.name}" modifiée.`);
+            } else {
+                await addClass(classData);
+                success(`Classe "${classData.name}" ajoutée.`);
+            }
+            resetForm();
+        } catch (err) {
+            showError(err.response?.data?.message || err.message || "Une erreur est survenue.");
+        }
+    };
+
+    // Le rendu est maintenant conditionné par la sélection d'une année scolaire
+    const renderContent = () => {
+        if (loading || isYearLoading) {
+            return <div className="loading"><div className="spinner"></div><p>Chargement...</p></div>;
+        }
+        if (error) {
+            return <div className="error"><h3>❌ Erreur</h3><p>{error}</p></div>;
+        }
+        if (!selectedYear) {
+            return <div className="empty-state"><h3>Veuillez sélectionner une année scolaire pour commencer.</h3></div>;
+        }
+        if (classes.length === 0) {
+            return (
+                <div className="empty-state">
+                    <span className="empty-icon">🏫</span>
+                    <h3>Aucune classe pour cette année</h3>
+                    <p>Commencez par ajouter votre première classe pour l'année scolaire sélectionnée.</p>
+                    <div className="container">
+                        <button className="btn-primary" onClick={() => setShowAddForm(true)}>➕ Ajouter une classe</button>
+                    </div>
+                </div>
+            );
+        }
+        return (
+            <div className="classes-grid">
+                {classes.map(classItem => (
+                    <div key={classItem.id} className="class-card">
+                        <div className="class-card-header">
+                            <h3>{classItem.name}</h3>
+                            <div className="class-actions">
+                                <button className="btn-edit" onClick={() => handleEdit(classItem)} title="Modifier">✏️</button>
+                                <button className="btn-delete" onClick={() => handleDelete(classItem)} title="Supprimer">🗑️</button>
+                            </div>
+                        </div>
+                        <div className="class-info">
+                            <div className="info-item"><span>👥 Élèves:</span><span>{classItem.students}</span></div>
+                            <div className="info-item"><span>🎓 Niveau:</span><span>{classItem.level}</span></div>
+                            <div className="info-item"><span>📚 Matière:</span><span>{classItem.subject}</span></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
 
     return (
         <div className="classes-manager">
-            {/* ... Le reste de votre JSX ... */}
             <div className="classes-header">
                 <h2>🏫 Gestion des Classes</h2>
-                <button className="btn-primary" onClick={() => { resetForm(); setShowAddForm(true); }}><span>➕</span> Ajouter une classe</button>
+                <div className="form-group year-selector">
+                    <label htmlFor="school-year-select">Année Scolaire</label>
+                    <select
+                        id="school-year-select"
+                        value={selectedYear}
+                        className="btn-select"
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        disabled={isYearLoading || schoolYears.length === 0}
+                    >
+                        {isYearLoading && <option>Chargement...</option>}
+                        {!isYearLoading && schoolYears.length === 0 && <option>Aucune année trouvée</option>}
+                        {schoolYears.map(year => (
+                            <option key={year.id} value={year.id}>{year.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <button
+                    className="btn-primary"
+                    onClick={() => { resetForm(); setShowAddForm(true); }}
+                    disabled={!selectedYear || isYearLoading} // On ne peut pas ajouter de classe sans année
+                >
+                    <span>➕</span> Ajouter une classe
+                </button>
             </div>
+
+            {renderContent()}
 
             {showAddForm && (
                 <div className="modal-overlay">
                     <div className="modal">
                         <div className="modal-header">
-                            <h3>{editingClass ? 'Modifier la classe' : 'Ajouter une nouvelle classe'}</h3>
-                            <button className="modal-close" onClick={handleCancelForm}>✕</button>
+                            <h3>{editingClass ? 'Modifier la classe' : 'Ajouter une classe'}</h3>
+                            <button className="modal-close" onClick={resetForm}>✕</button>
                         </div>
                         <form onSubmit={handleSubmit} className="class-form">
                             <div className="form-group">
                                 <label>Nom de la classe</label>
-                                <input type="text" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} placeholder="Ex: 6ème A" required autoFocus maxLength={50}/>
-                                <small className="form-hint">{formData.name.length}/50</small>
+                                <input type="text" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required autoFocus />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Nombre d'élèves</label>
-                                    <input type="number" value={formData.students} onChange={(e) => handleInputChange('students', e.target.value)} placeholder="25" min="1" max="50" required/>
-                                    <small className="form-hint">Entre 1 et 50</small>
+                                    <input type="number" value={formData.students} onChange={(e) => handleInputChange('students', e.target.value)} min="1" max="50" required />
                                 </div>
                                 <div className="form-group">
                                     <label>Niveau</label>
                                     <select value={formData.level} onChange={(e) => handleInputChange('level', e.target.value)} required>
                                         <option value="">Sélectionner</option>
-                                        {levels.map(level => <option key={level} value={level}>{level}</option>)}
+                                        {levelOptions.map(level => <option key={level} value={level}>{level}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -141,47 +220,17 @@ const ClassesManager = () => {
                                 <label>Matière principale</label>
                                 <select value={formData.subject} onChange={(e) => handleInputChange('subject', e.target.value)} required>
                                     <option value="">Sélectionner</option>
-                                    {lesson.map(subject => <option key={subject} value={subject}>{subject}</option>)}
+                                    {lessonOptions.map(subject => <option key={subject} value={subject}>{subject}</option>)}
                                 </select>
                             </div>
                             <div className="form-actions">
-                                <button type="button" className="btn-secondary" onClick={handleCancelForm}>Annuler</button>
+                                <button type="button" className="btn-secondary" onClick={resetForm}>Annuler</button>
                                 <button type="submit" className="btn-primary">{editingClass ? '✏️ Modifier' : '➕ Ajouter'}</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-
-            <div className="classes-grid">
-                {classes.length === 0 ? (
-                    <div className="empty-state">
-                        <span className="empty-icon">🏫</span>
-                        <h3>Aucune classe</h3>
-                        <p>Commencez par ajouter vos premières classes !</p>
-                        <button className="btn-primary" onClick={() => setShowAddForm(true)}>➕ Ajouter ma première classe</button>
-                    </div>
-                ) : (
-                    classes.map(classItem => (
-                        <div key={classItem.id} className="class-card">
-                            <div className="class-card-header">
-                                <h3>{classItem.name}</h3>
-                                <div className="class-actions">
-                                    <button className="btn-edit" onClick={() => handleEdit(classItem)} title="Modifier">✏️</button>
-                                    <button className="btn-delete" onClick={() => handleDelete(classItem)} title="Supprimer">🗑️</button>
-                                </div>
-                            </div>
-                            <div className="class-info">
-                                <div className="info-item"><span>👥 Élèves:</span><span>{classItem.students}</span></div>
-                                <div className="info-item"><span>🎓 Niveau:</span><span>{classItem.level}</span></div>
-                                <div className="info-item"><span>📚 Matière:</span><span>{classItem.subject}</span></div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Le conteneur de toasts a bien été retiré d'ici */}
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
