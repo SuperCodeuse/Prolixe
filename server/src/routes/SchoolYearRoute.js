@@ -15,11 +15,6 @@ const SchoolYearController = require('../controllers/schoolYearController');
  */
 router.get('/', SchoolYearController.getAllSchoolYears);
 
-/**
- * @route   GET /api/school-years/:id
- * @desc    Récupérer une année scolaire par son ID
- * @access  Public
- */
 router.get('/:id', SchoolYearController.getSchoolYearById);
 
 /**

@@ -120,7 +120,7 @@ class ClassController {
                         id,
                         name,
                         students,
-                        level,         -- Inclure 'level'
+                        level,
                         lesson AS subject
                     FROM CLASS
                     ORDER BY name ASC

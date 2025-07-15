@@ -2,6 +2,7 @@
 const mysql = require('mysql2/promise');
 const pool = require('../../config/database');
 
+// Fonctions utilitaires (inchangées)
 const parseFrenchDate = (dateStr) => {
     const months = { 'janv.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11 };
     const parts = dateStr.toLowerCase().split(' ');
@@ -33,10 +34,18 @@ class JournalController {
         res.status(statusCode).json({ success: false, message: defaultMessage, error: errorMessage, errors: customErrors });
     }
 
+    /**
+     * MODIFIÉ: Récupère tous les journaux avec les informations de l'année scolaire.
+     */
     static async getAllJournals(req, res) {
         try {
             const journals = await JournalController.withConnection(async (connection) => {
-                const [rows] = await connection.execute('SELECT id, name, school_year, is_archived, is_current FROM JOURNAL ORDER BY school_year DESC');
+                const [rows] = await connection.execute(`
+                    SELECT j.id, j.name, j.is_archived, j.is_current, j.school_year_id
+                    FROM JOURNAL j
+                    JOIN school_year sy ON j.school_year_id = sy.id
+                    ORDER BY start_date DESC
+                `);
                 return rows;
             });
             res.json({ success: true, data: journals });
@@ -45,26 +54,40 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Crée un journal en utilisant school_year_id.
+     */
     static async createJournal(req, res) {
-        const { name, school_year } = req.body;
-        if (!name || !school_year) {
-            return JournalController.handleError(res, new Error('Champs manquants'), 'Le nom et l\'année scolaire sont requis.', 400);
+        // Attend `school_year_id` au lieu de `school_year`
+        const { name, school_year_id } = req.body;
+        if (!name || !school_year_id) {
+            return JournalController.handleError(res, new Error('Champs manquants'), "Le nom et l'ID de l'année scolaire sont requis.", 400);
         }
         let connection;
         try {
             connection = await pool.getConnection();
 
-            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year = ?', [school_year]);
+            // Vérifie l'existence avec school_year_id
+            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year_id = ?', [school_year_id]);
             if (existingJournal.length > 0) {
-                return JournalController.handleError(res, new Error('Conflit'), 'Un journal avec cette année scolaire là existe déjà', 409);
+                return JournalController.handleError(res, new Error('Conflit'), 'Un journal pour cette année scolaire existe déjà.', 409);
             }
 
             await connection.beginTransaction();
             await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
-            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year, is_current, is_archived) VALUES (?, ?, 1, 0)', [name, school_year]);
+            // Insère avec school_year_id
+            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year_id, is_current, is_archived) VALUES (?, ?, 1, 0)', [name, school_year_id]);
             const newJournalId = insertResult.insertId;
             await connection.commit();
-            const [newJournal] = await connection.execute('SELECT * FROM JOURNAL WHERE id = ?', [newJournalId]);
+
+            // Récupère le nouveau journal avec les détails de l'année scolaire pour la réponse
+            const [newJournal] = await connection.execute(`
+                SELECT j.*
+                FROM JOURNAL j
+                JOIN school_year sy ON j.school_year_id = sy.id
+                WHERE j.id = ?
+            `, [newJournalId]);
+
             res.status(201).json({ success: true, message: 'Journal créé avec succès.', data: newJournal[0] });
         } catch (error) {
             if (connection) await connection.rollback();
@@ -74,6 +97,7 @@ class JournalController {
         }
     }
 
+    // ... Les méthodes `archiveJournal` et `deleteJournal` restent inchangées car elles opèrent sur l'ID du journal ...
     static async archiveJournal(req, res) {
         const { id } = req.params;
         try {
@@ -89,35 +113,36 @@ class JournalController {
 
     static async deleteJournal(req, res) {
         const { id } = req.params;
-        let connection; // Déclarer la connexion ici pour la visibilité dans le catch/finally
+        let connection;
 
         try {
             connection = await pool.getConnection();
-            await connection.beginTransaction(); // Démarrer une transaction
+            await connection.beginTransaction();
             await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?', [id]);
 
             const [result] = await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
 
             if (result.affectedRows === 0) {
-                // Si rien n'a été supprimé, c'est que le journal n'a pas été trouvé ou n'était pas archivé
-                await connection.rollback(); // Annuler la transaction
+                await connection.rollback();
                 return JournalController.handleError(res, new Error('Journal non trouvé ou non archivé'), 'Journal non trouvé ou non archivé.', 404);
             }
 
-            await connection.commit(); // Valider la transaction
+            await connection.commit();
             res.json({ success: true, message: 'Journal supprimé définitivement.' });
 
         } catch (error) {
-            if (connection) await connection.rollback(); // En cas d'erreur, annuler toutes les opérations
+            if (connection) await connection.rollback();
             JournalController.handleError(res, error, "Erreur lors de la suppression du journal.");
         } finally {
-            if (connection) connection.release(); // Libérer la connexion
+            if (connection) connection.release();
         }
     }
+
+    // ... La méthode `importJournal` reste inchangée car elle opère sur `journal_id` ...
     static async importJournal(req, res) {
         if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
 
-        const { journal_id } = req.body; // Récupérer l'ID du journal depuis le corps de la requête
+        const { journal_id } = req.body;
         let connection;
 
         try {
@@ -175,10 +200,18 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Récupère le journal courant avec les informations de l'année scolaire.
+     */
     static async getCurrentJournal(req, res) {
         try {
             const [journal] = await JournalController.withConnection(async (connection) => {
-                const [rows] = await connection.execute('SELECT * FROM JOURNAL WHERE is_current = 1 LIMIT 1');
+                const [rows] = await connection.execute(`
+                    SELECT j.*
+                    FROM JOURNAL j
+                    JOIN school_year sy ON j.school_year_id = sy.id
+                    WHERE j.is_current = 1 LIMIT 1
+                `);
                 return rows;
             });
             res.json({ success: true, data: journal || null });
@@ -187,10 +220,19 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Récupère les journaux archivés avec les informations de l'année scolaire.
+     */
     static async getArchivedJournals(req, res) {
         try {
             const journals = await JournalController.withConnection(async (connection) => {
-                const [rows] = await connection.execute('SELECT * FROM JOURNAL WHERE is_archived = 1 ORDER BY school_year DESC');
+                const [rows] = await connection.execute(`
+                    SELECT j.*
+                    FROM JOURNAL j
+                    JOIN school_year sy ON j.school_year_id = sy.id
+                    WHERE j.is_archived = 1 
+                    ORDER BY start_date DESC
+                `);
                 return rows;
             });
             res.json({ success: true, data: journals });
@@ -199,6 +241,7 @@ class JournalController {
         }
     }
 
+    // ... Le reste des méthodes (getJournalEntries, upsertJournalEntry, etc.) reste inchangé ...
     static async getJournalEntries(req, res) {
         const { startDate, endDate, journal_id } = req.query;
         if (!startDate || !endDate || !journal_id) {
