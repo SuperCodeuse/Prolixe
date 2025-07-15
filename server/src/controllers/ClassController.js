@@ -77,9 +77,9 @@ class ClassController {
             }
         }
 
-        if (!isUpdate || data.school_year_id !== undefined) {
-            if (!data.school_year_id || isNaN(parseInt(data.school_year_id))) {
-                errors.school_year_id = "L'année scolaire est requise.";
+        if (!isUpdate || data.journal_id !== undefined) {
+            if (!data.journal_id || isNaN(parseInt(data.journal_id))) {
+                errors.journal_id = "L'année scolaire est requise.";
             }
         }
 
@@ -119,9 +119,9 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async getAllClasses(req, res) {
-        const { school_year_id } = req.query; // Récupération depuis les paramètres de la requête
+        const { journal_id } = req.query; // Récupération depuis les paramètres de la requête
 
-        if (!school_year_id) {
+        if (!journal_id) {
             return ClassController.handleError(res, new Error('ID de l\'année scolaire manquant'), 'Un ID d\'année scolaire est requis.', 400);
         }
 
@@ -130,9 +130,9 @@ class ClassController {
                 const [rows] = await connection.execute(`
                     SELECT id, name, students, level, lesson AS subject
                     FROM CLASS
-                    WHERE school_year_id = ?
+                    WHERE journal_id = ?
                     ORDER BY name ASC
-                `, [school_year_id]);
+                `, [journal_id]);
                 return rows;
             });
 
@@ -194,8 +194,8 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async createClass(req, res) {
-        const { name, students, subject, level, school_year_id } = req.body;
-        const validationErrors = ClassController.validateClassData({ name, students, subject, level, school_year_id });
+        const { name, students, subject, level, journal_id } = req.body;
+        const validationErrors = ClassController.validateClassData({ name, students, subject, level, journal_id });
         if (Object.keys(validationErrors).length > 0) {
             return ClassController.handleError(res, new Error('Données invalides'), 'Données invalides.', 400, validationErrors);
         }
@@ -204,8 +204,8 @@ class ClassController {
         try {
             const newClass = await ClassController.withConnection(async (connection) => {
                 const [existing] = await connection.execute(
-                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND school_year_id = ?',
-                    [name.trim(), school_year_id]
+                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND journal_id = ?',
+                    [name.trim(), journal_id]
                 );
 
                 if (existing.length > 0) {
@@ -215,8 +215,8 @@ class ClassController {
                 }
 
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, lesson, level, school_year_id) VALUES (?, ?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), subject.trim(), parseInt(level), parseInt(school_year_id)]
+                    'INSERT INTO CLASS (name, students, lesson, level, journal_id) VALUES (?, ?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), subject.trim(), parseInt(level), parseInt(journal_id)]
                 );
 
                 const [newClassData] = await connection.execute(
@@ -281,9 +281,9 @@ class ClassController {
                 const values = [];
 
                 if (updateData.name !== undefined) {
-                    const schoolYearIdForCheck = updateData.school_year_id || existing[0].school_year_id;
+                    const schoolYearIdForCheck = updateData.journal_id || existing[0].journal_id;
                     const [duplicate] = await connection.execute(
-                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ? AND school_year_id = ?',
+                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ? AND journal_id = ?',
                         [updateData.name.trim(), parseInt(id), schoolYearIdForCheck]
                     );
 
@@ -301,9 +301,9 @@ class ClassController {
                     values.push(parseInt(updateData.students));
                 }
 
-                if (updateData.school_year_id !== undefined) {
-                    fieldsToUpdate.push('school_year_id = ?');
-                    values.push(parseInt(updateData.school_year_id));
+                if (updateData.journal_id !== undefined) {
+                    fieldsToUpdate.push('journal_id = ?');
+                    values.push(parseInt(updateData.journal_id));
                 }
 
                 if (updateData.subject !== undefined) {

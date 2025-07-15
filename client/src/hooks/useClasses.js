@@ -2,16 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import ClassService from '../services/ClassService';
 
 /**
- * Hook pour gérer les données des classes, désormais dépendant d'une année scolaire.
- * @param {number|string} schoolYearId - L'ID de l'année scolaire sélectionnée.
+ * Hook pour gérer les données des classes, désormais dépendant d'un journal.
+ * @param {number|string} journalId - L'ID du journal de classe sélectionné.
  */
-export const useClasses = (schoolYearId) => {
+export const useClasses = (journalId) => {
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Charge les classes associées à l'ID du journal fourni.
     const loadClasses = useCallback(async () => {
-        if (!schoolYearId) {
+        if (!journalId) {
             setClasses([]);
             setLoading(false);
             return;
@@ -20,7 +21,8 @@ export const useClasses = (schoolYearId) => {
         try {
             setLoading(true);
             setError(null);
-            const response = await ClassService.getClasses(schoolYearId);
+            // Assurez-vous que ClassService.getClasses peut filtrer par journalId
+            const response = await ClassService.getClasses(journalId);
             setClasses(response.data || []);
         } catch (err) {
             setError(err.message);
@@ -28,30 +30,29 @@ export const useClasses = (schoolYearId) => {
         } finally {
             setLoading(false);
         }
-    }, [schoolYearId]); // La dépendance est `schoolYearId`
+    }, [journalId]); // La dépendance est maintenant `journalId`
 
-    // Cet effet se déclenche au montage et à chaque fois que `loadClasses` est recréé (donc quand `schoolYearId` change).
     useEffect(() => {
         loadClasses();
     }, [loadClasses]);
 
-    // Ajouter une classe en injectant automatiquement l'ID de l'année scolaire.
+    // Ajoute une classe en injectant automatiquement l'ID du journal.
     const addClass = async (classData) => {
-        if (!schoolYearId) {
-            throw new Error("Impossible d'ajouter une classe sans année scolaire sélectionnée.");
+        if (!journalId) {
+            throw new Error("Impossible d'ajouter une classe sans journal sélectionné.");
         }
         try {
-            const dataToSend = { ...classData, school_year_id: schoolYearId };
+            const dataToSend = { ...classData, journal_id: journalId };
             const response = await ClassService.createClass(dataToSend);
             setClasses(prev => [...prev, response.data]);
             return response.data;
         } catch (err) {
             setError(err.message);
-            throw err; // Propage l'erreur pour la gérer dans le composant
+            throw err;
         }
     };
 
-    // Mettre à jour une classe.
+    // Mettre à jour une classe (la logique reste la même)
     const updateClass = async (id, classData) => {
         try {
             const response = await ClassService.updateClass(id, classData);
@@ -63,7 +64,7 @@ export const useClasses = (schoolYearId) => {
         }
     };
 
-    // Supprimer une classe.
+    // Supprimer une classe (la logique reste la même)
     const removeClass = async (id) => {
         try {
             await ClassService.deleteClass(id);
@@ -74,7 +75,7 @@ export const useClasses = (schoolYearId) => {
         }
     };
 
-    // Les fonctions utilitaires restent inchangées.
+    // Les fonctions utilitaires restent identiques
     const getClassColor = (subject, level) => {
         const extendedColors = {
             'Informatique_3': '#93C5FD', 'Informatique_4': '#1D4ED8', 'Informatique_5': '#1E3A8A', 'Informatique_6': '#0F172A',
@@ -102,7 +103,6 @@ export const useClasses = (schoolYearId) => {
         classes,
         loading,
         error,
-        loadClasses,
         addClass,
         updateClass,
         removeClass,

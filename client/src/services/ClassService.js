@@ -3,11 +3,11 @@ import ApiService from './api';
 
 class ClassService {
 
-    static async getClasses(schoolYearId) {
-        if (!schoolYearId) {
+    static async getClasses(journal_id) {
+        if (!journal_id) {
             return Promise.resolve({ data: [] });
         }
-        return ApiService.request(`/classes?school_year_id=${schoolYearId}`);
+        return ApiService.request(`/classes?journal_id=${journal_id}`);
     }
 
     static async getClass(id) {

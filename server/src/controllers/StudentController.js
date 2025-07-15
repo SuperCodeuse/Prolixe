@@ -1,96 +1,126 @@
 const pool = require('../../config/database');
 
 class StudentController {
+    // Re-using the utility methods for consistency
+    static async withConnection(operation) {
+        let connection;
+        try {
+            connection = await pool.getConnection();
+            return await operation(connection);
+        } catch (error) {
+            console.error('SQL Error in StudentController:', error.message);
+            throw error;
+        } finally {
+            if (connection) connection.release();
+        }
+    }
+
+    static handleError(res, error, defaultMessage = 'Erreur serveur', statusCode = 500) {
+        console.error(`❌ Erreur dans StudentController: ${defaultMessage}`, error);
+        const errorMessage = process.env.NODE_ENV === 'development' ? error.message : defaultMessage;
+        res.status(statusCode).json({ success: false, message: defaultMessage, error: errorMessage });
+    }
+
     /**
      * Récupère les élèves d'une classe pour une année scolaire donnée.
-     * Attend maintenant `school_year_id` en paramètre de requête.
      */
     static async getStudentsByClass(req, res) {
         const { classId } = req.params;
-        // On récupère maintenant l'ID de l'année scolaire, pas son nom.
-        const { school_year_id } = req.query;
+        const { journal_id } = req.query;
 
-        if (!school_year_id) {
-            // Le message d'erreur est mis à jour pour plus de clarté.
-            return res.status(400).json({ success: false, message: "L'ID de l'année scolaire (school_year_id) est requis." });
+        if (!classId || !journal_id) {
+            return StudentController.handleError(res, new Error("Paramètres manquants"), "L'ID de la classe et du journal sont requis.", 400);
         }
 
         try {
-            // La requête SQL est mise à jour pour filtrer sur `school_year_id`.
-            const [rows] = await pool.execute(
-                'SELECT * FROM STUDENTS WHERE class_id = ? AND school_year_id = ? ORDER BY lastname, firstname',
-                [classId, school_year_id]
-            );journal
-            res.json({ success: true, data: rows });
+            const students = await StudentController.withConnection(async (connection) => {
+                const [rows] = await connection.execute(
+                    'SELECT * FROM STUDENTS WHERE class_id = ? AND journal_id = ? ORDER BY lastname, firstname',
+                    [classId, journal_id]
+                );
+                return rows;
+            });
+            res.json({ success: true, data: students });
         } catch (error) {
-            console.error(error); // Il est bon de logger l'erreur côté serveur.
-            res.status(500).json({ success: false, message: 'Erreur lors de la récupération des élèves.' });
+            StudentController.handleError(res, error, 'Erreur lors de la récupération des élèves.');
         }
     }
 
     /**
-     * Crée un nouvel élève.
-     * Attend maintenant `school_year_id` dans le corps de la requête.
+     * Crée un nouvel élève lié à une classe et une année scolaire.
      */
     static async createStudent(req, res) {
-        // On attend `school_year_id` au lieu de `school_year`.
-        const { class_id, firstname, lastname, school_year_id } = req.body;
+        const { class_id, firstname, lastname, journal_id } = req.body;
 
-        if (!class_id || !firstname || !lastname || !school_year_id) {
-            return res.status(400).json({ success: false, message: 'Tous les champs (class_id, firstname, lastname, school_year_id) sont requis.' });
+        if (!class_id || !firstname || !lastname || !journal_id) {
+            return StudentController.handleError(res, new Error("Champs manquants"), 'Tous les champs (class_id, firstname, lastname, journal_id) sont requis.', 400);
         }
+
         try {
-            // La requête d'insertion est mise à jour pour utiliser la colonne `school_year_id`.
-            const [result] = await pool.execute(
-                'INSERT INTO STUDENTS (class_id, firstname, lastname, school_year_id) VALUES (?, ?, ?, ?)',
-                [class_id, firstname, lastname, school_year_id]
-            );
-            res.status(201).json({ success: true, message: 'Élève ajouté.', data: { id: result.insertId, ...req.body } });
+            const newStudent = await StudentController.withConnection(async (connection) => {
+                const [result] = await connection.execute(
+                    'INSERT INTO STUDENTS (class_id, firstname, lastname, journal_id) VALUES (?, ?, ?, ?)',
+                    [class_id, firstname.trim(), lastname.trim(), journal_id]
+                );
+                return { id: result.insertId, class_id, firstname, lastname, journal_id };
+            });
+            res.status(201).json({ success: true, message: 'Élève ajouté avec succès.', data: newStudent });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: 'Erreur lors de la création de l\'élève.' });
+            StudentController.handleError(res, error, 'Erreur lors de la création de l\'élève.');
         }
     }
 
     /**
-     * Met à jour un élève.
-     * Cette fonction ne modifiait pas l'année scolaire, donc elle reste fonctionnelle.
-     * Si vous souhaitez permettre la modification de l'année scolaire d'un élève,
-     * il faudra ajouter `school_year_id` aux champs à mettre à jour.
+     * Met à jour un élève. Peut changer son nom ou sa classe (au sein de la même année scolaire).
      */
     static async updateStudent(req, res) {
         const { id } = req.params;
-        const { firstname, lastname, class_id } = req.body;
+        const { firstname, lastname, class_id } = req.body; // L'année scolaire d'un élève ne devrait pas changer.
+
+        if (!firstname || !lastname || !class_id) {
+            return StudentController.handleError(res, new Error("Champs manquants"), 'Les champs firstname, lastname et class_id sont requis.', 400);
+        }
+
         try {
-            const [result] = await pool.execute(
-                'UPDATE STUDENTS SET firstname = ?, lastname = ?, class_id = ? WHERE id = ?',
-                [firstname, lastname, class_id, id]
-            );
+            const result = await StudentController.withConnection(async (connection) => {
+                const [updateResult] = await connection.execute(
+                    'UPDATE STUDENTS SET firstname = ?, lastname = ?, class_id = ? WHERE id = ?',
+                    [firstname.trim(), lastname.trim(), class_id, id]
+                );
+                return updateResult;
+            });
+
             if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'Élève non trouvé.' });
+                return StudentController.handleError(res, new Error("Élève non trouvé"), 'Élève non trouvé.', 404);
             }
-            res.json({ success: true, message: 'Élève mis à jour.' });
+            res.json({ success: true, message: 'Élève mis à jour avec succès.' });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour de l\'élève.' });
+            StudentController.handleError(res, error, 'Erreur lors de la mise à jour de l\'élève.');
         }
     }
 
     /**
      * Supprime un élève.
-     * Cette fonction n'est pas affectée par le changement de schéma.
      */
     static async deleteStudent(req, res) {
         const { id } = req.params;
+
         try {
-            const [result] = await pool.execute('DELETE FROM STUDENTS WHERE id = ?', [id]);
+            const result = await StudentController.withConnection(async (connection) => {
+                const [deleteResult] = await connection.execute('DELETE FROM STUDENTS WHERE id = ?', [id]);
+                return deleteResult;
+            });
+
             if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'Élève non trouvé.' });
+                return StudentController.handleError(res, new Error("Élève non trouvé"), 'Élève non trouvé.', 404);
             }
-            res.json({ success: true, message: 'Élève supprimé.' });
+            res.json({ success: true, message: 'Élève supprimé avec succès.' });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: 'Erreur lors de la suppression de l\'élève.' });
+            // Gérer les erreurs de clé étrangère si un élève est lié à d'autres tables (ex: notes)
+            if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+                return StudentController.handleError(res, error, "Impossible de supprimer cet élève car il est lié à d'autres données (ex: des notes).", 409);
+            }
+            StudentController.handleError(res, error, 'Erreur lors de la suppression de l\'élève.');
         }
     }
 }

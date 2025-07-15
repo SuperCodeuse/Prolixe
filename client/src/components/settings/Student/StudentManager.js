@@ -1,128 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { useClasses } from '../../../hooks/useClasses';
-import { useJournal } from '../../../hooks/useJournal'; // Utilisation du hook Journal
+import React, { useState, useEffect, useCallback } from 'react';
+import { useClasses } from '../../../hooks/useClasses'; // Votre hook pour les classes
 import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
+// Supposons que vous ayez un hook pour obtenir le journal de classe actif
+// import { useJournal } from '../../../hooks/useJournal';
 import './StudentManager.scss';
 
+// --- Placeholder pour le hook useJournal ---
+// Remplacez-le par votre implémentation réelle.
+// Ce hook doit fournir le journal de classe actuellement sélectionné par l'utilisateur.
+const useJournal = () => ({
+    currentJournal: {
+        id: 1, // L'ID du journal actif
+        name: "Journal de 6ème A - 2024/2025",
+        is_archived: false,
+    }
+});
+// -----------------------------------------
+
+
 const StudentManager = () => {
-    const { classes } = useClasses();
-    const { currentJournal } = useJournal(); // Récupère le journal actif
+    // Le journal actif est la source de vérité pour l'ID.
+    const { currentJournal } = useJournal();
+    const journalId = currentJournal?.id; // On extrait l'ID du journal actif
+
+    // Le hook useClasses est maintenant initialisé avec l'ID du journal.
+    // Assurez-vous que `useClasses` est adapté pour charger les classes par `journalId`.
+    const { classes, loading: classesLoading } = useClasses(journalId);
+
     const [selectedClass, setSelectedClass] = useState('');
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({ firstname: '', lastname: '' });
     const { success, error } = useToast();
 
-    // Recharge les élèves si la classe ou le journal actif change
-    useEffect(() => {
-        if (selectedClass && currentJournal) {
-            fetchStudents(selectedClass, currentJournal.school_year);
-        } else {
+    // Charge les élèves pour la classe et le journal sélectionnés.
+    const fetchStudents = useCallback(async () => {
+        if (!selectedClass || !journalId) {
             setStudents([]);
+            return;
         }
-    }, [selectedClass, currentJournal]);
-
-    const fetchStudents = async (classId, schoolYear) => {
         setIsLoading(true);
         try {
-            const response = await StudentService.getStudentsByClass(classId, schoolYear);
+            // Assurez-vous que votre `StudentService` et votre API attendent bien `journalId`.
+            const response = await StudentService.getStudentsByClass(selectedClass, journalId);
             setStudents(response.data);
         } catch (err) {
             error('Erreur de chargement des élèves.');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedClass, journalId, error]);
 
+    // Déclenche le rechargement des élèves si la sélection change.
+    useEffect(() => {
+        fetchStudents();
+    }, [fetchStudents]);
+
+    // Réinitialise la classe sélectionnée si la liste des classes change (ex: changement de journal).
+    useEffect(() => {
+        setSelectedClass('');
+    }, [classes]);
+
+    // Gère l'ajout d'un élève.
     const handleAddStudent = async (e) => {
         e.preventDefault();
-        if (!currentJournal) {
-            error("Veuillez sélectionner un journal de classe actif dans les paramètres.");
+        if (!formData.firstname.trim() || !formData.lastname.trim()) {
+            error("Le prénom et le nom de l'élève sont requis.");
             return;
         }
-
         try {
-            // L'année scolaire est maintenant celle du journal actif
-            await StudentService.createStudent({ ...formData, class_id: selectedClass, school_year: currentJournal.school_year });
-            success('Élève ajouté !');
+            // CORRIGÉ : On envoie `journal_id` dans le corps de la requête.
+            const studentData = {
+                ...formData,
+                class_id: selectedClass,
+                journal_id: journalId
+            };
+            await StudentService.createStudent(studentData);
+            success('Élève ajouté avec succès !');
             setFormData({ firstname: '', lastname: '' });
-            fetchStudents(selectedClass, currentJournal.school_year);
+            await fetchStudents();
         } catch (err) {
-            error('Erreur lors de l\'ajout de l\'élève.');
+            error(err.response?.data?.message || 'Erreur lors de l\'ajout de l\'élève.');
         }
     };
 
-    const handleDeleteStudent = async (studentId) => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élève ?')) {
+    // Gère la suppression d'un élève.
+    const handleDeleteStudent = async (studentId, studentName) => {
+        if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${studentName} ?`)) {
             try {
                 await StudentService.deleteStudent(studentId);
-                success('Élève supprimé.');
-                if (selectedClass && currentJournal) {
-                    fetchStudents(selectedClass, currentJournal.school_year);
-                }
+                success(`${studentName} a été supprimé.`);
+                await fetchStudents();
             } catch (err) {
-                error('Erreur lors de la suppression.');
+                error(err.response?.data?.message || 'Erreur lors de la suppression.');
             }
         }
     };
 
+    // Vérifie si l'interface doit être désactivée.
+    const isUiDisabled = !currentJournal || currentJournal.is_archived;
+
     return (
         <div className="student-manager">
-            <h2>👥 Gestion des Élèves</h2>
+            <h2>👥 Gestion des Élèves par Classe</h2>
 
-            {currentJournal && !currentJournal.is_archived ? (
-                <p className="current-year-info">Gestion pour l'année scolaire : <strong>{currentJournal.school_year}</strong></p>
+            {/* Affiche le contexte du journal de classe actif */}
+            {currentJournal ? (
+                <p className="current-year-info">
+                    Gestion pour le journal : <strong>{currentJournal.name}</strong>
+                    {currentJournal.is_archived && <span className="archived-tag"> (Archivé)</span>}
+                </p>
             ) : (
-                <div className="error-message">
-                    {currentJournal?.is_archived
-                        ? `Le journal "${currentJournal.name}" est archivé. La gestion des élèves est désactivée.`
-                        : "Aucun journal de classe actif. Veuillez en définir un dans l'onglet 'Journaux'."
-                    }
-                </div>
+                <div className="error-message">Aucun journal de classe sélectionné.</div>
             )}
 
+            {/* Le sélecteur de classe */}
             <div className="form-group">
                 <label>Sélectionnez une classe</label>
                 <select
                     className="btn-select"
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
-                    disabled={!currentJournal || currentJournal.is_archived}
+                    disabled={isUiDisabled || classesLoading || classes.length === 0}
                 >
                     <option value="">-- Choisissez une classe --</option>
+                    {classesLoading && <option>Chargement des classes...</option>}
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>
 
-            {selectedClass && currentJournal && !currentJournal.is_archived && (
+            {/* Formulaire d'ajout et liste des élèves (visibles seulement si une classe est sélectionnée) */}
+            {selectedClass && !isUiDisabled && (
                 <>
                     <form onSubmit={handleAddStudent} className="add-student-form form-group">
                         <input
-                            type="text"
-                            value={formData.firstname}
+                            type="text" value={formData.firstname}
                             onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
-                            placeholder="Prénom"
-                            required
+                            placeholder="Prénom" required
                         />
                         <input
-                            type="text"
-                            value={formData.lastname}
+                            type="text" value={formData.lastname}
                             onChange={(e) => setFormData({ ...formData, lastname: e.target.value })}
-                            placeholder="Nom"
-                            required
+                            placeholder="Nom" required
                         />
-                        <button type="submit" className="btn-primary">Ajouter</button>
+                        <button type="submit" className="btn-primary">Ajouter Élève</button>
                     </form>
 
                     <div className="student-list">
-                        {isLoading ? <p>Chargement...</p> : students.map(student => (
-                            <div key={student.id} className="student-item">
-                                <span>{student.lastname} {student.firstname}</span>
-                                <button onClick={() => handleDeleteStudent(student.id)} className="btn-delete">🗑️</button>
-                            </div>
-                        ))}
-                        {students.length === 0 && !isLoading && <p>Aucun élève dans cette classe pour l'année en cours.</p>}
+                        {isLoading ? <p>Chargement des élèves...</p> : (
+                            <>
+                                {students.map(student => (
+                                    <div key={student.id} className="student-item">
+                                        <span>{student.lastname.toUpperCase()} {student.firstname}</span>
+                                        <button onClick={() => handleDeleteStudent(student.id, `${student.firstname} ${student.lastname}`)} className="btn-delete" title="Supprimer">🗑️</button>
+                                    </div>
+                                ))}
+                                {students.length === 0 && <p>Aucun élève dans cette classe pour ce journal.</p>}
+                            </>
+                        )}
                     </div>
                 </>
             )}
