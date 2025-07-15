@@ -36,12 +36,16 @@
   }
 
   .btn-delete {
-    background: none;
-    border: none;
-    color: var(--text-muted);
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
     cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
     &:hover {
-      color: var(--red-danger);
+      background: var(--red-transparent-sm);
+      border-color: var(--red-danger);
     }
   }
 }
@@ -54,7 +58,6 @@
 }
 
 .form-group input {
-  width: 95%;
   padding: 0.85rem; // Padding légèrement augmenté
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;

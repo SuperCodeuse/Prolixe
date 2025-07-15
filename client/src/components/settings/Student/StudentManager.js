@@ -6,12 +6,9 @@ import { useJournal } from '../../../hooks/useJournal';
 import './StudentManager.scss';
 
 const StudentManager = () => {
-    // Le journal actif est la source de vérité pour l'ID.
     const { currentJournal } = useJournal();
     const journalId = currentJournal?.id; // On extrait l'ID du journal actif
 
-    // Le hook useClasses est maintenant initialisé avec l'ID du journal.
-    // Assurez-vous que `useClasses` est adapté pour charger les classes par `journalId`.
     const { classes, loading: classesLoading } = useClasses(journalId);
 
     const [selectedClass, setSelectedClass] = useState('');
@@ -22,21 +19,20 @@ const StudentManager = () => {
 
     // Charge les élèves pour la classe et le journal sélectionnés.
     const fetchStudents = useCallback(async () => {
-        if (!selectedClass || !journalId) {
+        if (!selectedClass) {
             setStudents([]);
             return;
         }
         setIsLoading(true);
         try {
-            // Assurez-vous que votre `StudentService` et votre API attendent bien `journalId`.
-            const response = await StudentService.getStudentsByClass(selectedClass, journalId);
+            const response = await StudentService.getStudentsByClass(selectedClass);
             setStudents(response.data);
         } catch (err) {
             error('Erreur de chargement des élèves.');
         } finally {
             setIsLoading(false);
         }
-    }, [selectedClass, journalId, error]);
+    }, [selectedClass, error]);
 
     // Déclenche le rechargement des élèves si la sélection change.
     useEffect(() => {
@@ -56,11 +52,9 @@ const StudentManager = () => {
             return;
         }
         try {
-            // CORRIGÉ : On envoie `journal_id` dans le corps de la requête.
             const studentData = {
                 ...formData,
                 class_id: selectedClass,
-                journal_id: journalId
             };
             await StudentService.createStudent(studentData);
             success('Élève ajouté avec succès !');

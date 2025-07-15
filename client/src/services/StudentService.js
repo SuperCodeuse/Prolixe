@@ -4,14 +4,12 @@ class StudentService {
     /**
      * Récupère les élèves d'une classe pour une année scolaire spécifique.
      * @param {number|string} classId - L'ID de la classe.
-     * @param {number|string} journal_id - L'ID de l'année scolaire.
      */
-    static async getStudentsByClass(classId, journal_id) {
-        if (!classId || !journal_id) {
-            return Promise.resolve({ data: [] }); // Évite un appel API invalide
+    static async getStudentsByClass(classId) {
+        if (!classId) {
+            return Promise.resolve({ data: [] });
         }
-        // CORRIGÉ : Le nom du paramètre est maintenant `school_year_id`.
-        return ApiService.request(`/students/class/${classId}?journal_id=${journal_id}`);
+        return ApiService.request(`/students/class/${classId}`);
     }
 
     /**

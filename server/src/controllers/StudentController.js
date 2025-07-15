@@ -26,17 +26,16 @@ class StudentController {
      */
     static async getStudentsByClass(req, res) {
         const { classId } = req.params;
-        const { journal_id } = req.query;
 
-        if (!classId || !journal_id) {
-            return StudentController.handleError(res, new Error("Paramètres manquants"), "L'ID de la classe et du journal sont requis.", 400);
+        if (!classId) {
+            return StudentController.handleError(res, new Error("Paramètres manquants"), "L'ID de la classe est requis.", 400);
         }
 
         try {
             const students = await StudentController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(
-                    'SELECT * FROM STUDENTS WHERE class_id = ? AND journal_id = ? ORDER BY lastname, firstname',
-                    [classId, journal_id]
+                    'SELECT * FROM STUDENTS WHERE class_id = ? ORDER BY lastname, firstname',
+                    [classId]
                 );
                 return rows;
             });
@@ -50,19 +49,20 @@ class StudentController {
      * Crée un nouvel élève lié à une classe et une année scolaire.
      */
     static async createStudent(req, res) {
-        const { class_id, firstname, lastname, journal_id } = req.body;
+        console.log(req.body);
+        const { class_id, firstname, lastname } = req.body;
 
-        if (!class_id || !firstname || !lastname || !journal_id) {
-            return StudentController.handleError(res, new Error("Champs manquants"), 'Tous les champs (class_id, firstname, lastname, journal_id) sont requis.', 400);
+        if (!class_id || !firstname || !lastname) {
+            return StudentController.handleError(res, new Error("Champs manquants"), 'Tous les champs (class_id, firstname, lastname) sont requis.', 400);
         }
 
         try {
             const newStudent = await StudentController.withConnection(async (connection) => {
                 const [result] = await connection.execute(
-                    'INSERT INTO STUDENTS (class_id, firstname, lastname, journal_id) VALUES (?, ?, ?, ?)',
-                    [class_id, firstname.trim(), lastname.trim(), journal_id]
+                    'INSERT INTO STUDENTS (class_id, firstname, lastname) VALUES (?, ?, ?)',
+                    [class_id, firstname.trim(), lastname.trim()]
                 );
-                return { id: result.insertId, class_id, firstname, lastname, journal_id };
+                return { id: result.insertId, class_id, firstname, lastname };
             });
             res.status(201).json({ success: true, message: 'Élève ajouté avec succès.', data: newStudent });
         } catch (error) {
