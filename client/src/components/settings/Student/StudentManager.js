@@ -2,22 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useClasses } from '../../../hooks/useClasses'; // Votre hook pour les classes
 import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
-// Supposons que vous ayez un hook pour obtenir le journal de classe actif
-// import { useJournal } from '../../../hooks/useJournal';
+import { useJournal } from '../../../hooks/useJournal';
 import './StudentManager.scss';
-
-// --- Placeholder pour le hook useJournal ---
-// Remplacez-le par votre implémentation réelle.
-// Ce hook doit fournir le journal de classe actuellement sélectionné par l'utilisateur.
-const useJournal = () => ({
-    currentJournal: {
-        id: 1, // L'ID du journal actif
-        name: "Journal de 6ème A - 2024/2025",
-        is_archived: false,
-    }
-});
-// -----------------------------------------
-
 
 const StudentManager = () => {
     // Le journal actif est la source de vérité pour l'ID.
@@ -109,7 +95,7 @@ const StudentManager = () => {
             {currentJournal ? (
                 <p className="current-year-info">
                     Gestion pour le journal : <strong>{currentJournal.name}</strong>
-                    {currentJournal.is_archived && <span className="archived-tag"> (Archivé)</span>}
+                    {currentJournal.is_archived ? (<span className="archived-tag"> (Archivé)</span>) : null}
                 </p>
             ) : (
                 <div className="error-message">Aucun journal de classe sélectionné.</div>

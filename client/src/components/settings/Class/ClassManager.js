@@ -141,8 +141,16 @@ const ClassesManager = () => {
                 >
                     <span>➕</span> Ajouter une classe
                 </button>
-            </div>
 
+            </div>
+            {currentJournal ? (
+                <p className="current-year-info">
+                    Gestion pour le journal : <strong>{currentJournal.name}</strong>
+                    {currentJournal.is_archived ? (<span className="archived-tag"> (Archivé)</span>) : null}
+                </p>
+            ) : (
+                <div className="error-message">Aucun journal de classe sélectionné.</div>
+            )}
             {renderContent()}
 
             {showAddForm && (
