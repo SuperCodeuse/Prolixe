@@ -3,8 +3,12 @@ const pool = require('../../config/database');
 class AttributionController {
     static async getAttributions(req, res) {
         try {
-            // Pas de changement ici
-            const [rows] = await pool.execute('SELECT * FROM ATTRIBUTIONS ORDER BY start_date DESC');
+            // JOIN to fetch school year details along with the attribution
+            const [rows] = await pool.execute(`
+                SELECT *
+                FROM ATTRIBUTIONS a
+                ORDER BY a.school_year_id DESC
+            `);
             res.json({ success: true, data: rows });
         } catch (error) {
             res.status(500).json({ success: false, message: 'Erreur lors de la récupération des attributions.' });
@@ -12,19 +16,18 @@ class AttributionController {
     }
 
     static async createAttribution(req, res) {
-        // Ajout de 'className' depuis le corps de la requête
-        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
-        if (!school_year || !school_name || !start_date || !end_date) {
-            return res.status(400).json({ success: false, message: 'Les champs school_year, school_name, start_date et end_date sont requis.' });
+        // Now expects school_year_id
+        const { school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
+        if (!school_year_id || !school_name || !start_date || !end_date) {
+            return res.status(400).json({ success: false, message: 'Les champs school_year_id, school_name, start_date et end_date sont requis.' });
         }
         try {
-            // Mise à jour de la requête SQL pour inclure la colonne 'class'
             const [result] = await pool.execute(
-                'INSERT INTO attributions (school_year, school_name, start_date, end_date, esi_hours, ess_hours, class) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null] // On utilise la variable 'className'
+                'INSERT INTO attributions (school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, class) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [school_year_id, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null]
             );
-
-            const [created] = await pool.execute('SELECT * FROM ATTRIBUTIONS WHERE id = ?', [result.insertId]);
+            // Fetch the newly created record with the join
+            const [created] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN school_year sy ON a.school_year_id = sy.id WHERE a.id = ?', [result.insertId]);
             res.status(201).json({ success: true, message: 'Attribution créée.', data: created[0] });
         } catch (error) {
             console.error(error);
@@ -34,20 +37,16 @@ class AttributionController {
 
     static async updateAttribution(req, res) {
         const { id } = req.params;
-        // Ajout de 'className' depuis le corps de la requête
-        const { school_year, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
-
+        const { school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
         try {
-            // Mise à jour de la requête SQL pour inclure le champ 'class'
             const [result] = await pool.execute(
-                'UPDATE attributions SET school_year = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ?, class = ? WHERE id = ?',
-                [school_year, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null, id] // On utilise la variable 'className'
+                'UPDATE attributions SET school_year_id = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ?, class = ? WHERE id = ?',
+                [school_year_id, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null, id]
             );
-
             if (result.affectedRows === 0) {
                 return res.status(404).json({ success: false, message: 'Attribution non trouvée.' });
             }
-            const [updated] = await pool.execute('SELECT * FROM ATTRIBUTIONS WHERE id = ?', [id]);
+            const [updated] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN school_year sy ON a.school_year_id = sy.id WHERE a.id = ?', [id]);
             res.json({ success: true, message: 'Attribution mise à jour.', data: updated[0] });
         } catch (error) {
             console.error(error.message);

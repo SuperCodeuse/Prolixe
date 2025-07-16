@@ -1,15 +1,14 @@
 // client/src/components/settings/Journal/JournalManager.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useJournal } from '../../hooks/useJournal';
 import { useSchoolYears } from '../../hooks/useSchoolYear';
 import { useToast } from '../../hooks/useToast';
 import ConfirmModal from '../ConfirmModal';
 import JournalService from '../../services/JournalService';
-import SchoolYearDisplay from '../../hooks/SchoolYearDisplay'; // Le nom suit bien la convention pour un composant.
+import SchoolYearDisplay from '../../hooks/SchoolYearDisplay'; // Предполагая, что это компонент, а не хук
 import './JournalManager.scss';
 
 const JournalManager = () => {
-    // Hooks
     const {
         journals,
         currentJournal,
@@ -27,26 +26,14 @@ const JournalManager = () => {
     const { schoolYears, loading: schoolYearsLoading, error: schoolYearsError } = useSchoolYears();
     const { success, error: showError } = useToast();
 
-    // State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    // Le formulaire contient maintenant le nom et l'ID de l'année scolaire
     const [formData, setFormData] = useState({ name: '', school_year_id: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [selectedFile, setSelectedFile] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
     const [importTargetJournalId, setImportTargetJournalId] = useState('');
 
-    // Refs
-    const fileInputRef = useRef(null); // Utilisation de useRef pour une manipulation sûre de l'input.
-
-    // Effet pour afficher les erreurs de chargement des journaux.
-    // L'appel d'un hook comme showError doit se faire ici ou dans un handler, pas dans le rendu.
-    useEffect(() => {
-        if (journalError) {
-            showError(journalError.message || 'Une erreur est survenue lors du chargement des journaux.');
-        }
-    }, [journalError, showError]);
-
-    // Handlers
     const handleClear = (journal) => {
         showConfirmModal(
             'Vider le journal',
@@ -55,9 +42,9 @@ const JournalManager = () => {
                 try {
                     await clearJournal(journal.id);
                     success(`Journal "${journal.name}" vidé avec succès.`);
+                    closeConfirmModal(); // Pas besoin de recharger, le hook doit mettre à jour l'état
                 } catch (err) {
                     showError(err.message || "Erreur lors du vidage du journal.");
-                } finally {
                     closeConfirmModal();
                 }
             }
@@ -71,9 +58,7 @@ const JournalManager = () => {
         } else {
             showError('Veuillez sélectionner un fichier JSON valide.');
             setSelectedFile(null);
-            if(fileInputRef.current) {
-                fileInputRef.current.value = null; // Réinitialiser l'input via la ref.
-            }
+            event.target.value = null; // Réinitialiser l'input
         }
     };
 
@@ -86,25 +71,27 @@ const JournalManager = () => {
         try {
             const response = await JournalService.importJournal(selectedFile, importTargetJournalId);
             success(response.message || 'Importation réussie !');
-            await loadAllJournals(); // Recharger pour voir les nouvelles données.
+            loadAllJournals(); // Recharger pour voir les nouvelles données
         } catch (err) {
-            showError(err.message || "Erreur lors de l'importation.");
+            showError(err.message || 'Erreur lors de l\'importation.');
         } finally {
             setIsImporting(false);
             setSelectedFile(null);
             setImportTargetJournalId('');
-            if(fileInputRef.current) {
-                fileInputRef.current.value = null;
-            }
+            // Réinitialiser la valeur de l'input de fichier
+            const fileInput = document.getElementById('import-journal-input');
+            if(fileInput) fileInput.value = null;
         }
     };
 
     const handleOpenModal = () => {
-        setFormData({ name: '', school_year_id: '' });
+        setFormData({ name: '', school_year_id: '' }); // Réinitialiser le formulaire
         setIsModalOpen(true);
     };
 
-    const handleCloseModal = () => setIsModalOpen(false);
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -117,6 +104,7 @@ const JournalManager = () => {
             return;
         }
         try {
+            // On envoie le nom et l'ID de l'année scolaire
             await createJournal(formData);
             success('Nouveau journal créé avec succès !');
             handleCloseModal();
@@ -133,9 +121,9 @@ const JournalManager = () => {
                 try {
                     await archiveJournal(journal.id);
                     success('Journal archivé.');
+                    closeConfirmModal();
                 } catch (err) {
                     showError(err.message);
-                } finally {
                     closeConfirmModal();
                 }
             }
@@ -150,9 +138,9 @@ const JournalManager = () => {
                 try {
                     await deleteArchivedJournal(journal.id);
                     success('Journal supprimé définitivement.');
+                    closeConfirmModal();
                 } catch (err) {
                     showError(err.message);
-                } finally {
                     closeConfirmModal();
                 }
             }
@@ -172,22 +160,12 @@ const JournalManager = () => {
         setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
     };
 
-    // Variables dérivées pour un code plus lisible
     const activeJournals = journals.filter(j => !j.is_archived);
-    const otherActiveJournals = activeJournals.filter(j => j.id !== currentJournal?.id);
-    const targetJournalName = activeJournals.find(j => j.id === importTargetJournalId)?.name;
 
-    if (journalLoading && !journals.length) {
-        return <div className="journal-manager"><p>Chargement des journaux...</p></div>;
-    }
-
-    // Affiche un message d'erreur si le chargement initial a échoué.
-    if (journalError && !journals.length) {
-        return (
-            <div className="journal-manager error-message">
-                <p>Erreur de chargement des journaux. Veuillez rafraîchir la page.</p>
-            </div>
-        );
+    if (journalLoading && !journals.length) return <p>Chargement des journaux...</p>;
+    if (journalError){
+        showError(journalError.message || journalError);
+        return;
     }
 
     return (
@@ -210,7 +188,6 @@ const JournalManager = () => {
                         <input
                             type="file"
                             id="import-journal-input"
-                            ref={fileInputRef}
                             accept=".json"
                             onChange={handleFileChange}
                             style={{ display: 'none' }}
@@ -222,9 +199,9 @@ const JournalManager = () => {
                             <button
                                 className="btn-primary"
                                 onClick={handleImport}
-                                disabled={isImporting || !importTargetJournalId}
+                                disabled={!selectedFile || isImporting || !importTargetJournalId}
                             >
-                                {isImporting ? 'Importation...' : `Importer dans "${targetJournalName}"`}
+                                {isImporting ? 'Importation...' : `Importer dans "${journals.find(j => j.id === importTargetJournalId)?.name}"`}
                             </button>
                         )}
                     </div>
@@ -235,7 +212,6 @@ const JournalManager = () => {
             </div>
 
             <div className="journal-lists">
-                {/* Section Journal Courant */}
                 <div className="journal-list">
                     <h3>Journal Courant / Visualisé</h3>
                     {currentJournal ? (
@@ -261,11 +237,10 @@ const JournalManager = () => {
                     )}
                 </div>
 
-                {/* Section Autres Journaux Actifs */}
                 <div className="journal-list">
                     <h3>Autres Journaux Actifs</h3>
-                    {otherActiveJournals.length > 0 ? (
-                        otherActiveJournals.map(journal => (
+                    {activeJournals.filter(j => j.id !== currentJournal?.id).length > 0 ? (
+                        activeJournals.filter(j => j.id !== currentJournal?.id).map(journal => (
                             <div key={journal.id} className="journal-card">
                                 <div className="journal-info">
                                     <strong>{journal.name}</strong>
@@ -283,7 +258,6 @@ const JournalManager = () => {
                     )}
                 </div>
 
-                {/* Section Journaux Archivés */}
                 <div className="journal-list">
                     <h3>Journaux Archivés</h3>
                     {archivedJournals.length > 0 ? (
@@ -291,6 +265,7 @@ const JournalManager = () => {
                             <div key={journal.id} className={`journal-card archived ${journal.id === currentJournal?.id ? 'current' : ''}`}>
                                 <div className="journal-info">
                                     <strong>{journal.name}</strong>
+                                    {/* Ajout de l'année scolaire pour la cohérence */}
                                     <span><SchoolYearDisplay schoolYearId={journal.school_year_id} /></span>
                                 </div>
                                 <div className="journal-actions">
@@ -309,7 +284,6 @@ const JournalManager = () => {
                 </div>
             </div>
 
-            {/* Modal de création */}
             {isModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
@@ -330,10 +304,9 @@ const JournalManager = () => {
                                     placeholder="Ex: Journal de classe 2024-2025"
                                 />
                             </div>
-
                             <div className="form-group">
                                 <label htmlFor="schoolYear">Année scolaire</label>
-                                {schoolYearsLoading ? <p>Chargement...</p> : schoolYearsError ? <p className="error-message">{schoolYearsError.message || String(schoolYearsError)}</p> :
+                                {schoolYearsLoading ? <p>Chargement...</p> : schoolYearsError ? <p className="error-message">{schoolYearsError}</p> :
                                     <select
                                         id="schoolYear"
                                         name="school_year_id"
@@ -356,7 +329,6 @@ const JournalManager = () => {
                 </div>
             )}
 
-            {/* Modal de confirmation */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}

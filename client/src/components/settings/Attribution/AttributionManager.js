@@ -1,37 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import AttributionService from '../../../services/AttributionService';
+import { useSchoolYears } from "../../../hooks/useSchoolYear";
 import { useToast } from '../../../hooks/useToast';
 import ConfirmModal from '../../ConfirmModal';
+import SchoolYearDisplay from '../../../hooks/SchoolYearDisplay'; // Assurez-vous que le chemin d'importation est correct
 import { format } from 'date-fns';
 import './AttributionManager.scss';
 
 const AttributionManager = () => {
+    // Utilisation de votre hook personnalisé pour les années scolaires
+    const { schoolYears, loading: schoolYearsLoading } = useSchoolYears();
+
+    // États pour les données de ce composant
     const [attributions, setAttributions] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [attributionsLoading, setAttributionsLoading] = useState(true);
+
+    // États pour l'interface utilisateur (UI)
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
-    // --- MODIFICATION : 'class' renommé en 'className' pour éviter les conflits JS ---
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
+
+    // État pour le formulaire
     const [formData, setFormData] = useState({
-        school_year: '',
+        school_year_id: '',
         school_name: '',
         start_date: '',
         end_date: '',
         esi_hours: 0,
         ess_hours: 0,
-        className: '' // Renommé ici
+        className: ''
     });
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+
     const { success, error } = useToast();
 
+    // Charge les attributions
     const fetchAttributions = async () => {
+        setAttributionsLoading(true);
         try {
-            setIsLoading(true);
             const response = await AttributionService.getAttributions();
             setAttributions(response.data);
         } catch (err) {
             error('Erreur de chargement des attributions.');
         } finally {
-            setIsLoading(false);
+            setAttributionsLoading(false);
         }
     };
 
@@ -39,19 +50,16 @@ const AttributionManager = () => {
         fetchAttributions();
     }, []);
 
+    // Gère les changements dans les champs du formulaire
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Fonctions pour gérer le formulaire (handleAddNew, handleEdit, handleSave)
     const handleAddNew = () => {
         setEditing(null);
-        const currentYear = new Date().getFullYear();
-        const nextYear = (currentYear + 1).toString();
-        setFormData({
-            school_year: `${currentYear}-${nextYear}`,
-            school_name: '',
-            start_date: '',
-            end_date: '',
-            esi_hours: 0,
-            ess_hours: 0,
-            className: '', // Modifié ici
-        });
+        setFormData({ school_year_id: '', school_name: '', start_date: '', end_date: '', esi_hours: 0, ess_hours: 0, className: '' });
         setShowForm(true);
     };
 
@@ -59,21 +67,15 @@ const AttributionManager = () => {
         setEditing(attribution);
         setFormData({
             id: attribution.id,
-            school_year: attribution.school_year,
+            school_year_id: attribution.school_year_id,
             school_name: attribution.school_name,
             start_date: format(new Date(attribution.start_date), 'yyyy-MM-dd'),
             end_date: format(new Date(attribution.end_date), 'yyyy-MM-dd'),
-            // --- MODIFICATION : Mappe la propriété 'class' de l'objet vers 'className' dans le state ---
-            className: attribution.class || '', // Le champ de la BDD s'appelle 'class'
+            className: attribution.class || '',
             esi_hours: attribution.esi_hours || 0,
             ess_hours: attribution.ess_hours || 0,
         });
         setShowForm(true);
-    };
-
-    const handleCancel = () => {
-        setShowForm(false);
-        setEditing(null);
     };
 
     const handleSave = async (e) => {
@@ -82,12 +84,12 @@ const AttributionManager = () => {
             error("La date de fin doit être postérieure à la date de début.");
             return;
         }
-
+        if (!formData.school_year_id) {
+            error("Veuillez sélectionner une année scolaire.");
+            return;
+        }
         try {
-            // Pas de changement nécessaire ici, formData contient déjà 'className'
-            const dataToSave = editing ? { ...formData, id: editing.id } : formData;
-            // AttributionService doit envoyer { ..., className: '...' } au backend
-            await AttributionService.saveAttribution(dataToSave);
+            await AttributionService.saveAttribution(formData);
             success(`Attribution sauvegardée avec succès.`);
             setShowForm(false);
             setEditing(null);
@@ -97,38 +99,48 @@ const AttributionManager = () => {
         }
     };
 
+    // Fonctions pour la modale de confirmation
     const handleDelete = (attribution) => {
         setConfirmModal({
             isOpen: true,
             title: 'Confirmer la suppression',
-            message: `Êtes-vous sûr de vouloir supprimer l'attribution pour la classe ${attribution.class} à ${attribution.school_name} ?`,
+            message: `Êtes-vous sûr de vouloir supprimer l'attribution pour ${attribution.school_name} (${attribution.school_year_name}) ?`,
             onConfirm: async () => {
                 try {
                     await AttributionService.deleteAttribution(attribution.id);
-                    success('Attribution supprimée.');
+                    success('Attribution supprimée avec succès.');
                     fetchAttributions();
                 } catch (err) {
-                    error(err.message || 'Erreur de suppression.');
-                } finally {
-                    closeConfirmModal();
+                    error(err.message || 'Erreur lors de la suppression.');
                 }
+                closeConfirmModal();
             }
         });
     };
 
-    const closeConfirmModal = () => {
-        setConfirmModal({ isOpen: false });
-    };
+    const closeConfirmModal = () => setConfirmModal({ isOpen: false, onConfirm: null });
 
+    // Logique de groupement par ID d'année scolaire
     const groupedAttributions = attributions.reduce((acc, curr) => {
-        const year = curr.school_year;
-        (acc[year] = acc[year] || []).push(curr);
+        const yearId = curr.school_year_id || 'unknown';
+        (acc[yearId] = acc[yearId] || []).push(curr);
         return acc;
     }, {});
 
-    const sortedYears = Object.keys(groupedAttributions).sort((a, b) => b.localeCompare(a));
+    // Tri des groupes basé sur le nom de l'année scolaire
+    const sortedGroupKeys = Object.keys(groupedAttributions).sort((a, b) => {
+        if (a === 'unknown') return 1;
+        if (b === 'unknown') return -1;
+        const nameA = groupedAttributions[a][0].start_date;
+        const nameB = groupedAttributions[b][0].start_date;
+        return nameB.localeCompare(nameA);
+    });
 
-    if (isLoading) return <p>Chargement...</p>;
+    const isLoading = attributionsLoading || schoolYearsLoading;
+
+    if (isLoading) {
+        return <div className="loading"><div className="spinner"></div><p>Chargement des données...</p></div>;
+    }
 
     return (
         <div className="attribution-manager">
@@ -138,52 +150,56 @@ const AttributionManager = () => {
                     <span>➕</span> Ajouter une attribution
                 </button>
             </div>
-            <p>Gérez vos informations professionnelles pour chaque contrat et année scolaire.</p>
+            <p className="description">Gérez vos informations professionnelles pour chaque contrat et année scolaire.</p>
 
             {showForm && (
                 <div className="modal-overlay">
                     <div className="modal">
                         <div className="modal-header">
                             <h3>{editing ? 'Modifier l\'attribution' : 'Nouvelle attribution'}</h3>
-                            <button className="modal-close" onClick={handleCancel}>✕</button>
+                            <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
                         </div>
                         <form onSubmit={handleSave} className="class-form">
                             <div className="form-group">
-                                <label>Année scolaire</label>
-                                <input type="text" value={formData.school_year} onChange={(e) => setFormData({ ...formData, school_year: e.target.value })} placeholder="Ex: 2024-2025" required />
+                                <label htmlFor="school_year_id">Année scolaire</label>
+                                <select id="school_year_id" name="school_year_id" value={formData.school_year_id} onChange={handleFormChange} required>
+                                    <option value="">-- Sélectionnez une année --</option>
+                                    {schoolYears.map(sy => (
+                                        <option key={sy.id} value={sy.id}>{sy.start_date} - {sy.end_date}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="form-group">
-                                <label>Nom de l'école</label>
-                                <input type="text" value={formData.school_name} onChange={(e) => setFormData({ ...formData, school_name: e.target.value })} placeholder="Ex: Institut Saint-Laurent" required />
+                                <label htmlFor="school_name">Nom de l'école</label>
+                                <input id="school_name" name="school_name" type="text" value={formData.school_name} onChange={handleFormChange} placeholder="Ex: Institut Saint-Laurent" required />
                             </div>
                             <div className="form-group">
-                                <label>Classe</label>
-                                {/* --- MODIFICATION : 'value' et 'onChange' utilisent 'className' --- */}
-                                <input type="text" value={formData.className} onChange={(e) => setFormData({ ...formData, className: e.target.value })} placeholder="Ex: 3TTINFO" />
+                                <label htmlFor="className">Classe (Optionnel)</label>
+                                <input id="className" name="className" type="text" value={formData.className} onChange={handleFormChange} placeholder="Ex: 3TTINFO" />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Date de début</label>
-                                    <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} required />
+                                    <label htmlFor="start_date">Date de début</label>
+                                    <input id="start_date" name="start_date" type="date" value={formData.start_date} onChange={handleFormChange} required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Date de fin</label>
-                                    <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} required />
+                                    <label htmlFor="end_date">Date de fin</label>
+                                    <input id="end_date" name="end_date" type="date" value={formData.end_date} onChange={handleFormChange} required />
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Heures ESI</label>
-                                    <input type="number" value={formData.esi_hours} onChange={(e) => setFormData({ ...formData, esi_hours: parseInt(e.target.value, 10) || 0 })} />
+                                    <label htmlFor="esi_hours">Heures ESI</label>
+                                    <input id="esi_hours" name="esi_hours" type="number" value={formData.esi_hours} onChange={handleFormChange} min="0" />
                                 </div>
                                 <div className="form-group">
-                                    <label>Heures ESS</label>
-                                    <input type="number" value={formData.ess_hours} onChange={(e) => setFormData({ ...formData, ess_hours: parseInt(e.target.value, 10) || 0 })} />
+                                    <label htmlFor="ess_hours">Heures ESS</label>
+                                    <input id="ess_hours" name="ess_hours" type="number" value={formData.ess_hours} onChange={handleFormChange} min="0" />
                                 </div>
                             </div>
                             <div className="form-actions">
-                                <button type="button" className="btn-secondary" onClick={handleCancel}>Annuler</button>
-                                <button type="submit" className="btn-primary">Sauvegarder</button>
+                                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Annuler</button>
+                                <button type="submit" className="btn-primary">{editing ? 'Sauvegarder' : 'Ajouter'}</button>
                             </div>
                         </form>
                     </div>
@@ -191,28 +207,31 @@ const AttributionManager = () => {
             )}
 
             <div className="attribution-list">
-                {sortedYears.length > 0 ? (
-                    sortedYears.map(year => (
-                        <div key={year} className="attribution-year-group">
-                            <h3 className="year-group-title">{year}</h3>
-                            {groupedAttributions[year].map(item => (
+                {sortedGroupKeys.length > 0 ? (
+                    sortedGroupKeys.map(yearId => (
+                        <div key={yearId} className="attribution-year-group">
+                            <h3 className="year-group-title">
+                                <SchoolYearDisplay schoolYearId={yearId} />
+                            </h3>
+                            {groupedAttributions[yearId].map(item => (
                                 <div className="attribution-item" key={item.id}>
                                     <div className="item-details">
-                                        {/* --- AJOUT : Affichage du nom de la classe --- */}
                                         <strong>{item.school_name} {item.class && ` - ${item.class}`}</strong>
                                         <p>Du {format(new Date(item.start_date), 'dd/MM/yyyy')} au {format(new Date(item.end_date), 'dd/MM/yyyy')}</p>
-                                        <p><strong>ESI:</strong> {item.esi_hours}h | <strong>ESS:</strong> {item.ess_hours}h</p>
+                                        <p><strong>ESI:</strong> {item.esi_hours || 0}h | <strong>ESS:</strong> {item.ess_hours || 0}h</p>
                                     </div>
                                     <div className="item-actions">
-                                        <button className="btn-edit" onClick={() => handleEdit(item)}>✏️</button>
-                                        <button className="btn-delete" onClick={() => handleDelete(item)}>🗑️</button>
+                                        <button className="btn-edit" onClick={() => handleEdit(item)} title="Modifier">✏️</button>
+                                        <button className="btn-delete" onClick={() => handleDelete(item)} title="Supprimer">🗑️</button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ))
                 ) : (
-                    <p>Aucune attribution enregistrée pour le moment.</p>
+                    <div className="empty-state">
+                        <p>Aucune attribution enregistrée pour le moment.</p>
+                    </div>
                 )}
             </div>
 
@@ -222,7 +241,7 @@ const AttributionManager = () => {
                 message={confirmModal.message}
                 onClose={closeConfirmModal}
                 onConfirm={confirmModal.onConfirm}
-                confirmText="Supprimer"
+                confirmText="Confirmer la suppression"
                 cancelText="Annuler"
                 type="danger"
             />
