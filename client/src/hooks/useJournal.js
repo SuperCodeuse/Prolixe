@@ -107,17 +107,21 @@ export const JournalProvider = ({ children }) => {
     }, [currentJournal]);
 
     const fetchAssignments = useCallback(async (classId, startDate, endDate) => {
+        if (!currentJournal) {
+            setAssignments([]);
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
-            const response = await JournalService.getAssignments(classId, startDate, endDate);
+            const response = await JournalService.getAssignments(currentJournal.id, classId, startDate, endDate);
             setAssignments(response.data || []);
         } catch (err) {
             setError(err.message || 'Erreur lors de la récupération des devoirs.');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentJournal]);
 
     const upsertJournalEntry = useCallback(async (entryData) => {
         if (!currentJournal) throw new Error("Aucun journal sélectionné.");
@@ -156,10 +160,12 @@ export const JournalProvider = ({ children }) => {
     }, [currentJournal]);
 
     const upsertAssignment = useCallback(async (assignmentData) => {
-        if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
+        if (!currentJournal) throw new Error("Aucun journal sélectionné.");
+        if (currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
         setError(null);
         try {
-            const response = await JournalService.upsertAssignment(assignmentData);
+            const dataWithJournalId = { ...assignmentData, journal_id: currentJournal.id };
+            const response = await JournalService.upsertAssignment(dataWithJournalId);
             const newAssignment = response.data;
             setAssignments(prev => {
                 const existingIndex = prev.findIndex(a => a.id === newAssignment.id);
@@ -173,7 +179,7 @@ export const JournalProvider = ({ children }) => {
             setError(err.message || "Erreur lors de la sauvegarde du devoir.");
             throw err;
         }
-    }, [currentJournal]);
+    }, [currentJournal]); // AJOUT: Dépendance à currentJournal.
 
     const deleteAssignment = useCallback(async (id) => {
         if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");

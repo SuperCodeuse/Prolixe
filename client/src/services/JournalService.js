@@ -75,14 +75,19 @@ class JournalService {
         });
     }
 
-    // --- Assignments ---
-    static async getAssignments(classId = '', startDate = '', endDate = '') {
+    static async getAssignments(journalId, classId = '', startDate = '', endDate = '') {
+        if (!journalId) {
+            console.error("getAssignments a été appelé sans journalId.");
+            // Retourne une promesse qui résout avec une structure de données vide pour éviter les erreurs.
+            return Promise.resolve({ data: [], success: false, message: 'Un ID de journal est requis.' });
+        }
         let query = `${JOURNAL_API_URL}/assignments`;
-        const params = [];
+        const params = [`journal_id=${journalId}`]; // Le paramètre est `journal_id` pour correspondre au backend
         if (classId) params.push(`classId=${classId}`);
         if (startDate) params.push(`startDate=${startDate}`);
         if (endDate) params.push(`endDate=${endDate}`);
-        if (params.length > 0) query += '?' + params.join('&');
+
+        query += '?' + params.join('&');
 
         return ApiService.request(query);
     }

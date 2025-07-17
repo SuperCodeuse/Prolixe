@@ -332,12 +332,19 @@ class JournalController {
     }
 
     static async getAssignments(req, res) {
-        const { classId, startDate, endDate } = req.query;
+        const { classId, startDate, endDate, journal_id } = req.query; // AJOUT: lecture de journal_id
+
+        if (!journal_id) {
+            return JournalController.handleError(res, new Error('Paramètre manquant'), "L'ID du journal est requis.", 400);
+        }
+
         let query = `
-            SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected, c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject
+            SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected, c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject, a.journal_id
             FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id`;
-        const params = [];
-        const conditions = [];
+
+        const conditions = ['a.journal_id = ?'];
+        const params = [parseInt(journal_id)];
+
         if (classId) {
             conditions.push('a.class_id = ?');
             params.push(parseInt(classId));
@@ -346,8 +353,10 @@ class JournalController {
             conditions.push('a.due_date BETWEEN ? AND ?');
             params.push(startDate, endDate);
         }
-        if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+
+        query += ' WHERE ' + conditions.join(' AND ');
         query += ' ORDER BY a.due_date ASC, a.type ASC';
+
         try {
             const assignments = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(query, params);
@@ -360,10 +369,10 @@ class JournalController {
     }
 
     static async upsertAssignment(req, res) {
-        const { id } = req.body;
-        if (id) {
+        const {id} = req.body;
+        if (id) { // Mise à jour
             try {
-                const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed', 'is_corrected'];
+                const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed', 'is_corrected', 'journal_id'];
                 const fieldsToUpdate = [];
                 const values = [];
                 Object.keys(req.body).forEach(key => {
@@ -376,30 +385,44 @@ class JournalController {
                 });
                 if (fieldsToUpdate.length === 0) {
                     const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [id]));
-                    return res.status(200).json({ success: true, message: 'Aucun champ valide à mettre à jour.', data: assignment[0] });
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Aucun champ valide à mettre à jour.',
+                        data: assignment[0]
+                    });
                 }
                 values.push(id);
-                await JournalController.withConnection(async (c) => c.execute(`UPDATE ASSIGNMENT SET ${fieldsToUpdate.join(', ')} WHERE id = ?`, values));
+                await JournalController.withConnection(async (c) => c.execute(`UPDATE ASSIGNMENT
+                                                                               SET ${fieldsToUpdate.join(', ')}
+                                                                               WHERE id = ?`, values));
                 const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [id]));
-                res.status(200).json({ success: true, message: 'Assignation mise à jour avec succès.', data: assignment[0] });
+                res.status(200).json({
+                    success: true,
+                    message: 'Assignation mise à jour avec succès.',
+                    data: assignment[0]
+                });
             } catch (error) {
                 JournalController.handleError(res, error, "Erreur lors de la mise à jour de l'assignation.");
             }
-        } else {
-            const { class_id, subject, type, description, due_date, is_completed } = req.body;
-            if (!class_id || !subject || !type || !due_date) return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides.', 400);
+        } else { // Création
+            const {class_id, subject, type, description, due_date, is_completed, journal_id} = req.body;
+            if (!class_id || !subject || !type || !due_date || !journal_id) return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides (classe, matière, type, date et journal sont requis).', 400);
+
             try {
                 const formattedDueDate = JournalController.formatDateForDatabase(due_date);
-                const [result] = await JournalController.withConnection(async (c) => c.execute('INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)', [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]));
+                const [result] = await JournalController.withConnection(async (c) => c.execute(
+                    'INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed, journal_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false, parseInt(journal_id)]
+                ));
                 const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [result.insertId]));
-                res.status(201).json({ success: true, message: 'Assignation créée avec succès.', data: assignment[0] });
+                res.status(201).json({success: true, message: 'Assignation créée avec succès.', data: assignment[0]});
             } catch (error) {
                 JournalController.handleError(res, error, "Erreur lors de la création de l'assignation.");
             }
         }
     }
 
-    static formatDateForDatabase(dateInput) {
+        static formatDateForDatabase(dateInput) {
         if (!dateInput) return null;
         let date;
         if (dateInput instanceof Date) date = dateInput;
