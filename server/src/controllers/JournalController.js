@@ -390,14 +390,6 @@ class JournalController {
             if (!class_id || !subject || !type || !due_date) return JournalController.handleError(res, new Error('Champs obligatoires manquants'), 'Données invalides.', 400);
             try {
                 const formattedDueDate = JournalController.formatDateForDatabase(due_date);
-
-                console.log("date :", formattedDueDate);
-                console.log("class_id :", class_id);
-                console.log("subject :", subject);
-                console.log("type :", type);
-                console.log("description :", description);
-                console.log("is_completed :", is_completed);
-
                 const [result] = await JournalController.withConnection(async (c) => c.execute('INSERT INTO ASSIGNMENT (class_id, subject, type, description, due_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)', [parseInt(class_id), subject, type, description || null, formattedDueDate, is_completed || false]));
                 const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [result.insertId]));
                 res.status(201).json({ success: true, message: 'Assignation créée avec succès.', data: assignment[0] });

@@ -58,7 +58,7 @@ class ClassController {
 
     /**
      * Valide les données d'entrée pour la création ou la mise à jour d'une classe.
-     * @param {object} data - Les données de la classe (name, students, subject, level).
+     * @param {object} data - Les données de la classe (name, students, level).
      * @param {boolean} isUpdate - Indique si la validation est pour une mise à jour (certains champs peuvent être optionnels).
      * @returns {object} Un objet contenant les erreurs de validation par champ.
      */
@@ -93,16 +93,6 @@ class ClassController {
             }
         }
 
-        // Validation de la matière
-        if (!isUpdate || data.subject !== undefined) {
-            if (!data.subject || typeof data.subject !== 'string' || !data.subject.trim()) {
-                errors.subject = 'La matière est requise.';
-            } else if (data.subject.trim().length > 100) {
-                errors.subject = 'La matière ne peut pas dépasser 100 caractères.';
-            }
-        }
-
-        // NOUVEAU: Validation du niveau
         if (!isUpdate || data.level !== undefined) {
             const levelNum = parseInt(data.level);
             if (isNaN(levelNum) || !validLevels.includes(levelNum)) {
@@ -128,7 +118,7 @@ class ClassController {
         try {
             const data = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT id, name, students, level, lesson AS subject
+                    SELECT id, name, students, level
                     FROM CLASS
                     WHERE journal_id = ?
                     ORDER BY name ASC
@@ -166,8 +156,7 @@ class ClassController {
                         id,
                         name,
                         students,
-                        level,          -- Inclure 'level'
-                        lesson AS subject
+                        level,     
                     FROM CLASS
                     WHERE id = ?
                 `, [parseInt(id)]);
@@ -194,8 +183,8 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async createClass(req, res) {
-        const { name, students, subject, level, journal_id } = req.body;
-        const validationErrors = ClassController.validateClassData({ name, students, subject, level, journal_id });
+        const { name, students, level, journal_id } = req.body;
+        const validationErrors = ClassController.validateClassData({ name, students, level, journal_id });
         if (Object.keys(validationErrors).length > 0) {
             return ClassController.handleError(res, new Error('Données invalides'), 'Données invalides.', 400, validationErrors);
         }
@@ -215,12 +204,12 @@ class ClassController {
                 }
 
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, lesson, level, journal_id) VALUES (?, ?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), subject.trim(), parseInt(level), parseInt(journal_id)]
+                    'INSERT INTO CLASS (name, students, level, journal_id) VALUES (?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), parseInt(level), parseInt(journal_id)]
                 );
 
                 const [newClassData] = await connection.execute(
-                    'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, level FROM CLASS WHERE id = ?',
                     [result.insertId]
                 );
 
@@ -249,7 +238,7 @@ class ClassController {
      */
     static async updateClass(req, res) {
         const { id } = req.params;
-        const updateData = req.body; // Peut contenir name, students, subject, level
+        const updateData = req.body; // Peut contenir name, students, level
 
         // Validation de l'ID
         if (!id || isNaN(parseInt(id))) {
@@ -306,12 +295,6 @@ class ClassController {
                     values.push(parseInt(updateData.journal_id));
                 }
 
-                if (updateData.subject !== undefined) {
-                    fieldsToUpdate.push('lesson = ?'); // 'lesson' est le nom de la colonne de la DB pour la matière
-                    values.push(updateData.subject.trim());
-                }
-
-                // NOUVEAU: Ajouter la mise à jour du level
                 if (updateData.level !== undefined) {
                     fieldsToUpdate.push('level = ?');
                     values.push(parseInt(updateData.level));
@@ -323,7 +306,6 @@ class ClassController {
                     throw err;
                 }
 
-                // Ajouter l'ID à la fin des valeurs pour la clause WHERE
                 values.push(parseInt(id));
 
                 await connection.execute(
@@ -331,9 +313,8 @@ class ClassController {
                     values
                 );
 
-                // Récupérer la classe mise à jour pour renvoyer les données complètes
                 const [updatedData] = await connection.execute(
-                    'SELECT id, name, students, lesson AS subject, level FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, level FROM CLASS WHERE id = ?',
                     [parseInt(id)]
                 );
 
@@ -426,9 +407,7 @@ class ClassController {
                     SELECT
                         COUNT(*) as total_classes,
                         SUM(students) as total_students,
-                        AVG(students) as avg_students_per_class,
-                        COUNT(DISTINCT lesson) as unique_subjects
-                        -- Ajoutez SUM(CASE WHEN level = X THEN 1 ELSE 0 END) pour des stats par niveau si besoin
+                        AVG(students) as avg_students_per_class
                     FROM CLASS
                 `);
                 return result[0];
@@ -439,8 +418,7 @@ class ClassController {
                 data: {
                     totalClasses: stats.total_classes || 0,
                     totalStudents: stats.total_students || 0,
-                    averageStudentsPerClass: Math.round(stats.avg_students_per_class || 0),
-                    uniqueSubjects: stats.unique_subjects || 0
+                    averageStudentsPerClass: Math.round(stats.avg_students_per_class || 0)
                 },
                 message: 'Statistiques récupérées avec succès.'
             });

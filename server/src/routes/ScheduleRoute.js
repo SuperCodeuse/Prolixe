@@ -1,46 +1,11 @@
-// backend/routes/schoolYearRoutes.js
+// backend/routes/scheduleRoutes.js
 const express = require('express');
 const router = express.Router();
-const SchoolYearController = require('../controllers/schoolYearController');
+const ScheduleController = require('../controllers/ScheduleController'); // Assurez-vous que le chemin est correct
 
-// ======================================================
-// Définition des routes pour la ressource "school-years"
-// Préfixe de base: /api/school-years
-// ======================================================
-
-/**
- * @route   GET /api/school-years
- * @desc    Récupérer toutes les années scolaires
- * @access  Public
- */
-router.get('/', SchoolYearController.getAllSchoolYears);
-
-/**
- * @route   GET /api/school-years/:id
- * @desc    Récupérer une année scolaire par son ID
- * @access  Public
- */
-router.get('/:id', SchoolYearController.getSchoolYearById);
-
-/**
- * @route   POST /api/school-years
- * @desc    Créer une nouvelle année scolaire
- * @access  Public
- */
-router.post('/', SchoolYearController.createSchoolYear);
-
-/**
- * @route   PUT /api/school-years/:id
- * @desc    Mettre à jour une année scolaire spécifique
- * @access  Public
- */
-router.put('/:id', SchoolYearController.updateSchoolYear);
-
-/**
- * @route   DELETE /api/school-years/:id
- * @desc    Supprimer une année scolaire spécifique
- * @access  Public
- */
-router.delete('/:id', SchoolYearController.deleteSchoolYear);
+router.get('/', ScheduleController.getSchedule);
+router.put('/', ScheduleController.upsertCourse);
+router.delete('/:journal_id/:day/:time_slot_id', ScheduleController.deleteCourse);
 
 module.exports = router;
+

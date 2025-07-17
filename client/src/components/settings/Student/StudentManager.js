@@ -118,7 +118,6 @@ const StudentManager = () => {
                 <div className="error-message">Aucun journal de classe sélectionné.</div>
             )}
 
-            {/* Le sélecteur de classe */}
             <div className="form-group">
                 <label>Sélectionnez une classe</label>
                 <select
@@ -133,7 +132,6 @@ const StudentManager = () => {
                 </select>
             </div>
 
-            {/* Formulaire d'ajout et liste des élèves (visibles seulement si une classe est sélectionnée) */}
             {selectedClass && !isUiDisabled && (
                 <>
                     <form onSubmit={handleAddStudent} className="add-student-form form-group">

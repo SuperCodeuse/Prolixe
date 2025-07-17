@@ -6,10 +6,14 @@ import { useScheduleHours } from "../../hooks/useScheduleHours";
 import { useToast } from '../../hooks/useToast';
 import Toast from "../Toast";
 import ConfirmModal from '../ConfirmModal';
-import { useSchedule } from '../../hooks/useSchedule'; // <-- CORRECTION ICI : useSchedule au lieu de useShedule
+import { useSchedule } from '../../hooks/useSchedule';
+import {useJournal} from "../../hooks/useJournal";
 
 const Horaire = () => {
-    const { classes, getClassColor } = useClasses();
+    const { currentJournal } = useJournal();
+    const journalId = currentJournal?.id;
+    const { classes, getClassColor } = useClasses(journalId);
+
     const { hours, getSortedHours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { success, error: showError, toasts, removeToast } = useToast();
 
@@ -80,6 +84,7 @@ const Horaire = () => {
 
         try {
             await upsertCourse(selectedSlot.day, selectedSlot.time_libelle, courseForm);
+
             success('Cours enregistré avec succès !', 3000);
             setShowModal(false);
             setCourseForm({ subject: '', classId: '', room: '', notes: '' });

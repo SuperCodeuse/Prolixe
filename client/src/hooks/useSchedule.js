@@ -37,7 +37,7 @@ export const useSchedule = () => {
             setError(errorHours.message || 'Erreur lors du chargement des créneaux horaires.');
             setLoading(false);
         }
-    }, [hours, loadingHours, errorHours, fetchSchedule, currentJournal]); // Ajouter currentJournal
+    }, [hours, loadingHours, errorHours, fetchSchedule, currentJournal]);
 
     const upsertCourse = useCallback(async (day, time_libelle, courseDetails) => {
         if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
@@ -46,7 +46,6 @@ export const useSchedule = () => {
             const time_slot_id = getHourIdByLibelle(time_libelle);
             if (!time_slot_id) throw new Error(`ID de créneau horaire introuvable pour : ${time_libelle}`);
 
-            // Passer l'ID du journal courant au service
             const response = await scheduleService.upsertCourse(day, time_slot_id, courseDetails, currentJournal.id);
 
             if (response.success && response.data.schedule) {

@@ -16,13 +16,12 @@ const ClassesManager = () => {
     // State pour le formulaire et la modale
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
-    const [formData, setFormData] = useState({ name: '', students: '', subject: '', level: '' });
+    const [formData, setFormData] = useState({ name: '', students: '', level: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null });
 
-    const lessonOptions = ['Informatique', 'Exp.logiciels', 'Programmation', 'Database'];
     const levelOptions = [3, 4, 5, 6];
 
-    const resetForm = () => { setFormData({ name: '', students: '', subject: '', level: '' }); setEditingClass(null); setShowAddForm(false); };
+    const resetForm = () => { setFormData({ name: '', students: '', level: '' }); setEditingClass(null); setShowAddForm(false); };
     const closeConfirmModal = () => setConfirmModal({ isOpen: false, onConfirm: null });
     const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -31,7 +30,6 @@ const ClassesManager = () => {
         setFormData({
             name: classItem.name || '',
             students: classItem.students || '',
-            subject: classItem.subject || '',
             level: classItem.level || '',
         });
         setShowAddForm(true);
@@ -59,7 +57,7 @@ const ClassesManager = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.name || !formData.students || !formData.subject || !formData.level) {
+        if (!formData.name || !formData.students || !formData.level) {
             showError("Tous les champs du formulaire sont requis.");
             return;
         }
@@ -122,7 +120,6 @@ const ClassesManager = () => {
                         <div className="class-info">
                             <div className="info-item"><span>👥 Élèves:</span><span>{classItem.students}</span></div>
                             <div className="info-item"><span>🎓 Niveau:</span><span>{classItem.level}</span></div>
-                            <div className="info-item"><span>📚 Matière:</span><span>{classItem.subject}</span></div>
                         </div>
                     </div>
                 ))}
@@ -155,7 +152,35 @@ const ClassesManager = () => {
 
             {showAddForm && (
                 <div className="modal-overlay">
-                    {/* ... Le JSX de votre modale reste identique ... */}
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3>{editingClass ? 'Modifier la classe' : 'Ajouter une classe'}</h3>
+                            <button className="modal-close" onClick={resetForm}>✕</button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="class-form">
+                            <div className="form-group">
+                                <label>Nom de la classe</label>
+                                <input type="text" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required autoFocus />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Nombre d'élèves</label>
+                                    <input type="number" value={formData.students} onChange={(e) => handleInputChange('students', e.target.value)} min="1" max="50" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Niveau</label>
+                                    <select value={formData.level} onChange={(e) => handleInputChange('level', e.target.value)} required>
+                                        <option value="">Sélectionner</option>
+                                        {levelOptions.map(level => <option key={level} value={level}>{level}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-actions">
+                                <button type="button" className="btn-secondary" onClick={resetForm}>Annuler</button>
+                                <button type="submit" className="btn-primary">{editingClass ? '✏️ Modifier' : '➕ Ajouter'}</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 

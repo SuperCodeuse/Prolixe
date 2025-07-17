@@ -13,7 +13,7 @@ class ScheduleService {
             body: JSON.stringify({
                 day,
                 time_slot_id,
-                journal_id: journalId, // Ajout du journalId
+                journal_id: journalId,
                 ...courseData
             }),
         });
