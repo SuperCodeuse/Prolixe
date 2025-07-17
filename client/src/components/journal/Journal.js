@@ -20,7 +20,8 @@ const Journal = () => {
 
 const JournalView = () => {
     const { currentJournal, upsertJournalEntry, deleteJournalEntry, upsertAssignment, deleteAssignment, fetchJournalEntries, fetchAssignments, journalEntries, assignments } = useJournal();
-    const { classes, getClassColor } = useClasses();
+    const journalId = currentJournal?.id;
+    const { classes, getClassColor } = useClasses(journalId);
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
     const { success, error: showError } = useToast();
