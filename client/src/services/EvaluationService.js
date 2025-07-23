@@ -1,10 +1,10 @@
 import ApiService from './api';
 
-export const getEvaluations = () => {
-    return ApiService.request(`/evaluations`);
+export const getEvaluations = (journalId) => {
+    if (!journalId) return Promise.resolve({ data: [] });
+    return ApiService.request(`/evaluations?journalId=${journalId}`);
 };
 
-// NOUVELLE FONCTION
 export const getEvaluationById = (id) => {
     return ApiService.request(`/evaluations/${id}`);
 };
@@ -40,9 +40,6 @@ export const saveGrades = (evaluationId, grades) => {
     });
 };
 
-export const getEvaluationTemplates = (schoolYear) => {
-    if (!schoolYear) {
-        return Promise.resolve({ data: [] }); // Retourne une liste vide si pas d'année
-    }
-    return ApiService.request(`/evaluations/templates/${schoolYear}`);
+export const getEvaluationTemplates = () => {
+    return ApiService.request(`/evaluations/templates`);
 };

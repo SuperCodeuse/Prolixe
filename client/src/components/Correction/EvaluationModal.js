@@ -7,8 +7,9 @@ import './EvaluationModal.scss';
 import { TextField } from "@mui/material";
 
 const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy }) => {
-    const { classes } = useClasses();
     const { currentJournal } = useJournal();
+    const journalId = currentJournal?.id;
+    const { classes } = useClasses(journalId);
     const { error: showError } = useToast();
 
     // États du formulaire
@@ -39,7 +40,6 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
         if (!isOpen) return;
 
         const loadData = async () => {
-            // Mode édition
             if (evaluation) {
                 setIsLoading(true);
                 try {
@@ -52,7 +52,6 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                 } catch (err) { showError("Erreur au chargement de l'évaluation."); }
                 finally { setIsLoading(false); }
             }
-            // Mode copie
             else if (evaluationToCopy) {
                 setIsLoading(true);
                 try {
@@ -65,12 +64,11 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                 } catch (err) { showError("Erreur au chargement du modèle à copier."); }
                 finally { setIsLoading(false); }
             }
-            // Mode création : on charge les templates
             else if (currentJournal?.id) {
                 try {
-                    const response = await getEvaluationTemplates(currentJournal.school_year);
+                    const response = await getEvaluationTemplates();
                     setTemplates(response.data || []);
-                    setDate(new Date().toISOString().split('T')[0]); // Pré-remplir la date
+                    setDate(new Date().toISOString().split('T')[0]);
                 } catch (err) { showError("Impossible de charger les modèles."); }
             }
         };
@@ -123,7 +121,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             name,
             class_id: classId,
             date,
-            school_year: currentJournal.school_year, // L'année scolaire est celle du journal courant
+            journal_id: journalId,
             criteria: criteria.filter(c => c.label && c.max_score),
         });
         setIsSaving(false);

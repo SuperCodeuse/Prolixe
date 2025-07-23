@@ -97,7 +97,7 @@ class JournalController {
         }
     }
 
-    // ... Les méthodes `archiveJournal` et `deleteJournal` restent inchangées car elles opèrent sur l'ID du journal ...
+    //
     static async archiveJournal(req, res) {
         const { id } = req.params;
         try {

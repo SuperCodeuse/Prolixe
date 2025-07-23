@@ -4,25 +4,20 @@ import { getEvaluationForGrading, saveGrades } from '../../services/EvaluationSe
 import { useToast } from '../../hooks/useToast';
 import './CorrectionView.scss';
 
-// Le composant d'affichage a été amélioré pour gérer les blocs de commentaires
 const CommentDisplay = ({ text }) => {
     if (!text) {
         return null;
     }
 
-    // Sépare le texte par les commentaires de bloc `/* ... */`, en les conservant comme délimiteurs
     const parts = text.split(/(\/\*[\s\S]*?\*\/)/g).filter(Boolean);
 
     return (
         <div className="comment-display-container">
             {parts.map((part, index) => {
-                // Si la partie est un commentaire de bloc
                 if (part.startsWith('/*') && part.endsWith('*/')) {
-                    // On retire les délimiteurs et on l'affiche dans une balise <pre>
                     return <pre className="comment-block" key={index}>{part.substring(2, part.length - 2)}</pre>;
                 }
 
-                // Pour les autres parties, on traite ligne par ligne
                 return part.split('\n').map((line, lineIndex) => {
                     const key = `${index}-${lineIndex}`;
                     if (line.trim().startsWith('#')) {
@@ -31,7 +26,6 @@ const CommentDisplay = ({ text }) => {
                     if (line.trim().startsWith('//')) {
                         return <div key={key}><code>{line}</code></div>;
                     }
-                    // Affiche une ligne normale ou un espace insécable pour les lignes vides
                     return <div key={key}>{line || '\u00A0'}</div>;
                 });
             })}

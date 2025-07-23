@@ -3,13 +3,20 @@
 const db = require('../../config/database');
 
 exports.getEvaluations = async (req, res) => {
+    const { journalId } = req.query; // ex: /evaluations?journalId=1
+
+    if (!journalId) {
+        return res.status(400).json({ message: "L'ID du journal est requis." });
+    }
+
     try {
         const [evaluations] = await db.query(`
-            SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name, c.id as class_id
+            SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name, c.id as class_id
             FROM EVALUATIONS e
-            JOIN CLASS c ON e.class_id = c.id
-            ORDER BY e.school_year DESC, e.evaluation_date DESC
-        `);
+                     JOIN CLASS c ON e.class_id = c.id
+            WHERE e.journal_id = ?
+            ORDER BY e.evaluation_date DESC
+        `, [journalId]);
         res.json({ success: true, data: evaluations });
     } catch (error) {
         console.error("Erreur dans getEvaluations:", error);
@@ -37,10 +44,10 @@ exports.getEvaluationById = async (req, res) => {
 };
 
 exports.createEvaluation = async (req, res) => {
-    const { name, class_id, school_year, date, criteria } = req.body;
+    const { name, class_id, journal_id, date, criteria } = req.body;
 
-    if (!name || !class_id || !school_year || !date || !Array.isArray(criteria) || criteria.length === 0) {
-        return res.status(400).json({ success: false, message: "Les champs nom, classe, année scolaire, date et au moins un critère sont requis." });
+    if (!name || !class_id || !date || !journal_id || !Array.isArray(criteria) || criteria.length === 0) {
+        return res.status(400).json({ success: false, message: "Les champs nom, classe, journal, date et au moins un critère sont requis." });
     }
 
     const connection = await db.getConnection();
@@ -48,8 +55,8 @@ exports.createEvaluation = async (req, res) => {
         await connection.beginTransaction();
 
         const [evalResult] = await connection.query(
-            'INSERT INTO EVALUATIONS (name, class_id, school_year, evaluation_date) VALUES (?, ?, ?, ?)',
-            [name, class_id, school_year, date]
+            'INSERT INTO EVALUATIONS (name, class_id, journal_id, evaluation_date) VALUES (?, ?, ?, ?)',
+            [name, class_id, journal_id, date]
         );
         const evaluationId = evalResult.insertId;
 
@@ -80,7 +87,6 @@ exports.createEvaluation = async (req, res) => {
     }
 };
 
-// Obtenir les détails complets d'une évaluation pour la grille de correction
 exports.getEvaluationForGrading = async (req, res) => {
     const { id } = req.params;
     try {
@@ -92,7 +98,7 @@ exports.getEvaluationForGrading = async (req, res) => {
         }
 
         const [criteria] = await db.query('SELECT * FROM EVALUATION_CRITERIA WHERE evaluation_id = ? ORDER BY id', [id]);
-        const [students] = await db.query('SELECT * FROM STUDENTS WHERE class_id = ? AND school_year = ? ORDER BY lastname, firstname', [evaluation.class_id, evaluation.school_year]);
+        const [students] = await db.query('SELECT * FROM STUDENTS WHERE class_id = ? ORDER BY lastname, firstname', [evaluation.class_id]);
 
         // MODIFIÉ : On récupère aussi les commentaires
         const [grades] = await db.query(
@@ -176,7 +182,7 @@ exports.updateEvaluation = async (req, res) => {
         await connection.commit();
 
         const [updatedEvaluation] = await connection.query(
-            'SELECT e.id, e.name, e.evaluation_date, e.school_year, c.name as class_name FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ?',
+            'SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ?',
             [id]
         );
 
@@ -203,18 +209,14 @@ exports.deleteEvaluation = async (req, res) => {
 };
 
 exports.getEvaluationTemplates = async (req, res) => {
-    const { school_year } = req.params;
-    if (!school_year) {
-        return res.status(400).json({ success: false, message: "L'année scolaire est requise." });
-    }
     try {
         const query = `
-            SELECT id, name, school_year
-            FROM EVALUATIONS
-            WHERE school_year != ?
-            ORDER BY school_year DESC, name ASC;
+            SELECT e.id, e.name, j.name as journal_name
+            FROM EVALUATIONS e
+                     JOIN journal j ON e.journal_id = j.id
+            ORDER BY j.name ASC, e.name ASC;
         `;
-        const [templates] = await db.query(query, [school_year]);
+        const [templates] = await db.query(query);
         res.json({ success: true, data: templates });
     } catch (error) {
         console.error("Erreur dans getEvaluationTemplates:", error);
