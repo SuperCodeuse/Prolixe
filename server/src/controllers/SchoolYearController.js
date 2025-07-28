@@ -23,7 +23,7 @@ class SchoolYearController {
     static async getAllSchoolYears(req, res) {
         try {
             const [rows] = await pool.execute(
-                'SELECT id, start_date, end_date FROM school_year ORDER BY start_date DESC'
+                'SELECT id, start_date, end_date FROM SCHOOL_YEAR ORDER BY start_date DESC'
             );
             res.json({ success: true, data: rows });
         } catch (error) {
@@ -43,11 +43,11 @@ class SchoolYearController {
 
         try {
             const [result] = await pool.execute(
-                'INSERT INTO school_year (start_date, end_date) VALUES (?, ?, ?)',
+                'INSERT INTO SCHOOL_YEAR (start_date, end_date) VALUES (?, ?, ?)',
                 [name, start_date, end_date]
             );
             const newSchoolYearId = result.insertId;
-            const [newSchoolYear] = await pool.execute('SELECT * FROM school_year WHERE id = ?', [newSchoolYearId]);
+            const [newSchoolYear] = await pool.execute('SELECT * FROM SCHOOL_YEAR WHERE id = ?', [newSchoolYearId]);
 
             res.status(201).json({ success: true, message: 'Année scolaire créée avec succès.', data: newSchoolYear[0] });
         } catch (error) {
@@ -72,7 +72,7 @@ class SchoolYearController {
 
         try {
             const [result] = await pool.execute(
-                'UPDATE school_year SET start_date = ?, end_date = ? WHERE id = ?',
+                'UPDATE SCHOOL_YEAR SET start_date = ?, end_date = ? WHERE id = ?',
                 [name, start_date, end_date, id]
             );
 
@@ -80,7 +80,7 @@ class SchoolYearController {
                 return SchoolYearController.handleError(res, new Error('Année non trouvée'), 'Année scolaire non trouvée.', 404);
             }
 
-            const [updatedSchoolYear] = await pool.execute('SELECT * FROM school_year WHERE id = ?', [id]);
+            const [updatedSchoolYear] = await pool.execute('SELECT * FROM SCHOOL_YEAR WHERE id = ?', [id]);
             res.json({ success: true, message: 'Année scolaire mise à jour.', data: updatedSchoolYear[0] });
         } catch (error) {
             if (error.code === 'ER_DUP_ENTRY') {
@@ -106,7 +106,7 @@ class SchoolYearController {
             }
             // Ajoutez ici d'autres vérifications pour les classes, élèves, etc.
 
-            const [result] = await pool.execute('DELETE FROM school_year WHERE id = ?', [id]);
+            const [result] = await pool.execute('DELETE FROM SCHOOL_YEAR WHERE id = ?', [id]);
 
             if (result.affectedRows === 0) {
                 return SchoolYearController.handleError(res, new Error('Année non trouvée'), 'Année scolaire non trouvée.', 404);
@@ -121,7 +121,7 @@ class SchoolYearController {
     static async getSchoolYearById(req, res){
         const { id } = req.params;
         try {
-            const [result] = await pool.execute('SELECT * FROM school_year WHERE id = ?', [id]);
+            const [result] = await pool.execute('SELECT * FROM SCHOOL_YEAR WHERE id = ?', [id]);
 
             if (result.affectedRows === 0) {
                 return SchoolYearController.handleError(res, new Error('Année non trouvée'), 'Année scolaire non trouvée.', 404);

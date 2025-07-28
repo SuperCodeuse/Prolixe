@@ -27,7 +27,7 @@ class AttributionController {
                 [school_year_id, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null]
             );
             // Fetch the newly created record with the join
-            const [created] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN school_year sy ON a.school_year_id = sy.id WHERE a.id = ?', [result.insertId]);
+            const [created] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN SCHOOL_YEAR sy ON a.school_year_id = sy.id WHERE a.id = ?', [result.insertId]);
             res.status(201).json({ success: true, message: 'Attribution créée.', data: created[0] });
         } catch (error) {
             console.error(error);
@@ -46,7 +46,7 @@ class AttributionController {
             if (result.affectedRows === 0) {
                 return res.status(404).json({ success: false, message: 'Attribution non trouvée.' });
             }
-            const [updated] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN school_year sy ON a.school_year_id = sy.id WHERE a.id = ?', [id]);
+            const [updated] = await pool.execute('SELECT a.* FROM ATTRIBUTIONS a JOIN SCHOOL_YEAR sy ON a.school_year_id = sy.id WHERE a.id = ?', [id]);
             res.json({ success: true, message: 'Attribution mise à jour.', data: updated[0] });
         } catch (error) {
             console.error(error.message);

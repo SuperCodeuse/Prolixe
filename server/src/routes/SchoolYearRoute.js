@@ -1,7 +1,7 @@
 // backend/routes/schoolYearRoutes.js
 const express = require('express');
 const router = express.Router();
-const SchoolYearController = require('../controllers/schoolYearController');
+const SchoolYearController = require('../controllers/SchoolYearController');
 
 // ======================================================
 // Définition des routes pour la ressource "school-years"

@@ -43,7 +43,7 @@ class JournalController {
                 const [rows] = await connection.execute(`
                     SELECT j.id, j.name, j.is_archived, j.is_current, j.school_year_id
                     FROM JOURNAL j
-                    JOIN school_year sy ON j.school_year_id = sy.id
+                    JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
                     ORDER BY start_date DESC
                 `);
                 return rows;
@@ -84,7 +84,7 @@ class JournalController {
             const [newJournal] = await connection.execute(`
                 SELECT j.*
                 FROM JOURNAL j
-                JOIN school_year sy ON j.school_year_id = sy.id
+                JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
                 WHERE j.id = ?
             `, [newJournalId]);
 
@@ -209,7 +209,7 @@ class JournalController {
                 const [rows] = await connection.execute(`
                     SELECT j.*
                     FROM JOURNAL j
-                    JOIN school_year sy ON j.school_year_id = sy.id
+                    JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
                     WHERE j.is_current = 1 LIMIT 1
                 `);
                 return rows;
@@ -229,7 +229,7 @@ class JournalController {
                 const [rows] = await connection.execute(`
                     SELECT j.*
                     FROM JOURNAL j
-                    JOIN school_year sy ON j.school_year_id = sy.id
+                    JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
                     WHERE j.is_archived = 1 
                     ORDER BY start_date DESC
                 `);
