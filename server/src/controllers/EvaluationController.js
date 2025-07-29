@@ -213,7 +213,7 @@ exports.getEvaluationTemplates = async (req, res) => {
         const query = `
             SELECT e.id, e.name, j.name as journal_name
             FROM EVALUATIONS e
-                     JOIN journal j ON e.journal_id = j.id
+                     JOIN JOURNAL j ON e.journal_id = j.id
             ORDER BY j.name ASC, e.name ASC;
         `;
         const [templates] = await db.query(query);
