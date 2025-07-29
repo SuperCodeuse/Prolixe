@@ -1,0 +1,54 @@
+// Importations des variables de couleurs et mixins de l'application
+@import '../../App.scss';
+
+.conseil-de-classe-container {
+  padding: 2rem;
+  background-color: #f9f9f9; // Fond léger pour la page
+  border-radius: 8px;
+
+  h2 {
+    color: #333; // Couleur de titre principale
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2; // Fond pour les en-têtes
+      font-weight: 600;
+      color: #555;
+    }
+
+    tbody tr {
+      &:hover {
+        background-color: #f1f1f1; // Effet au survol
+      }
+    }
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical; // Permet de redimensionner verticalement
+
+    &:focus {
+      border-color: #007bff; // Couleur de focus (à adapter)
+      outline: none;
+    }
+  }
+
+}

@@ -228,6 +228,7 @@ app.use('/api/journal', require('./routes/JournalRoute'));
 app.use('/api/attributions', require('./routes/AttributionRoute'));
 app.use('/api/evaluations', require('./routes/EvaluationRoute'));
 app.use('/api/students', require('./routes/StudentRoute'));
+app.use('/api/conseilDeClasse', require('./routes/ConseilRoutes'));
 app.use('/api/notes', require('./routes/NoteRoute'));
 app.use('/api/school-years', require('./routes/SchoolYearRoute'));
 

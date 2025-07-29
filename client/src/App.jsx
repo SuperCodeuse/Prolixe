@@ -15,6 +15,7 @@ import CorrectionView from "./components/Correction/CorrectionView"; // Ajout de
 
 
 import './App.scss';
+import ConseilDeClasse from "./components/cc/conseilClasse";
 
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     const breakpoint = 1600;
@@ -34,6 +35,7 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
                     <Route path="/journal" element={<Journal />} />
                     <Route path="/horaire" element={<Horaire />} />
                     <Route path="/correction" element={<CorrectionList />} />
+                    <Route path="/conseilDeClasse" element={<ConseilDeClasse />} />
                     <Route path="/correction/:evaluationId" element={<CorrectionView />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />

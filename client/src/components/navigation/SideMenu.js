@@ -22,6 +22,7 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
         { id: 'journal', label: 'Journal', icon: '📝', path: '/journal' },
         { id: 'horaire', label: 'Emploi du temps', icon: '⏰', path: '/horaire' },
         { id: 'correction', label: 'Correction', icon: '✅', path: '/correction' },
+        { id: 'conseilDeClasse', label: 'Conseil de classe', icon: '👥', path: '/conseilDeClasse' },
         { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' }
     ];
 
