@@ -108,11 +108,15 @@ class ConseilDeClasseController {
      */
     static async updateStudentConseil(req, res) {
         const { student_id } = req.params;
-        const { notes, decision } = req.body;
+        const { notes, decision, journal_id } = req.body;
 
         // Validation de base des entrées
         if (!student_id || isNaN(parseInt(student_id))) {
             return ConseilDeClasseController.handleError(res, new Error('ID étudiant invalide'), 'ID étudiant invalide.', 400);
+        }
+
+        if (!journal_id || isNaN(parseInt(journal_id))) {
+            return ConseilDeClasseController.handleError(res, new Error('ID du journal manquant ou invalide'), 'ID du journal requis.', 400);
         }
 
         const validationErrors = ConseilDeClasseController.validateConseilData({ notes, decision });
@@ -129,8 +133,8 @@ class ConseilDeClasseController {
             await ConseilDeClasseController.withConnection(async (connection) => {
                 // 1. Vérifier si un enregistrement existe déjà
                 const [existing] = await connection.execute(
-                    'SELECT id FROM CONSEIL_CLASS WHERE student_id = ?', // Potentiellement ajouter AND journal_id = ?
-                    [student_id]
+                    'SELECT id FROM CONSEIL_CLASS WHERE student_id = ? AND journal_id = ?',
+                    [student_id, journal_id]
                 );
 
                 if (existing.length > 0) {
@@ -154,10 +158,10 @@ class ConseilDeClasseController {
                 } else {
                     // --- INSERT : Création d'un nouvel enregistrement ---
                     const query = `
-                        INSERT INTO CONSEIL_CLASS (student_id, notes, decision) 
-                        VALUES (?, ?, ?)
+                        INSERT INTO CONSEIL_CLASS (student_id, journal_id, notes, decision)
+                        VALUES (?, ?, ?, ?)
                     `;
-                    // On utilise des valeurs par défaut pour les champs non fournis
+
                     await connection.execute(query, [student_id, notes || '', decision || 'AO-A']);
                 }
             });
