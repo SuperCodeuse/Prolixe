@@ -1,25 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getConseilDataForClass, saveStudentConseil } from '../services/ConseilClasseService';
 import { debounce } from 'lodash';
+// On importe le hook useJournal pour obtenir le journalId directement si ce n'est pas passé en paramètre
+// mais la meilleure pratique est de le passer en paramètre pour un couplage faible.
+import { useJournal } from './useJournal';
 
 /**
  * Hook personnalisé pour gérer la logique du conseil de classe.
  * @param {number} classId - L'ID de la classe à gérer.
+ * @param {number} journalId - L'ID du journal (année scolaire) en cours.
  */
-export const useConseilDeClasse = (classId) => {
+export const useConseilDeClasse = (classId, journalId) => { // MODIFIÉ : Ajout de journalId en paramètre
     const [students, setStudents] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Initialisé à false, se met à true seulement si on charge
     const [error, setError] = useState(null);
-    const [savingStatus, setSavingStatus] = useState({}); // Pour suivre l'état de sauvegarde par élève
+    const [savingStatus, setSavingStatus] = useState({});
 
     // Fonction pour charger les données initiales
     useEffect(() => {
-        if (!classId) return;
+        // MODIFIÉ : Ne rien faire si classId ou journalId sont manquants
+        if (!classId || !journalId) {
+            setStudents([]); // Vider les étudiants si pas de classe/journal sélectionné
+            return;
+        }
 
         const fetchStudents = async () => {
             try {
                 setLoading(true);
-                const response = await getConseilDataForClass(classId);
+                setError(null); // Réinitialiser les erreurs précédentes
+                // Le service pourrait aussi avoir besoin du journalId, à adapter si nécessaire
+                const response = await getConseilDataForClass(classId, journalId);
                 if (response.success) {
                     setStudents(response.data);
                 } else {
@@ -33,22 +43,21 @@ export const useConseilDeClasse = (classId) => {
         };
 
         fetchStudents();
-    }, [classId]); // Se déclenche quand classId change
+    }, [classId, journalId]); // MODIFIÉ : Le hook réagit aussi au changement de journal
 
     // Sauvegarde les modifications pour un étudiant spécifique
     const saveChanges = async (studentId, data) => {
         setSavingStatus(prev => ({ ...prev, [studentId]: 'saving' }));
         try {
-            await saveStudentConseil(studentId, data);
+            await saveStudentConseil(studentId, data); // La data contient maintenant le journal_id
             setSavingStatus(prev => ({ ...prev, [studentId]: 'saved' }));
-            // Cache l'indicateur "sauvegardé" après 2 secondes
             setTimeout(() => setSavingStatus(prev => ({ ...prev, [studentId]: null })), 2000);
         } catch (err) {
             setSavingStatus(prev => ({ ...prev, [studentId]: 'error' }));
         }
     };
 
-    // Crée une version "debounce" de la sauvegarde pour ne pas surcharger le serveur
+    // La fonction debounced n'a pas besoin de changer
     const debouncedSaveChanges = useCallback(debounce(saveChanges, 1000), []);
 
     // Gère les changements sur les inputs (notes et décision)
@@ -59,9 +68,16 @@ export const useConseilDeClasse = (classId) => {
         );
         setStudents(updatedStudents);
 
-        // Prépare et sauvegarde les données modifiées
-        const dataToSave = { [field]: value };
-        debouncedSaveChanges(studentId, dataToSave);
+        // CORRECTION PRINCIPALE : On ajoute journal_id aux données à sauvegarder
+        const dataToSave = {
+            [field]: value,
+            journal_id: journalId, // Ajout de la clé requise par le backend
+        };
+
+        // On ne sauvegarde que si journalId est valide
+        if (journalId) {
+            debouncedSaveChanges(studentId, dataToSave);
+        }
     };
 
     return { students, loading, error, savingStatus, handleStudentChange };

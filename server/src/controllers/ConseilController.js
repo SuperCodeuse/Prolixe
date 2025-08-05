@@ -162,7 +162,7 @@ class ConseilDeClasseController {
                         VALUES (?, ?, ?, ?)
                     `;
 
-                    await connection.execute(query, [student_id, notes || '', decision || 'AO-A']);
+                    await connection.execute(query, [student_id, journal_id, notes || '', decision || 'AO-A']);
                 }
             });
 

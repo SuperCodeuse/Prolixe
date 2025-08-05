@@ -97,7 +97,7 @@ const ConseilDeClasse = () => {
 
     // 3. Récupération des données (hooks)
     const { classes, loading: loadingClasses, error: errorClasses } = useClasses(journalId);
-    const { students, loading: loadingStudents, error: errorStudents, savingStatus, handleStudentChange } = useConseilDeClasse(selectedClassId);
+    const { students, loading: loadingStudents, error: errorStudents, savingStatus, handleStudentChange } = useConseilDeClasse(selectedClassId, journalId);
 
     // 4. Memoization de l'affichage du contenu pour éviter les re-calculs inutiles
     const content = useMemo(() => {
