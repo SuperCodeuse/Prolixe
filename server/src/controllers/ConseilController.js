@@ -110,6 +110,7 @@ class ConseilDeClasseController {
         const { student_id } = req.params;
         const { notes, decision } = req.body;
 
+        // Validation de base des entrées
         if (!student_id || isNaN(parseInt(student_id))) {
             return ConseilDeClasseController.handleError(res, new Error('ID étudiant invalide'), 'ID étudiant invalide.', 400);
         }
@@ -119,33 +120,61 @@ class ConseilDeClasseController {
             return ConseilDeClasseController.handleError(res, new Error('Données invalides'), 'Données invalides.', 400, validationErrors);
         }
 
-        try {
-            const query = `
-                INSERT INTO conseil_class (student_id, notes, decision)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    notes = VALUES(notes),
-                    decision = VALUES(decision)
-            `;
+        // On s'assure qu'il y a au moins une donnée à mettre à jour
+        if (notes === undefined && decision === undefined) {
+            return ConseilDeClasseController.handleError(res, new Error('Aucune donnée à mettre à jour'), 'Aucune donnée fournie pour la mise à jour.', 400);
+        }
 
+        try {
             await ConseilDeClasseController.withConnection(async (connection) => {
-                await connection.execute(query, [student_id, notes, decision]);
+                // 1. Vérifier si un enregistrement existe déjà
+                const [existing] = await connection.execute(
+                    'SELECT id FROM CONSEIL_CLASS WHERE student_id = ?', // Potentiellement ajouter AND journal_id = ?
+                    [student_id]
+                );
+
+                if (existing.length > 0) {
+                    const fieldsToUpdate = [];
+                    const values = [];
+
+                    if (notes !== undefined) {
+                        fieldsToUpdate.push('notes = ?');
+                        values.push(notes);
+                    }
+                    if (decision !== undefined) {
+                        fieldsToUpdate.push('decision = ?');
+                        values.push(decision);
+                    }
+
+                    const query = `UPDATE CONSEIL_CLASS SET ${fieldsToUpdate.join(', ')} WHERE id = ?`;
+                    values.push(existing[0].id);
+
+                    await connection.execute(query, values);
+
+                } else {
+                    // --- INSERT : Création d'un nouvel enregistrement ---
+                    const query = `
+                        INSERT INTO CONSEIL_CLASS (student_id, notes, decision) 
+                        VALUES (?, ?, ?)
+                    `;
+                    // On utilise des valeurs par défaut pour les champs non fournis
+                    await connection.execute(query, [student_id, notes || '', decision || 'AO-A']);
+                }
             });
 
             res.status(200).json({
                 success: true,
                 message: 'Avis du conseil de classe sauvegardé avec succès.',
-                data: { student_id, notes, decision }
+                data: { student_id, ...req.body }
             });
 
         } catch (error) {
-            // Gère le cas où l'étudiant n'existerait pas (clé étrangère)
+            // Gère le cas où l'étudiant n'existe pas dans la table STUDENTS
             if (error.code === 'ER_NO_REFERENCED_ROW_2') {
                 return ConseilDeClasseController.handleError(res, error, 'L\'étudiant spécifié n\'existe pas.', 404);
             }
             ConseilDeClasseController.handleError(res, error, 'Erreur lors de la sauvegarde de l\'avis.');
         }
-    }
-}
+    }}
 
 module.exports = ConseilDeClasseController;
