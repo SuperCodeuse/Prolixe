@@ -49,6 +49,21 @@
         @include btn-secondary-base;
         padding: 0.5rem 1rem;
         font-size: 0.9rem;
+
+        &:disabled {
+          background-color: var(--bg-dark-tertiary);
+          color: var(--text-muted);
+          border-color: var(--border-color);
+          opacity: 0.6;
+          cursor: not-allowed; // Curseur "interdit"
+          transform: none; // Annule les effets de survol
+          box-shadow: none; // Annule les ombres de survol
+        }
+
+        &:disabled:hover {
+          background: var(--bg-dark-tertiary);
+          border-color: var(--border-color);
+        }
       }
 
       @media (max-width: 768px) {
