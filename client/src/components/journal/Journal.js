@@ -40,6 +40,8 @@ const JournalView = () => {
     const [nextCourseSlot, setNextCourseSlot] = useState(null);
     const [copyToNextSlot, setCopyToNextSlot] = useState(false);
     const [courseStatus, setCourseStatus] = useState('given');
+    // --- AJOUT : État pour la case à cocher "Annuler toute la journée" ---
+    const [cancelEntireDay, setCancelEntireDay] = useState(false);
 
     const isArchived = currentJournal?.is_archived;
 
@@ -113,22 +115,23 @@ const JournalView = () => {
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
         debouncedSave(entryData);
 
-        // --- MODIFICATION : Propagation du libellé pour les vacances ---
-        if (courseStatus === 'holiday') {
-            const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
-            const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
-            allCoursesForThisDay.forEach(courseToUpdate => {
-                if (courseToUpdate.id !== selectedCourseForJournal.id) {
-                    const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
-                    debouncedSave({
-                        id: existingEntry?.id || null,
-                        schedule_id: courseToUpdate.id,
-                        date: selectedDayForJournal.key,
-                        planned_work: '',
-                        actual_work: '[HOLIDAY]',
-                        notes: value // On utilise la nouvelle note pour tous
-                    });
-                }
+        const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
+        const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
+        const otherCourses = allCoursesForThisDay.filter(course => course.id !== selectedCourseForJournal.id);
+
+        // Propagation du libellé si la case correspondante est cochée
+        if ((courseStatus === 'holiday' || (courseStatus === 'cancelled' && cancelEntireDay)) && field === 'notes') {
+            const statusToPropagate = courseStatus === 'holiday' ? '[HOLIDAY]' : '[CANCELLED]';
+            otherCourses.forEach(courseToUpdate => {
+                const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
+                debouncedSave({
+                    id: existingEntry?.id || null,
+                    schedule_id: courseToUpdate.id,
+                    date: selectedDayForJournal.key,
+                    planned_work: '',
+                    actual_work: statusToPropagate,
+                    notes: value
+                });
             });
         }
 
@@ -183,6 +186,31 @@ const JournalView = () => {
         }
     };
 
+    // --- AJOUT : Handler pour la case à cocher d'annulation de journée ---
+    const handleCancelEntireDayChange = (e) => {
+        const isChecked = e.target.checked;
+        setCancelEntireDay(isChecked);
+
+        if (isChecked) {
+            const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
+            const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
+            const otherCoursesToUpdate = allCoursesForThisDay.filter(course => course.id !== selectedCourseForJournal.id);
+
+            otherCoursesToUpdate.forEach(courseToUpdate => {
+                const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
+                debouncedSave({
+                    id: existingEntry?.id || null,
+                    schedule_id: courseToUpdate.id,
+                    date: selectedDayForJournal.key,
+                    planned_work: '',
+                    actual_work: '[CANCELLED]',
+                    notes: journalForm.notes // On utilise la note actuelle
+                });
+            });
+            if (otherCoursesToUpdate.length > 0) success(`Toute la journée a été marquée comme "Annulée".`);
+        }
+    };
+
     const handleCopyToNextSlotChange = async (e) => {
         if (isArchived) return;
         const isChecked = e.target.checked;
@@ -202,6 +230,7 @@ const JournalView = () => {
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
         setSelectedDayForJournal(day);
+        setCancelEntireDay(false); // Réinitialiser la checkbox à chaque ouverture
         const entry = getJournalEntry(course.id, day.key);
         let status = 'given';
         if (entry) {
@@ -345,6 +374,7 @@ const JournalView = () => {
                                             {day.isHoliday ? (<div className="holiday-card"><span className="holiday-icon">🎉</span><span className="holiday-name">{day.holidayName}</span></div>) : (
                                                 <div className="day-courses-list">
                                                     {validCoursesForThisDay.length > 0 ? validCoursesForThisDay.map(courseInSchedule => {
+                                                        const classInfo = getClassInfo(courseInSchedule.classId); // Correction de la régression
                                                         const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
                                                         const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
                                                         const isExam = journalEntry?.actual_work === '[EXAM]';
@@ -358,7 +388,7 @@ const JournalView = () => {
                                                         return (
                                                             <div key={courseInSchedule.id}
                                                                  className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''} ${isManualHoliday ? 'is-holiday' : ''}`}
-                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, courseInSchedule.classLevel) }}
+                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, classInfo?.level) }} // Correction de la régression
                                                                  onClick={() => handleOpenJournalModal(courseInSchedule, day)} >
                                                                 {isManualHoliday ? (
                                                                     <div className="cancellation-display holiday-display"><span className="cancellation-icon">🌴</span><p className="cancellation-label">Vacances - Férié</p><p className="cancellation-reason">{specialStatusNote}</p></div>
@@ -368,7 +398,7 @@ const JournalView = () => {
                                                                     <div className="cancellation-display exam-display"><span className="cancellation-icon">✍️</span><p className="cancellation-label">EXAMEN</p><p className="cancellation-reason">{specialStatusNote}</p></div>
                                                                 ) : (
                                                                     <div className="course-summary">
-                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{courseInSchedule.className || 'Classe inconnue'}</span></div>
+                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div> {/* Correction de la régression */}
                                                                         <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
                                                                         {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}><span className="preview-icon">📝</span><p className="preview-text">{journalPreview.text}</p></div>)}
                                                                     </div>
@@ -414,7 +444,14 @@ const JournalView = () => {
                                     {nextCourseSlot && !isArchived && (<div className="form-group checkbox-group copy-next-group"><input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} /><label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label></div>)}
                                 </>
                             ) : courseStatus === 'cancelled' ? (
-                                <div className="form-group"><label>Raison de l'annulation</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/></div>
+                                // --- AJOUT : Case à cocher pour annuler toute la journée ---
+                                <>
+                                    <div className="form-group"><label>Raison de l'annulation</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/></div>
+                                    <div className="form-group checkbox-group">
+                                        <input type="checkbox" id="cancelEntireDay" checked={cancelEntireDay} onChange={handleCancelEntireDayChange} disabled={isArchived} />
+                                        <label htmlFor="cancelEntireDay">Annuler toute la journée</label>
+                                    </div>
+                                </>
                             ) : courseStatus === 'exam' ? (
                                 <div className="form-group"><label>Sujet de l'examen / Informations</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Sujet de l'examen, matériel autorisé..." rows="3" disabled={isArchived}/></div>
                             ) : (
