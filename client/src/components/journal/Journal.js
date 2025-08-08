@@ -112,36 +112,33 @@ const JournalView = () => {
         if (isArchived) return;
         const newFormState = { ...journalForm, [field]: value };
         setJournalForm(newFormState);
-        const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
+
+        let actualWorkToSave = (field === 'actual_work') ? value : newFormState.actual_work;
+        if (isInterro) {
+            actualWorkToSave = `[INTERRO] ${ (field === 'actual_work') ? value : newFormState.actual_work }`;
+        }
+
+        const entryData = { ...newFormState, id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, actual_work: actualWorkToSave };
         debouncedSave(entryData);
 
         const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
         const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
         const otherCourses = allCoursesForThisDay.filter(course => course.id !== selectedCourseForJournal.id);
 
-        // Propagation du libellé si la case correspondante est cochée
         if ((courseStatus === 'holiday' || (courseStatus === 'cancelled' && cancelEntireDay)) && field === 'notes') {
             const statusToPropagate = courseStatus === 'holiday' ? '[HOLIDAY]' : '[CANCELLED]';
             otherCourses.forEach(courseToUpdate => {
                 const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
-                debouncedSave({
-                    id: existingEntry?.id || null,
-                    schedule_id: courseToUpdate.id,
-                    date: selectedDayForJournal.key,
-                    planned_work: '',
-                    actual_work: statusToPropagate,
-                    notes: value
-                });
+                debouncedSave({ id: existingEntry?.id || null, schedule_id: courseToUpdate.id, date: selectedDayForJournal.key, planned_work: '', actual_work: statusToPropagate, notes: value });
             });
         }
 
         if (copyToNextSlot && nextCourseSlot) {
             const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
-            const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...newFormState };
+            const nextEntryData = { ...newFormState, id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, actual_work: actualWorkToSave };
             debouncedSave(nextEntryData);
         }
     };
-
     const handleStatusChange = (e) => {
         if (isArchived) return;
         const newStatus = e.target.value;
