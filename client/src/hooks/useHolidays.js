@@ -14,7 +14,7 @@ export const useHolidays = () => {
     // Charge les congés depuis le localStorage au démarrage
     useEffect(() => {
         try {
-            const storedData = localStorage.getItem(`${currentJournal.name}-schoolHolidays`);
+            const storedData = localStorage.getItem(`${currentJournal.id}-schoolHolidays`);
             if (storedData) {
                 setHolidays(JSON.parse(storedData));
             }

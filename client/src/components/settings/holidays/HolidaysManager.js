@@ -31,7 +31,7 @@ const HolidaysManager = () => {
                 }
 
                 // Stocker les données dans le localStorage
-                localStorage.setItem(`${currentJournal.name}-schoolHolidays`, JSON.stringify(holidays));
+                localStorage.setItem(`${currentJournal.id}-schoolHolidays`, JSON.stringify(holidays));
                 success(`Calendrier "${file.name}" importé avec succès !`);
 
             } catch (err) {

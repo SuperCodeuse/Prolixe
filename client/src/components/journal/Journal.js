@@ -1,5 +1,3 @@
-
-// client/src/components/journal/Journal.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './Journal.scss';
 import { useJournal } from '../../hooks/useJournal';
@@ -10,7 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import { useHolidays } from '../../hooks/useHolidays';
 import JournalPicker from './JournalPicker';
 import ConfirmModal from '../ConfirmModal';
-import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay, isAfter, isBefore, min, max } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Journal = () => {
@@ -25,7 +23,7 @@ const JournalView = () => {
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
     const { success, error: showError } = useToast();
-    const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
+    const { getHolidayForDate, holidays, loading: loadingHolidays } = useHolidays();
 
     // --- STATES ---
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
@@ -46,6 +44,33 @@ const JournalView = () => {
     const isArchived = currentJournal?.is_archived;
 
     // --- MEMOS & CALLBACKS ---
+
+    // Définition des limites du journal basées sur les congés
+    const journalBounds = useMemo(() => {
+        if (!holidays || holidays.length === 0) {
+            return null; // Si pas de données de congés, pas de limites
+        }
+        try {
+            // On prend toutes les dates de début et de fin des congés
+            const allDates = holidays.flatMap(h => [parseISO(h.start), parseISO(h.end)]);
+            // On trouve la plus petite et la plus grande date
+            const minDate = min(allDates);
+            const maxDate = max(allDates);
+            // On retourne le début de la semaine de la première date et de la dernière date
+            return {
+                start: startOfWeek(minDate, { weekStartsOn: 1 }),
+                end: startOfWeek(maxDate, { weekStartsOn: 1 })
+            };
+        } catch (e) {
+            console.error("Erreur lors du parsing des dates de congés:", e);
+            return null;
+        }
+    }, [holidays]);
+
+    // Détermination de l'état (activé/désactivé) des boutons de navigation
+    const isPrevDisabled = !journalBounds || !isAfter(currentWeekStart, journalBounds.start);
+    const isNextDisabled = !journalBounds || !isBefore(currentWeekStart, journalBounds.end);
+
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
     const assignmentTypes = ['Interro', 'Devoir', 'Projet', 'Examen', 'Autre'];
     const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday'}[dayName]||dayName),[]);
@@ -324,10 +349,10 @@ const JournalView = () => {
                     <h1>{currentJournal?.name}</h1>
                 </div>
                 <div className="week-navigation">
-                    <button className="btn-secondary" onClick={() => navigateWeek(-1)}>&lt; Précédent</button>
+                    <button className="btn-secondary" onClick={() => navigateWeek(-1)} disabled={isPrevDisabled}>&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
                     <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 4), 'dd/MM/yyyy', { locale: fr })}</span>
-                    <button className="btn-secondary" onClick={() => navigateWeek(1)}>Suivant &gt;</button>
+                    <button className="btn-secondary" onClick={() => navigateWeek(1)} disabled={isNextDisabled}>Suivant &gt;</button>
                 </div>
             </div>
             <div className="journal-content">
