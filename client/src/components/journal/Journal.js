@@ -317,7 +317,7 @@ const JournalView = () => {
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
-        if (isArchivé) return;
+        if (isArchived) return;
         if (!assignmentForm.class_id || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.due_date) {
             return showError('Veuillez remplir tous les champs obligatoires.');
         }
