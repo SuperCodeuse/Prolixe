@@ -51,7 +51,7 @@ export const useConseilDeClasse = (classId, journalId) => { // MODIFIÉ : Ajout 
         try {
             await saveStudentConseil(studentId, data); // La data contient maintenant le journal_id
             setSavingStatus(prev => ({ ...prev, [studentId]: 'saved' }));
-            setTimeout(() => setSavingStatus(prev => ({ ...prev, [studentId]: null })), 2000);
+            //setTimeout(() => setSavingStatus(prev => ({ ...prev, [studentId]: null })), 2000);
         } catch (err) {
             setSavingStatus(prev => ({ ...prev, [studentId]: 'error' }));
         }
