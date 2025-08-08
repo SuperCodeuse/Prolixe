@@ -45,12 +45,85 @@
     padding-bottom: 1rem;
   }
 
-  .student-selector {
-    @include form-group-base;
+  .form-group-student-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 2rem;
-    select {
-      font-size: 1.1rem;
-      padding: 0.8rem;
+
+    .student-selector {
+      flex-grow: 1;
+      select {
+        font-size: 1.1rem;
+        padding: 0.8rem;
+      }
+    }
+
+    .absent-toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+
+      label {
+        cursor: pointer;
+        font-size: 1rem;
+        color: var(--text-secondary);
+        position: relative;
+        padding-left: 1.75rem;
+        user-select: none;
+        transition: color 0.2s ease;
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 1.25rem;
+          height: 1.25rem;
+          border-radius: 4px;
+          background-color: var(--bg-dark-tertiary);
+          border: 2px solid var(--border-color);
+          transition: all 0.2s ease;
+        }
+
+        &::after {
+          content: '✔';
+          position: absolute;
+          left: 0.2rem;
+          top: 50%;
+          transform: translateY(-50%) scale(0);
+          font-size: 1rem;
+          font-weight: bold;
+          color: var(--text-light);
+          transition: transform 0.2s ease, color 0.2s ease;
+        }
+      }
+
+      input[type="checkbox"]:checked + label::before {
+        background-color: var(--accent-green);
+        border-color: var(--accent-green);
+      }
+
+      input[type="checkbox"]:checked + label::after {
+        transform: translateY(-50%) scale(1);
+      }
+
+      label:hover::before {
+        background-color: var(--bg-dark-blue);
+      }
+
+      input[type="checkbox"]:focus + label::before {
+        box-shadow: 0 0 0 3px var(--blue-transparent-sm);
+      }
     }
   }
 
@@ -106,6 +179,13 @@
       &.pass { border-color: #f59e0b99; color: var(--accent-orange); }
       &.success { border-color: #10b98199; color: var(--accent-green); }
       &.neutral { border-color: var(--border-color); }
+      &.absent {
+        background-color: var(--bg-dark-tertiary);
+        border-color: var(--text-gray);
+        color: var(--text-gray);
+        font-weight: normal;
+        pointer-events: none;
+      }
 
       &:focus {
         outline: none;
@@ -182,14 +262,14 @@
     }
 
     div {
-      min-height: 1.5em; // Assure que les lignes vides sont visibles
+      min-height: 1.5em;
     }
   }
 
   .comment-textarea {
     width: 100%;
     background-color: var(--bg-dark-blue);
-    border: 1px solid var(--accent-blue); // Bordure bleue pour indiquer le mode édition
+    border: 1px solid var(--accent-blue);
     color: #d1d5db;
     padding: 1rem;
     border-radius: 8px;
@@ -228,6 +308,7 @@
     &.fail { color: var(--red-danger); }
     &.pass { color: var(--accent-orange); }
     &.success { color: var(--accent-green); }
+    &.absent { color: var(--text-gray); }
   }
 
   .student-result-row {

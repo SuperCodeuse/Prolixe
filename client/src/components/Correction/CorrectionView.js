@@ -1,3 +1,4 @@
+// client/src/components/Correction/CorrectionView.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEvaluationForGrading, saveGrades } from '../../services/EvaluationService';
@@ -47,6 +48,7 @@ const CorrectionView = () => {
     const { success, error: showError } = useToast();
 
     const [editingCommentKey, setEditingCommentKey] = useState(null);
+    const [absentStudents, setAbsentStudents] = useState(new Set()); // CHANGEMENT : Nouvel état pour les élèves absents
 
     const fetchData = useCallback(async () => {
         if (!evaluationId) return;
@@ -65,11 +67,18 @@ const CorrectionView = () => {
                 const key = `${grade.student_id}-${grade.criterion_id}`;
                 acc[key] = {
                     score: grade.score,
-                    comment: grade.comment || ''
+                    comment: grade.comment || '',
                 };
                 return acc;
             }, {});
+
+            // CHANGEMENT : Initialiser l'état des élèves absents
+            const absentStudentsSet = new Set(data.grades
+                .filter(g => g.is_absent)
+                .map(g => g.student_id));
+
             setGrades(gradesObject);
+            setAbsentStudents(absentStudentsSet);
             setError('');
         } catch (err) {
             console.error(err);
@@ -99,6 +108,26 @@ const CorrectionView = () => {
             ...prev,
             [key]: { ...(prev[key] || { comment: '' }), score: newScore }
         }));
+
+        // CHANGEMENT : Si on saisit une note, on considère que l'élève n'est plus absent
+        setAbsentStudents(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(studentId);
+            return newSet;
+        });
+    };
+
+    // CHANGEMENT : Nouvelle fonction pour gérer l'absence globale
+    const handleAbsentToggle = (studentId, isAbsent) => {
+        setAbsentStudents(prev => {
+            const newSet = new Set(prev);
+            if (isAbsent) {
+                newSet.add(studentId);
+            } else {
+                newSet.delete(studentId);
+            }
+            return newSet;
+        });
     };
 
     const handleCommentChange = (studentId, criterionId, comment) => {
@@ -111,14 +140,24 @@ const CorrectionView = () => {
 
     const handleSave = async () => {
         setIsSaving(true);
-        const gradesToSave = Object.entries(grades).map(([key, value]) => {
-            const [student_id, criterion_id] = key.split('-');
-            return {
-                student_id: Number(student_id),
-                criterion_id: Number(criterion_id),
-                score: value.score === '' || value.score === null ? null : Number(value.score),
-                comment: value.comment || null
-            };
+
+        const gradesToSave = [];
+
+        students.forEach(student => {
+            const isStudentAbsent = absentStudents.has(student.id);
+
+            criteria.forEach(criterion => {
+                const key = `${student.id}-${criterion.id}`;
+                const gradeInfo = grades[key] || { score: null, comment: null };
+
+                gradesToSave.push({
+                    student_id: Number(student.id),
+                    criterion_id: Number(criterion.id),
+                    score: isStudentAbsent ? null : (gradeInfo.score === '' || gradeInfo.score === null ? null : Number(gradeInfo.score)),
+                    comment: isStudentAbsent ? null : (gradeInfo.comment || null),
+                    is_absent: isStudentAbsent
+                });
+            });
         });
 
         try {
@@ -131,7 +170,8 @@ const CorrectionView = () => {
         }
     };
 
-    const getGradeClass = (score, maxScore) => {
+    const getGradeClass = (score, maxScore, isAbsent) => {
+        if (isAbsent) return 'absent';
         if (score === null || score === undefined) return 'neutral';
         if (parseFloat(maxScore) === 0) return score < 0 ? 'fail' : 'neutral';
         const percentage = (score / maxScore) * 100;
@@ -143,14 +183,23 @@ const CorrectionView = () => {
     const studentTotals = useMemo(() => {
         const totals = {};
         students.forEach(student => {
-            totals[student.id] = criteria.reduce((total, criterion) => {
-                const gradeInfo = grades[`${student.id}-${criterion.id}`];
-                const score = gradeInfo?.score ?? 0;
-                return total + Number(score);
-            }, 0);
+            if (absentStudents.has(student.id)) { // CHANGEMENT : Vérifier l'état global
+                totals[student.id] = "-";
+            } else {
+                let totalScore = 0;
+                let hasScores = false;
+                criteria.forEach(criterion => {
+                    const gradeInfo = grades[`${student.id}-${criterion.id}`];
+                    if (gradeInfo?.score !== null && gradeInfo?.score !== undefined) {
+                        totalScore += Number(gradeInfo.score);
+                        hasScores = true;
+                    }
+                });
+                totals[student.id] = hasScores ? totalScore : 0;
+            }
         });
         return totals;
-    }, [students, criteria, grades]);
+    }, [students, criteria, grades, absentStudents]); // CHANGEMENT : Ajout de absentStudents
 
     const selectedStudentTotal = useMemo(() => studentTotals[selectedStudentId] || 0, [selectedStudentId, studentTotals]);
 
@@ -160,6 +209,9 @@ const CorrectionView = () => {
 
     const totalMaxScore = criteria.reduce((sum, c) => sum + (c.max_score > 0 ? parseFloat(c.max_score) : 0), 0);
     const selectedStudent = students.find(s => s.id === selectedStudentId);
+
+    // CHANGEMENT : Vérifier si l'élève sélectionné est absent
+    const isSelectedStudentAbsent = absentStudents.has(selectedStudentId);
 
     return (
         <div className="correction-view-focused">
@@ -177,7 +229,7 @@ const CorrectionView = () => {
             <div className="correction-layout">
                 <div className="student-correction-panel">
                     <h3>Correction de l'élève</h3>
-                    <div className="form-group">
+                    <div className="form-group-student-selector form-group checkbox-group">
                         <select
                             value={selectedStudentId || ''}
                             onChange={(e) => setSelectedStudentId(Number(e.target.value))}
@@ -187,6 +239,15 @@ const CorrectionView = () => {
                                 <option key={s.id} value={s.id}>{s.lastname} {s.firstname}</option>
                             ))}
                         </select>
+                        <div className="absent-toggle-container">
+                            <input
+                                type="checkbox"
+                                id={`absent-toggle`}
+                                checked={isSelectedStudentAbsent}
+                                onChange={(e) => handleAbsentToggle(selectedStudentId, e.target.checked)}
+                            />
+                            <label htmlFor={`absent-toggle`}>Absent</label>
+                        </div>
                     </div>
 
                     {selectedStudent && (
@@ -204,13 +265,14 @@ const CorrectionView = () => {
                                             <div className="grade-input-wrapper">
                                                 <input
                                                     type="number"
-                                                    className={`grade-input ${getGradeClass(gradeInfo.score, criterion.max_score)}`}
-                                                    value={gradeInfo.score ?? ''}
+                                                    className={`grade-input ${getGradeClass(gradeInfo.score, criterion.max_score, isSelectedStudentAbsent)}`}
+                                                    value={isSelectedStudentAbsent ? '-' : gradeInfo.score ?? ''}
                                                     placeholder="-"
                                                     onChange={(e) => handleGradeChange(selectedStudent.id, criterion.id, e.target.value, criterion.max_score)}
                                                     max={isMalus ? undefined : criterion.max_score}
                                                     min={isMalus ? undefined : "0"}
                                                     step="0.5"
+                                                    disabled={isSelectedStudentAbsent} // Désactiver l'input si l'élève est absent
                                                 />
                                                 <span className="max-score">/ {criterion.max_score}</span>
                                             </div>
@@ -224,13 +286,14 @@ const CorrectionView = () => {
                                                     onChange={(e) => handleCommentChange(selectedStudent.id, criterion.id, e.target.value)}
                                                     autoFocus
                                                     onBlur={() => setEditingCommentKey(null)}
+                                                    disabled={isSelectedStudentAbsent}
                                                 />
                                             ) : (
-                                                <div className="comment-display-wrapper" onClick={() => setEditingCommentKey(key)}>
+                                                <div className="comment-display-wrapper" onClick={!isSelectedStudentAbsent ? () => setEditingCommentKey(key) : undefined}>
                                                     {gradeInfo.comment ? (
                                                         <CommentDisplay text={gradeInfo.comment} />
                                                     ) : (
-                                                        <button type="button" className="btn-add-comment">
+                                                        <button type="button" className="btn-add-comment" disabled={isSelectedStudentAbsent}>
                                                             + Ajouter un commentaire
                                                         </button>
                                                     )}
@@ -242,8 +305,8 @@ const CorrectionView = () => {
                             })}
                             <div className="student-total-row">
                                 <span>Total de l'élève</span>
-                                <span className={`total-score ${getGradeClass(selectedStudentTotal, totalMaxScore)}`}>
-                                    {selectedStudentTotal.toFixed(2)} / {totalMaxScore}
+                                <span className={`total-score ${getGradeClass(selectedStudentTotal, totalMaxScore, isSelectedStudentAbsent)}`}>
+                                    {isSelectedStudentAbsent ? '-' : selectedStudentTotal.toFixed(2)} / {totalMaxScore}
                                 </span>
                             </div>
                         </div>
@@ -256,8 +319,8 @@ const CorrectionView = () => {
                         {students.map(student => (
                             <div className="student-result-row" key={student.id}>
                                 <span className="student-name">{student.lastname} {student.firstname}</span>
-                                <span className={`total-score ${getGradeClass(studentTotals[student.id], totalMaxScore)}`}>
-                                    {studentTotals[student.id].toFixed(2)}
+                                <span className={`total-score ${getGradeClass(studentTotals[student.id], totalMaxScore, studentTotals[student.id] === '-')}`}>
+                                    {studentTotals[student.id] === '-' ? '-' : studentTotals[student.id].toFixed(2)}
                                 </span>
                             </div>
                         ))}

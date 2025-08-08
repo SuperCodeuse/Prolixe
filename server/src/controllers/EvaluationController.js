@@ -100,9 +100,8 @@ exports.getEvaluationForGrading = async (req, res) => {
         const [criteria] = await db.query('SELECT * FROM EVALUATION_CRITERIA WHERE evaluation_id = ? ORDER BY id', [id]);
         const [students] = await db.query('SELECT * FROM STUDENTS WHERE class_id = ? ORDER BY lastname, firstname', [evaluation.class_id]);
 
-        // MODIFIÉ : On récupère aussi les commentaires
         const [grades] = await db.query(
-            `SELECT sg.student_id, sg.criterion_id, sg.score, sg.comment
+            `SELECT sg.student_id, sg.criterion_id, sg.score, sg.comment, sg.is_absent
              FROM STUDENT_GRADES sg
              JOIN EVALUATION_CRITERIA ec ON sg.criterion_id = ec.id
              WHERE ec.evaluation_id = ?`,
@@ -130,12 +129,11 @@ exports.saveGrades = async (req, res) => {
         await connection.beginTransaction();
 
         for (const grade of grades) {
-            // MODIFIÉ : La requête gère maintenant la colonne `comment`
             await connection.query(
-                `INSERT INTO STUDENT_GRADES (student_id, criterion_id, score, comment)
-                 VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE score = VALUES(score), comment = VALUES(comment)`,
-                [grade.student_id, grade.criterion_id, grade.score, grade.comment || null]
+                `INSERT INTO STUDENT_GRADES (student_id, criterion_id, score, comment, is_absent)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE score = VALUES(score), comment = VALUES(comment), is_absent = VALUES(is_absent)`,
+                [grade.student_id, grade.criterion_id, grade.score, grade.comment || null, grade.is_absent]
             );
         }
 
