@@ -239,8 +239,9 @@ const JournalView = () => {
     const handleOpenJournalModal = useCallback((course, day) => {
         setSelectedCourseForJournal(course);
         setSelectedDayForJournal(day);
-        setCancelEntireDay(false); // Réinitialiser la checkbox à chaque ouverture
+        setCancelEntireDay(false);
         const entry = getJournalEntry(course.id, day.key);
+        setIsInterro(entry?.actual_work?.startsWith('[INTERRO]') || false);
         let status = 'given';
         if (entry) {
             if (entry.actual_work === '[CANCELLED]') status = 'cancelled';
@@ -476,9 +477,17 @@ const JournalView = () => {
                                     <option value="holiday">Vacances / Férié</option>
                                 </select>
                             </div>
+                            {/* --- MODIFICATION ICI --- */}
+                            {/* On affiche "Travail Prévu" si le cours est 'given' OU 'cancelled' */}
+                            {(courseStatus === 'given' || courseStatus === 'cancelled') && (
+                                <div className="form-group">
+                                    <label>Travail Prévu:</label>
+                                    <textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3" disabled={isArchived}/>
+                                </div>
+                            )}
+
                             {courseStatus === 'given' ? (
                                 <>
-                                    <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3" disabled={isArchived}/></div>
                                     <div className="form-group">
                                         <label>Travail Effectué:</label>
                                         <textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3" disabled={isArchived}/>
@@ -492,7 +501,7 @@ const JournalView = () => {
                                 </>
                             ) : courseStatus === 'cancelled' ? (
                                 <>
-                                    <div className="form-group"><label>Raison de l'annulation</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/></div>
+                                    <div className="form-group"><label>Raison de l'annulation (Notes)</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/></div>
                                     <div className="form-group checkbox-group">
                                         <input type="checkbox" id="cancelEntireDay" checked={cancelEntireDay} onChange={handleCancelEntireDayChange} disabled={isArchived} />
                                         <label htmlFor="cancelEntireDay">Annuler toute la journée</label>
@@ -500,7 +509,7 @@ const JournalView = () => {
                                 </>
                             ) : courseStatus === 'exam' ? (
                                 <div className="form-group"><label>Sujet de l'examen / Informations</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Sujet de l'examen, matériel autorisé..." rows="3" disabled={isArchived}/></div>
-                            ) : (
+                            ) : ( // courseStatus === 'holiday'
                                 <div className="form-group"><label>Motif (Jour blanc, etc.)</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Jour blanc, Fête de l'école..." rows="3" disabled={isArchived}/></div>
                             )}
                         </div>
