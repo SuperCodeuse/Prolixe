@@ -48,15 +48,12 @@ const JournalView = () => {
     // Définition des limites du journal basées sur les congés
     const journalBounds = useMemo(() => {
         if (!holidays || holidays.length === 0) {
-            return null; // Si pas de données de congés, pas de limites
+            return null;
         }
         try {
-            // On prend toutes les dates de début et de fin des congés
             const allDates = holidays.flatMap(h => [parseISO(h.start), parseISO(h.end)]);
-            // On trouve la plus petite et la plus grande date
             const minDate = min(allDates);
             const maxDate = max(allDates);
-            // On retourne le début de la semaine de la première date et de la dernière date
             return {
                 start: startOfWeek(minDate, { weekStartsOn: 1 }),
                 end: startOfWeek(maxDate, { weekStartsOn: 1 })
@@ -74,6 +71,19 @@ const JournalView = () => {
     const closeConfirmModal = useCallback(() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null }), []);
     const assignmentTypes = ['Interro', 'Devoir', 'Projet', 'Examen', 'Autre'];
     const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday'}[dayName]||dayName),[]);
+
+    // --- AJOUT : Fonctions pour naviguer au début et à la fin ---
+    const goToStart = useCallback(() => {
+        if (journalBounds) {
+            setCurrentWeekStart(journalBounds.start);
+        }
+    }, [journalBounds]);
+
+    const goToEnd = useCallback(() => {
+        if (journalBounds) {
+            setCurrentWeekStart(journalBounds.end);
+        }
+    }, [journalBounds]);
 
     const weekDays = useMemo(() => Array.from({ length: 5 }).map((_, i) => {
         const date = addDays(currentWeekStart, i);
@@ -145,7 +155,6 @@ const JournalView = () => {
             const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
             debouncedSave(entryData);
 
-            // Appliquer à tous les autres cours de la même classe ce jour-là
             const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
             const coursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
             const otherCoursesOfSameClass = coursesForThisDay.filter(c => c.classId === selectedCourseForJournal.classId && c.id !== selectedCourseForJournal.id);
@@ -308,7 +317,7 @@ const JournalView = () => {
 
     const handleSaveAssignment = useCallback(async (e) => {
         e.preventDefault();
-        if (isArchived) return;
+        if (isArchivé) return;
         if (!assignmentForm.class_id || !assignmentForm.subject || !assignmentForm.type || !assignmentForm.due_date) {
             return showError('Veuillez remplir tous les champs obligatoires.');
         }
@@ -348,11 +357,14 @@ const JournalView = () => {
                 <div className="journal-header-left">
                     <h1>{currentJournal?.name}</h1>
                 </div>
+                {/* --- MODIFICATION : Ajout des boutons << et >> --- */}
                 <div className="week-navigation">
-                    <button className="btn-secondary" onClick={() => navigateWeek(-1)} disabled={isPrevDisabled}>&lt; Précédent</button>
+                    <button className="btn-secondary" onClick={goToStart} disabled={isPrevDisabled} title="Aller au début">&lt;&lt;</button>
+                    <button className="btn-secondary" onClick={() => navigateWeek(-1)} disabled={isPrevDisabled} title="Semaine précédente">&lt; Précédent</button>
                     <button className="btn-today" onClick={goToToday}>Aujourd'hui</button>
                     <span>{format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} - {format(addDays(currentWeekStart, 4), 'dd/MM/yyyy', { locale: fr })}</span>
-                    <button className="btn-secondary" onClick={() => navigateWeek(1)} disabled={isNextDisabled}>Suivant &gt;</button>
+                    <button className="btn-secondary" onClick={() => navigateWeek(1)} disabled={isNextDisabled} title="Semaine suivante">Suivant &gt;</button>
+                    <button className="btn-secondary" onClick={goToEnd} disabled={isNextDisabled} title="Aller à la fin">&gt;&gt;</button>
                 </div>
             </div>
             <div className="journal-content">
