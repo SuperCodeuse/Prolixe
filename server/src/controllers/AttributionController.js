@@ -23,7 +23,7 @@ class AttributionController {
         }
         try {
             const [result] = await pool.execute(
-                'INSERT INTO attributions (school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, class) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO ATTRIBUTIONS (school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, class) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [school_year_id, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null]
             );
             // Fetch the newly created record with the join
@@ -40,7 +40,7 @@ class AttributionController {
         const { school_year_id, school_name, start_date, end_date, esi_hours, ess_hours, className } = req.body;
         try {
             const [result] = await pool.execute(
-                'UPDATE attributions SET school_year_id = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ?, class = ? WHERE id = ?',
+                'UPDATE ATTRIBUTIONS SET school_year_id = ?, school_name = ?, start_date = ?, end_date = ?, esi_hours = ?, ess_hours = ?, class = ? WHERE id = ?',
                 [school_year_id, school_name, start_date, end_date, esi_hours || 0, ess_hours || 0, className || null, id]
             );
             if (result.affectedRows === 0) {
