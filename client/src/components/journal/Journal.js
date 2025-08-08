@@ -40,8 +40,8 @@ const JournalView = () => {
     const [nextCourseSlot, setNextCourseSlot] = useState(null);
     const [copyToNextSlot, setCopyToNextSlot] = useState(false);
     const [courseStatus, setCourseStatus] = useState('given');
-    // --- AJOUT : État pour la case à cocher "Annuler toute la journée" ---
     const [cancelEntireDay, setCancelEntireDay] = useState(false);
+    const [isInterro, setIsInterro] = useState(false);
 
     const isArchived = currentJournal?.is_archived;
 
@@ -211,6 +211,18 @@ const JournalView = () => {
         }
     };
 
+    const handleIsInterroChange = (e) => {
+        const isChecked = e.target.checked;
+        setIsInterro(isChecked);
+
+        const currentActualWork = journalForm.actual_work.replace('[INTERRO]', '').trim();
+        const newActualWork = isChecked ? `[INTERRO] ${currentActualWork}` : currentActualWork;
+
+        const updatedForm = { ...journalForm, actual_work: newActualWork };
+        const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...updatedForm };
+        debouncedSave(entryData);
+    };
+
     const handleCopyToNextSlotChange = async (e) => {
         if (isArchived) return;
         const isChecked = e.target.checked;
@@ -362,11 +374,7 @@ const JournalView = () => {
                                 const dayKeyForSchedule = day.dayOfWeekKey;
                                 const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
                                 const validCoursesForThisDay = coursesForThisDay.filter(course => course.classId != null);
-
-                                if (validCoursesForThisDay.length === 0 && !day.isHoliday) {
-                                    return null;
-                                }
-
+                                if (validCoursesForThisDay.length === 0 && !day.isHoliday) { return null; }
                                 return (
                                     <div key={day.key} className={`day-column ${day.isHoliday ? 'is-holiday' : ''}`}>
                                         <div className="day-header-journal">{day.label}</div>
@@ -374,20 +382,23 @@ const JournalView = () => {
                                             {day.isHoliday ? (<div className="holiday-card"><span className="holiday-icon">🎉</span><span className="holiday-name">{day.holidayName}</span></div>) : (
                                                 <div className="day-courses-list">
                                                     {validCoursesForThisDay.length > 0 ? validCoursesForThisDay.map(courseInSchedule => {
+                                                        const classInfo = courseInSchedule
                                                         const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
                                                         const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
                                                         const isExam = journalEntry?.actual_work === '[EXAM]';
                                                         const isManualHoliday = journalEntry?.actual_work === '[HOLIDAY]';
+                                                        const isInterro = journalEntry?.actual_work?.startsWith('[INTERRO]');
                                                         const specialStatusNote = journalEntry?.notes;
                                                         let journalPreview = { text: null, className: '' };
                                                         if (journalEntry && !isCancelled && !isExam && !isManualHoliday) {
-                                                            journalPreview.text = journalEntry.actual_work || journalEntry.planned_work;
+                                                            const workText = journalEntry.actual_work || journalEntry.planned_work;
+                                                            journalPreview.text = isInterro ? workText.replace('[INTERRO]', '').trim() : workText;
                                                             journalPreview.className = journalEntry.actual_work ? 'actual-work' : 'planned-work';
                                                         }
                                                         return (
                                                             <div key={courseInSchedule.id}
-                                                                 className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''} ${isManualHoliday ? 'is-holiday' : ''}`}
-                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, courseInSchedule.classLevel) }} // Correction de la régression
+                                                                 className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''} ${isManualHoliday ? 'is-holiday' : ''} ${isInterro ? 'is-interro' : ''}`}
+                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, courseInSchedule.classLevel) }}
                                                                  onClick={() => handleOpenJournalModal(courseInSchedule, day)} >
                                                                 {isManualHoliday ? (
                                                                     <div className="cancellation-display holiday-display"><span className="cancellation-icon">🌴</span><p className="cancellation-label">Vacances - Férié</p><p className="cancellation-reason">{specialStatusNote}</p></div>
@@ -397,9 +408,16 @@ const JournalView = () => {
                                                                     <div className="cancellation-display exam-display"><span className="cancellation-icon">✍️</span><p className="cancellation-label">EXAMEN</p><p className="cancellation-reason">{specialStatusNote}</p></div>
                                                                 ) : (
                                                                     <div className="course-summary">
-                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{courseInSchedule.className || 'Classe inconnue'}</span></div>
-                                                                        <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
-                                                                        {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}><span className="preview-icon">📝</span><p className="preview-text">{journalPreview.text}</p></div>)}
+                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo.className || 'Classe inconnue'}</span></div>
+                                                                        <div className="course-details">
+                                                                            <div className="course-title-display">{courseInSchedule.subject}</div>
+                                                                            <div className="course-room-display">{courseInSchedule.room}</div>
+                                                                        </div>
+                                                                        {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}><span className="preview-icon"></span>
+                                                                            <p className="preview-text">
+                                                                                {isInterro && <span className="interro-prefix">Interro : </span>}
+                                                                                {journalPreview.text}</p>
+                                                                        </div>)}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -419,7 +437,33 @@ const JournalView = () => {
                         )}
                     </div>
                 </div>
-                <div className="assignments-section">{/* ... Assignments section ... */}</div>
+                <div className="assignments-section">
+                    <h2>Assignations & Évaluations</h2>
+                    {!isArchived && <button className="btn-primary" onClick={handleAddAssignment}>+ Nouvelle Assignation</button>}
+                    {assignments.length === 0 ? <p>Aucune assignation prévue cette semaine.</p> : (
+                        <div className="assignment-list">
+                            {assignments.map(assign => {
+                                const assignClass = getClassInfo(assign.class_id);
+                                return (
+                                    <div key={assign.id} className={`assignment-item ${assign.is_completed && assign.is_corrected ? 'fully-corrected' : ''}`}>
+                                        <input type="checkbox" checked={assign.is_completed} title="Terminé ?" onChange={() => { if(!isArchived) {const payload = { ...assign, is_completed: !assign.is_completed }; if (!payload.is_completed) payload.is_corrected = false; upsertAssignment(payload); }}} disabled={isArchived} />
+                                        <div className="assignment-details">
+                                            <h4>{assign.subject} ({assign.type})</h4>
+                                            <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
+                                        </div>
+                                        {assign.is_completed && (
+                                            <div className="corrected-checkbox-wrapper">
+                                                <label htmlFor={`corrected-${assign.id}`}>Corrigé</label>
+                                                <input type="checkbox" id={`corrected-${assign.id}`} title="Corrigé ?" checked={!!assign.is_corrected} onChange={() => {if(!isArchived) upsertAssignment({ id: assign.id, is_corrected: !assign.is_corrected })}} disabled={isArchived}/>
+                                            </div>
+                                        )}
+                                        {!isArchived && <button className="btn-edit" onClick={() => handleEditAssignment(assign)}>✏️</button>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
             {showJournalModal && selectedCourseForJournal && selectedDayForJournal && (
                 <div className="modal-overlay">
@@ -438,12 +482,18 @@ const JournalView = () => {
                             {courseStatus === 'given' ? (
                                 <>
                                     <div className="form-group"><label>Travail Prévu:</label><textarea value={journalForm.planned_work} onChange={(e) => handleFormChange('planned_work', e.target.value)} placeholder="Décrivez le travail prévu..." rows="3" disabled={isArchived}/></div>
-                                    <div className="form-group"><label>Travail Effectué:</label><textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3" disabled={isArchived}/></div>
+                                    <div className="form-group">
+                                        <label>Travail Effectué:</label>
+                                        <textarea value={journalForm.actual_work} onChange={(e) => handleFormChange('actual_work', e.target.value)} placeholder="Décrivez le travail réellement effectué..." rows="3" disabled={isArchived}/>
+                                    </div>
+                                    <div className="form-group checkbox-group">
+                                        <input type="checkbox" id="isInterro" checked={isInterro} onChange={handleIsInterroChange} disabled={isArchived} />
+                                        <label htmlFor="isInterro">Cette heure de cours est une interrogation</label>
+                                    </div>
                                     <div className="form-group"><label>Notes Supplémentaires:</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ajoutez des notes ici..." rows="2" disabled={isArchived}/></div>
                                     {nextCourseSlot && !isArchived && (<div className="form-group checkbox-group copy-next-group"><input type="checkbox" id="copyToNextSlot" checked={copyToNextSlot} onChange={handleCopyToNextSlotChange} /><label htmlFor="copyToNextSlot">Copier sur le créneau suivant ({nextCourseSlot.time_slot_libelle})</label></div>)}
                                 </>
                             ) : courseStatus === 'cancelled' ? (
-                                // --- AJOUT : Case à cocher pour annuler toute la journée ---
                                 <>
                                     <div className="form-group"><label>Raison de l'annulation</label><textarea value={journalForm.notes} onChange={(e) => handleFormChange('notes', e.target.value)} placeholder="Ex: Grève, Maladie..." rows="3" disabled={isArchived}/></div>
                                     <div className="form-group checkbox-group">
