@@ -112,6 +112,26 @@ const JournalView = () => {
         setJournalForm(newFormState);
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
         debouncedSave(entryData);
+
+        // --- MODIFICATION : Propagation du libellé pour les vacances ---
+        if (courseStatus === 'holiday') {
+            const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
+            const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
+            allCoursesForThisDay.forEach(courseToUpdate => {
+                if (courseToUpdate.id !== selectedCourseForJournal.id) {
+                    const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
+                    debouncedSave({
+                        id: existingEntry?.id || null,
+                        schedule_id: courseToUpdate.id,
+                        date: selectedDayForJournal.key,
+                        planned_work: '',
+                        actual_work: '[HOLIDAY]',
+                        notes: value // On utilise la nouvelle note pour tous
+                    });
+                }
+            });
+        }
+
         if (copyToNextSlot && nextCourseSlot) {
             const nextEntry = getJournalEntry(nextCourseSlot.id, selectedDayForJournal.key);
             const nextEntryData = { id: nextEntry?.id || null, schedule_id: nextCourseSlot.id, date: selectedDayForJournal.key, ...newFormState };
@@ -141,10 +161,20 @@ const JournalView = () => {
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...newFormState };
         debouncedSave(entryData);
 
+        const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
+        const allCoursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
+
+        if (newStatus === 'holiday') {
+            const otherCoursesToUpdate = allCoursesForThisDay.filter(course => course.id !== selectedCourseForJournal.id);
+            otherCoursesToUpdate.forEach(courseToUpdate => {
+                const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
+                debouncedSave({ id: existingEntry?.id || null, schedule_id: courseToUpdate.id, date: selectedDayForJournal.key, planned_work: '', actual_work: '[HOLIDAY]', notes: newFormState.notes });
+            });
+            if (otherCoursesToUpdate.length > 0) success(`Toute la journée a été marquée comme "Vacances".`);
+        }
+
         if (newStatus === 'exam') {
-            const dayKey = getDayKeyFromDateFnsString(selectedDayForJournal.dayOfWeekKey);
-            const coursesForThisDay = getCoursesGroupedByDay[dayKey] || [];
-            const otherCoursesOfSameClass = coursesForThisDay.filter(c => c.classId === selectedCourseForJournal.classId && c.id !== selectedCourseForJournal.id);
+            const otherCoursesOfSameClass = allCoursesForThisDay.filter(c => c.classId === selectedCourseForJournal.classId && c.id !== selectedCourseForJournal.id);
             otherCoursesOfSameClass.forEach(courseToUpdate => {
                 const existingEntry = getJournalEntry(courseToUpdate.id, selectedDayForJournal.key);
                 debouncedSave({ id: existingEntry?.id || null, schedule_id: courseToUpdate.id, date: selectedDayForJournal.key, planned_work: '', actual_work: '[EXAM]', notes: newFormState.notes });
@@ -302,9 +332,6 @@ const JournalView = () => {
                             weekDays.map(day => {
                                 const dayKeyForSchedule = day.dayOfWeekKey;
                                 const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
-
-                                // **LA CORRECTION EST ICI**
-                                // On ne garde que les cours avec un classId valide pour éviter les erreurs.
                                 const validCoursesForThisDay = coursesForThisDay.filter(course => course.classId != null);
 
                                 if (validCoursesForThisDay.length === 0 && !day.isHoliday) {
@@ -318,7 +345,7 @@ const JournalView = () => {
                                             {day.isHoliday ? (<div className="holiday-card"><span className="holiday-icon">🎉</span><span className="holiday-name">{day.holidayName}</span></div>) : (
                                                 <div className="day-courses-list">
                                                     {validCoursesForThisDay.length > 0 ? validCoursesForThisDay.map(courseInSchedule => {
-                                                        const classInfo = courseInSchedule;
+                                                        const classInfo = getClassInfo(courseInSchedule.classId);
                                                         const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
                                                         const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
                                                         const isExam = journalEntry?.actual_work === '[EXAM]';
@@ -332,7 +359,7 @@ const JournalView = () => {
                                                         return (
                                                             <div key={courseInSchedule.id}
                                                                  className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''} ${isManualHoliday ? 'is-holiday' : ''}`}
-                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(classInfo.subject, classInfo.classLevel) }}
+                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, classInfo?.level) }}
                                                                  onClick={() => handleOpenJournalModal(courseInSchedule, day)} >
                                                                 {isManualHoliday ? (
                                                                     <div className="cancellation-display holiday-display"><span className="cancellation-icon">🌴</span><p className="cancellation-label">Vacances - Férié</p><p className="cancellation-reason">{specialStatusNote}</p></div>
@@ -342,7 +369,7 @@ const JournalView = () => {
                                                                     <div className="cancellation-display exam-display"><span className="cancellation-icon">✍️</span><p className="cancellation-label">EXAMEN</p><p className="cancellation-reason">{specialStatusNote}</p></div>
                                                                 ) : (
                                                                     <div className="course-summary">
-                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo.className || 'Classe inconnue'}</span></div>
+                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div>
                                                                         <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
                                                                         {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}><span className="preview-icon">📝</span><p className="preview-text">{journalPreview.text}</p></div>)}
                                                                     </div>
