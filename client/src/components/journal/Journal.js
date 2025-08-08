@@ -345,7 +345,6 @@ const JournalView = () => {
                                             {day.isHoliday ? (<div className="holiday-card"><span className="holiday-icon">🎉</span><span className="holiday-name">{day.holidayName}</span></div>) : (
                                                 <div className="day-courses-list">
                                                     {validCoursesForThisDay.length > 0 ? validCoursesForThisDay.map(courseInSchedule => {
-                                                        const classInfo = getClassInfo(courseInSchedule.classId);
                                                         const journalEntry = getJournalEntry(courseInSchedule.id, day.key);
                                                         const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
                                                         const isExam = journalEntry?.actual_work === '[EXAM]';
@@ -359,7 +358,7 @@ const JournalView = () => {
                                                         return (
                                                             <div key={courseInSchedule.id}
                                                                  className={`journal-slot has-course ${isCancelled ? 'is-cancelled' : ''} ${isExam ? 'is-exam' : ''} ${isManualHoliday ? 'is-holiday' : ''}`}
-                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, classInfo?.level) }}
+                                                                 style={{ borderColor: isCancelled ? 'var(--red-danger)' : (isExam || isManualHoliday) ? 'var(--accent-orange)' : getClassColor(courseInSchedule.subject, courseInSchedule.classLevel) }}
                                                                  onClick={() => handleOpenJournalModal(courseInSchedule, day)} >
                                                                 {isManualHoliday ? (
                                                                     <div className="cancellation-display holiday-display"><span className="cancellation-icon">🌴</span><p className="cancellation-label">Vacances - Férié</p><p className="cancellation-reason">{specialStatusNote}</p></div>
@@ -369,7 +368,7 @@ const JournalView = () => {
                                                                     <div className="cancellation-display exam-display"><span className="cancellation-icon">✍️</span><p className="cancellation-label">EXAMEN</p><p className="cancellation-reason">{specialStatusNote}</p></div>
                                                                 ) : (
                                                                     <div className="course-summary">
-                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{classInfo?.name || 'Classe inconnue'}</span></div>
+                                                                        <div className="course-info-header"><span className="course-time-display">{courseInSchedule.time_slot_libelle}</span><span className="course-class-display">{courseInSchedule.className || 'Classe inconnue'}</span></div>
                                                                         <div className="course-details"><div className="course-title-display">{courseInSchedule.subject}</div><div className="course-room-display">{courseInSchedule.room}</div></div>
                                                                         {journalPreview.text && (<div className={`journal-entry-preview ${journalPreview.className}`}><span className="preview-icon">📝</span><p className="preview-text">{journalPreview.text}</p></div>)}
                                                                     </div>
