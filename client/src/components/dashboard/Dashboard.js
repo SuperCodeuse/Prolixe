@@ -3,8 +3,9 @@ import React, { useEffect, useMemo } from 'react';
 import { useClasses } from '../../hooks/useClasses';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useJournal } from '../../hooks/useJournal';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { useHolidays } from '../../hooks/useHolidays';
+import { format, parseISO } from 'date-fns';
+import { fr, enGB } from 'date-fns/locale';
 import '../../App.scss';
 import './dashboard.scss';
 import NotesSection from "./NoteSection";
@@ -12,36 +13,44 @@ import NotesSection from "./NoteSection";
 const Dashboard = () => {
     const { currentJournal } = useJournal();
     const journalId = currentJournal?.id;
-    const { classes, loading: loadingClasses, error: errorClasses } = useClasses(journalId);
+    const { classes, loading: loadingClasses, error: errorClasses, getClassColor } = useClasses(journalId);
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
-    const { assignments, fetchAssignments } = useJournal();
+    const { assignments, fetchAssignments, journalEntries, fetchJournalEntries } = useJournal();
+    const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
 
     useEffect(() => {
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
         fetchAssignments();
-    }, [fetchAssignments]);
+        fetchJournalEntries(todayStr, todayStr);
+    }, [fetchAssignments, fetchJournalEntries]);
 
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const holidayInfo = getHolidayForDate(new Date());
 
     const todaySchedule = useMemo(() => {
         if (!schedule || !schedule.data) return [];
+        const todayKey = format(new Date(), 'eeee', { locale: enGB }).toLowerCase();
+        const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
 
-        const todayKey = format(new Date(), 'eeee').toLowerCase();
+        return courses.map(course => {
+            const journalEntry = journalEntries.find(entry =>
+                entry.schedule_id === course.id &&
+                format(parseISO(entry.date), 'yyyy-MM-dd') === todayStr
+            );
+            const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
 
-        return Object.entries(schedule.data)
-            .filter(([key]) => key.startsWith(todayKey))
-            .map(([key, course]) => {
-                const time = key.substring(todayKey.length + 1);
-                return {
-                    ...course,
-                    key,
-                    time_slot_libelle: time,
-                };
-            })
-            .sort((a, b) => {
-                const timeA = a.time_slot_libelle.split('-')[0];
-                const timeB = b.time_slot_libelle.split('-')[0];
-                return timeA.localeCompare(timeB);
-            });
-    }, [schedule]);
+            return {
+                ...course,
+                key: `${course.day}-${course.time_slot_libelle}`,
+                isCancelled: isCancelled,
+                cancellationNotes: isCancelled ? journalEntry.notes : null
+            };
+        }).sort((a, b) => {
+            const timeA = a.time_slot_libelle.split('-')[0];
+            const timeB = b.time_slot_libelle.split('-')[0];
+            return timeA.localeCompare(timeB);
+        });
+    }, [schedule, journalEntries, todayStr]);
 
     const stats = useMemo(() => {
         const programmedAssignments = assignments.filter(a => !a.is_completed).length;
@@ -55,7 +64,6 @@ const Dashboard = () => {
         ];
     }, [classes.length, todaySchedule.length, assignments]);
 
-    // --- Tâches à faire ---
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
         const toCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
         const upcoming = assignments
@@ -65,9 +73,7 @@ const Dashboard = () => {
         return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
     }, [assignments]);
 
-
-    // --- Gestion des états de chargement et d'erreur ---
-    if (loadingClasses || loadingSchedule) {
+    if (loadingClasses || loadingSchedule || loadingHolidays) {
         return <div className="dashboard-status">Chargement du tableau de bord...</div>;
     }
 
@@ -78,7 +84,6 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard">
-            {/* Header */}
             <div className="dashboard-header">
                 <div className="header-content">
                     <h1>📊 Tableau de bord</h1>
@@ -89,7 +94,6 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Statistics Cards */}
             <div className="stats-grid">
                 {stats.map((stat, index) => (
                     <div key={index} className={`stat-card ${stat.color}`}>
@@ -105,34 +109,59 @@ const Dashboard = () => {
             </div>
 
             <div className="dashboard-content">
-                {/* Today's Schedule */}
                 <div className="dashboard-section">
                     <div className="section-header">
                         <h2>📅 Emploi du temps d'aujourd'hui</h2>
-                        {/* Ce bouton pourrait naviguer vers la page Horaire complète */}
-                        <button className="view-all-btn">Voir tout</button>
                     </div>
                     <div className="schedule-list">
-                        {todaySchedule.length > 0 ? todaySchedule.map((item) => {
-                            // Utilisation de '==' pour la comparaison d'ID par sécurité (si les types diffèrent)
-                            const classInfo = classes.find(c => c.id == item.classId);
-                            return (
-                                <div key={item.key} className="schedule-item">
-                                    <div className="schedule-time">
-                                        {/* Affiche l'heure de début du cours */}
-                                        <span>{item.time_slot_libelle.split('-')[0]}</span>
-                                    </div>
-                                    <div className="schedule-details">
-                                        <h4>{item.subject}</h4>
-                                        <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
-                                    </div>
+                        {holidayInfo ? (
+                            <div className="holiday-card-dashboard">
+                                <span className="holiday-icon">🎉</span>
+                                <div className="holiday-details">
+                                    <h4>Jour de congé</h4>
+                                    <p>{holidayInfo.name}</p>
                                 </div>
-                            )
-                        }) : <p className="empty-state">Aucun cours programmé pour aujourd'hui.</p>}
+                            </div>
+                        ) : todaySchedule.length > 0 ? (
+                            todaySchedule.map((item) => {
+                                const classInfo = classes.find(c => c.id == item.classId);
+                                const itemColor = getClassColor(item.subject, classInfo?.classLevel);
+
+                                return (
+                                    <div
+                                        key={item.key}
+                                        className={`schedule-item ${item.isCancelled ? 'is-cancelled' : ''}`}
+                                        style={{ borderLeftColor: item.isCancelled ? 'var(--red-danger)' : itemColor }}
+                                    >
+                                        {item.isCancelled ? (
+                                            <>
+                                                <div className="schedule-time">{item.time_slot_libelle.split('-')[0]}</div>
+                                                <div className="schedule-details">
+                                                    <h4 className="cancelled-text">{item.subject} - ANNULÉ</h4>
+                                                    <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
+                                                    {item.cancellationNotes && <p className="cancellation-reason">{item.cancellationNotes}</p>}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="schedule-time">
+                                                    <span>{item.time_slot_libelle.split('-')[0]}</span>
+                                                </div>
+                                                <div className="schedule-details">
+                                                    <h4>{item.subject}</h4>
+                                                    <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p className="empty-state">Aucun cours programmé pour aujourd'hui.</p>
+                        )}
                     </div>
                 </div>
 
-                {/* "À faire" Section */}
                 <div className="dashboard-section">
                     <div className="section-header">
                         <h2>✅ À faire</h2>
@@ -154,7 +183,7 @@ const Dashboard = () => {
                             })
                         ) : <p className="empty-state">Aucune correction en attente.</p>}
 
-                        <h4 style={{marginTop: '1.5rem'}}>Prochains devoirs</h4>
+                        <h4 style={{ marginTop: '1.5rem' }}>Prochains devoirs</h4>
                         {upcomingAssignments.length > 0 ? (
                             upcomingAssignments.map(task => {
                                 const classInfo = classes.find(c => c.id == task.class_id);
