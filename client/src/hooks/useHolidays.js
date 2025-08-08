@@ -1,31 +1,33 @@
 // client/src/hooks/useHolidays.js
 import { useState, useEffect, useCallback } from 'react';
-// 1. Importer la fonction 'endOfDay'
 import { isWithinInterval, parseISO, endOfDay } from 'date-fns';
-import { useJournal } from './useJournal'; // Importer le hook de journal
-
+import { useJournal } from './useJournal';
 
 export const useHolidays = () => {
     const [holidays, setHolidays] = useState([]);
     const [loading, setLoading] = useState(true);
     const { currentJournal } = useJournal();
 
-
-    // Charge les congés depuis le localStorage au démarrage
     useEffect(() => {
-        try {
-            const storedData = localStorage.getItem(`${currentJournal.id}-schoolHolidays`);
-            if (storedData) {
-                setHolidays(JSON.parse(storedData));
+        if (currentJournal?.id) {
+            try {
+                // Utilisation de l'id du journal pour la clé du localStorage
+                const storedData = localStorage.getItem(`${currentJournal.id}-schoolHolidays`);
+                if (storedData) {
+                    setHolidays(JSON.parse(storedData));
+                }
+            } catch (error) {
+                console.error("Erreur lors du chargement des congés depuis le localStorage:", error);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Erreur lors du chargement des congés depuis le localStorage:", error);
-        } finally {
+        } else {
+            // Gérer le cas où currentJournal est null
+            setHolidays([]);
             setLoading(false);
         }
-    }, []);
+    }, [currentJournal]); // CHANGEMENT : Le useEffect se déclenchera à chaque fois que currentJournal change
 
-    // Vérifie si une date est un jour de congé
     const getHolidayForDate = useCallback((date) => {
         if (!date || holidays.length === 0) return null;
 

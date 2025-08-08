@@ -6,7 +6,7 @@ const JournalContext = createContext(null);
 
 export const JournalProvider = ({ children }) => {
     const [journals, setJournals] = useState([]);
-    const [currentJournal, setCurrentJournal] = useState(null);
+    const [currentJournal, setCurrentJournal] = useState(null); // Initialisé à null
     const [archivedJournals, setArchivedJournals] = useState([]);
     const [journalEntries, setJournalEntries] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -24,13 +24,8 @@ export const JournalProvider = ({ children }) => {
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
             const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
 
-            // Si le journal sélectionné est archivé, on le garde, sinon on prend le courant
-            if(lastSelected){
-                setCurrentJournal(lastSelected);
-            } else {
-                setCurrentJournal(current || (all.find(j => !j.is_archived)));
-            }
-
+            const journalToSet = lastSelected || current || all.find(j => !j.is_archived);
+            setCurrentJournal(journalToSet);
             setArchivedJournals(archived);
         } catch (err) {
             setError(err.message || "Erreur lors du chargement des journaux.");
@@ -43,12 +38,22 @@ export const JournalProvider = ({ children }) => {
         loadAllJournals();
     }, [loadAllJournals]);
 
+    useEffect(() => {
+        if (currentJournal) {
+
+        }
+    }, [currentJournal]); // Se déclenche à chaque fois que currentJournal change
+
     const selectJournal = (journal) => {
         if (journal && journal.id) {
             setCurrentJournal(journal);
             localStorage.setItem('prolixe_currentJournalId', journal.id);
         }
     };
+
+    // Les autres fonctions qui dépendent de currentJournal (comme fetchJournalEntries, fetchAssignments) sont déjà des `useCallback`
+    // avec `[currentJournal]` comme dépendance, ce qui est une bonne pratique.
+    // Elles seront donc recréées et pourront utiliser la nouvelle valeur de `currentJournal` au prochain rendu.
 
     const clearJournal = useCallback(async (journalId) => {
         try {
@@ -98,7 +103,7 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             const response = await JournalService.getJournalEntries(startDate, endDate, currentJournal.id);
-            setJournalEntries(response.data || []); // Stocker directement le tableau
+            setJournalEntries(response.data || []);
         } catch (err) {
             setError(err.message || 'Erreur lors de la récupération des entrées du journal.');
         } finally {
@@ -179,7 +184,7 @@ export const JournalProvider = ({ children }) => {
             setError(err.message || "Erreur lors de la sauvegarde du devoir.");
             throw err;
         }
-    }, [currentJournal]); // AJOUT: Dépendance à currentJournal.
+    }, [currentJournal]);
 
     const deleteAssignment = useCallback(async (id) => {
         if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");

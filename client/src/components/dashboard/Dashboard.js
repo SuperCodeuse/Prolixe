@@ -11,24 +11,36 @@ import './dashboard.scss';
 import NotesSection from "./NoteSection";
 
 const Dashboard = () => {
-    const { currentJournal } = useJournal();
+    const {
+        currentJournal,
+        assignments,
+        fetchAssignments,
+        journalEntries,
+        fetchJournalEntries,
+        loading: loadingJournal
+    } = useJournal();
+
     const journalId = currentJournal?.id;
+
     const { classes, loading: loadingClasses, error: errorClasses, getClassColor } = useClasses(journalId);
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
-    const { assignments, fetchAssignments, journalEntries, fetchJournalEntries } = useJournal();
     const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
 
     useEffect(() => {
-        const todayStr = format(new Date(), 'yyyy-MM-dd');
-        fetchAssignments();
-        fetchJournalEntries(todayStr, todayStr);
-    }, [fetchAssignments, fetchJournalEntries]);
+        if (journalId) {
+            fetchAssignments();
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            fetchJournalEntries(todayStr, todayStr);
+        }
+    }, [journalId, fetchAssignments, fetchJournalEntries, currentJournal]);
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const holidayInfo = getHolidayForDate(new Date());
 
     const todaySchedule = useMemo(() => {
-        if (!schedule || !schedule.data) return [];
+        if (!schedule || !schedule.data || !classes) return [];
+        if (holidayInfo) return [];
+
         const todayKey = format(new Date(), 'eeee', { locale: enGB }).toLowerCase();
         const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
 
@@ -50,9 +62,14 @@ const Dashboard = () => {
             const timeB = b.time_slot_libelle.split('-')[0];
             return timeA.localeCompare(timeB);
         });
-    }, [schedule, journalEntries, todayStr]);
+    }, [schedule, journalEntries, todayStr, classes, holidayInfo]); // Ajout de `classes` et `holidayInfo` comme dépendances
 
     const stats = useMemo(() => {
+        // S'assurer que les données sont prêtes
+        if (!classes || !assignments || !todaySchedule) {
+            return [];
+        }
+
         const programmedAssignments = assignments.filter(a => !a.is_completed).length;
         const pendingCorrections = assignments.filter(a => a.is_completed && !a.is_corrected).length;
 
@@ -62,9 +79,12 @@ const Dashboard = () => {
             { title: 'Devoirs programmés', value: programmedAssignments, icon: '📝', color: 'warning' },
             { title: 'Corrections en attente', value: pendingCorrections, icon: '✍️', color: 'success' }
         ];
-    }, [classes.length, todaySchedule.length, assignments]);
+    }, [classes, todaySchedule, assignments]);
 
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
+        // S'assurer que les données sont prêtes
+        if (!assignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
+
         const toCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
         const upcoming = assignments
             .filter(a => !a.is_completed)
@@ -73,10 +93,12 @@ const Dashboard = () => {
         return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
     }, [assignments]);
 
-    if (loadingClasses || loadingSchedule || loadingHolidays) {
+    // Gérer l'état de chargement de manière plus robuste
+    if (loadingJournal || loadingClasses || loadingSchedule || loadingHolidays) {
         return <div className="dashboard-status">Chargement du tableau de bord...</div>;
     }
 
+    // Gestion des erreurs
     if (errorClasses || errorSchedule) {
         const errorMessage = (errorClasses?.message || '') + ' ' + (errorSchedule?.message || '');
         return <div className="dashboard-status error">Erreur de chargement: {errorMessage}</div>;
