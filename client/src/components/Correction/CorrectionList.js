@@ -116,21 +116,35 @@ const CorrectionList = () => {
             // Fonction pour générer le HTML de commentaire formaté
             const formatCommentHtml = (text) => {
                 if (!text) return '';
+
+                // Fonction utilitaire pour échapper les caractères HTML
+                const escapeHtml = (unsafe) => {
+                    return unsafe.replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                };
+
                 const parts = text.split(/(\/\*[\s\S]*?\*\/)/g).filter(Boolean);
                 let html = '';
+
                 parts.forEach((part) => {
                     if (part.startsWith('/*') && part.endsWith('*/')) {
-                        html += `<pre class="comment-block" style="background-color: rgba(98, 151, 241, 0.1); padding: 8px; border-left: 3px solid rgba(98, 151, 241, 0.94); margin: 5px 0; font-family: 'Courier New', monospace; font-size: 0.8rem; white-space: pre-wrap;">${part.substring(2, part.length - 2).trim()}</pre>`;
+                        const content = escapeHtml(part);
+                        html += `<code style="font-family: 'Courier New', monospace; background-color: rgba(6, 182, 212, 0.1); padding: 2px 4px; border-radius: 3px; font-size: 0.8rem; word-break: break-all;">${content}</code><br/>`;
                     } else {
                         html += part.split('\n').map((line) => {
                             const trimmedLine = line.trim();
                             if (trimmedLine.startsWith('#')) {
-                                return `<b style="color: rgba(98, 151, 241, 0.94); font-size: 0.9rem;">${trimmedLine.substring(1).trim()}</b><br/>`;
+                                return `<b style="color: rgba(98, 151, 241, 0.94); font-size: 0.9rem;">${escapeHtml(trimmedLine.substring(1).trim())}</b><br/>`;
                             }
                             if (trimmedLine.startsWith('//')) {
-                                return `<code style="font-family: 'Courier New', monospace; background-color: rgba(6, 182, 212, 0.1); padding: 2px 4px; border-radius: 3px; font-size: 0.8rem;">${line}</code><br/>`;
+                                const content = escapeHtml(line);
+                                return `<code style="font-family: 'Courier New', monospace; background-color: rgba(6, 182, 212, 0.1); padding: 2px 4px; border-radius: 3px; font-size: 0.8rem; word-break: break-all;">${content}</code><br/>`;
                             }
-                            return `<span style="line-height: 1.4;">${line}</span><br/>`;
+                            const content = escapeHtml(line);
+                            return `<span style="line-height: 1.4;">${content}</span><br/>`;
                         }).join('');
                     }
                 });
@@ -142,7 +156,6 @@ const CorrectionList = () => {
                 const isAbsent = grades.some(g => g.student_id === studentId && g.is_absent);
                 const scores = criteria.map(criterion => {
                     const grade = grades.find(g => g.student_id === studentId && g.criterion_id === criterion.id);
-                    // Si l'élève n'est pas absent et n'a pas de note, on met 0
                     let scoreValue;
                     if (isAbsent) {
                         scoreValue = '-';
@@ -171,98 +184,101 @@ const CorrectionList = () => {
                 };
             });
 
-            // Créer une page pour chaque étudiant
-            const pdfPages = [];
+            // Initialiser le PDF
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
+            let isFirstOverallPage = true;
 
-            studentGrades.forEach((student, index) => {
-                const pdfContainer = document.createElement('div');
-                pdfContainer.style.width = '210mm';
-                pdfContainer.style.minHeight = '297mm'; // A4 height
-                pdfContainer.style.padding = '20mm';
-                pdfContainer.style.fontFamily = '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-                pdfContainer.style.boxSizing = 'border-box';
-                pdfContainer.style.color = '#1a1a1a';
-                pdfContainer.style.fontSize = '12px';
-                pdfContainer.style.backgroundColor = '#ffffff';
-                pdfContainer.style.position = 'relative';
+            // Constants pour les calculs de hauteur (ajustées pour plus de précision)
+            const CONTAINER_HEIGHT = 1123;
+            const CONTAINER_PADDING = 120;
+            const FOOTER_HEIGHT = 80;
+            const TABLE_HEADER_HEIGHT = 60;
+            const BASE_ROW_HEIGHT = 60;
+            const MARGIN_SAFETY = 20; // Augmenté pour plus de sécurité
 
-                // En-tête avec dégradé
-                const headerHtml = `
-                <div style="
-                    background: linear-gradient(135deg, rgba(98, 151, 241, 0.94) 0%, rgba(6, 182, 212, 1) 100%);
-                    margin: -20mm -20mm 25px -20mm;
-                    padding: 25px 20mm 20px 20mm;
-                    color: white;
-                    position: relative;
-                    overflow: hidden;
-                ">
-                    <div style="position: relative; z-index: 2;">
-                        <h1 style="font-size: 1.8rem; margin: 0 0 8px 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                            Grille de cotation
-                        </h1>
-                        <h2 style="font-size: 1.3rem; margin: 0 0 12px 0; font-weight: 400; opacity: 0.95;">
-                            ${evaluationName}
+            // Fonction pour créer l'en-tête
+            const createHeader = (isFirstPageOfStudent = true) => `
+            <div style="
+                background: linear-gradient(135deg, rgba(98, 151, 241, 0.94) 0%, rgba(6, 182, 212, 1) 100%);
+                margin: -60px -60px 20px -60px;
+                padding: ${isFirstPageOfStudent ? '25px' : '15px'} 60px 20px 60px;
+                color: white;
+                position: relative;
+                overflow: hidden;
+            ">
+                <div style="position: relative; z-index: 2;">
+                    <h1 style="font-size: ${isFirstPageOfStudent ? '24px' : '20px'}; margin: 0 0 6px 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        Grille de cotation
+                    </h1>
+                    <h2 style="font-size: ${isFirstPageOfStudent ? '18px' : '16px'}; margin: 0 0 12px 0; font-weight: 400; opacity: 0.95;">
+                        ${escapeHtml(evaluationName)}
+                    </h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; opacity: 0.9;">
+                        <span>Classe: <strong>${escapeHtml(evaluationData.class_name)}</strong></span>
+                        <span>Date: <strong>${new Date(evaluationData.evaluation_date).toLocaleDateString('fr-FR')}</strong></span>
+                    </div>
+                </div>
+                ${isFirstPageOfStudent ? `<div style="
+                    position: absolute;
+                    top: -50%;
+                    right: -10%;
+                    width: 150px;
+                    height: 150px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 50%;
+                    z-index: 1;
+                "></div>` : ''}
+            </div>
+        `;
+
+            // Fonction pour créer les infos étudiant
+            const createStudentInfo = (student) => `
+            <div style="
+                background: ${student.isAbsent ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)'};
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                color: white;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="font-size: 20px; margin: 0 0 6px 0; font-weight: 600;">
+                            ${escapeHtml(student.firstname)} ${escapeHtml(student.lastname)}
                         </h2>
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; opacity: 0.9;">
-                            <span>Classe: <strong>${evaluationData.class_name}</strong></span>
-                            <span>Date: <strong>${new Date(evaluationData.evaluation_date).toLocaleDateString('fr-FR')}</strong></span>
-                        </div>
+                        ${student.isAbsent ? '<span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: 500;">ABSENT</span>' : ''}
                     </div>
-                    <!-- Élément décoratif -->
-                    <div style="
-                        position: absolute;
-                        top: -50%;
-                        right: -10%;
-                        width: 200px;
-                        height: 200px;
-                        background: rgba(255, 255, 255, 0.1);
-                        border-radius: 50%;
-                        z-index: 1;
-                    "></div>
-                </div>
-            `;
-
-                // Informations de l'étudiant
-                const studentInfoHtml = `
-                <div style="
-                    background: ${student.isAbsent ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)'};
-                    padding: 20px 25px;
-                    border-radius: 12px;
-                    margin-bottom: 25px;
-                    color: white;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                ">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 style="font-size: 1.4rem; margin: 0 0 5px 0; font-weight: 600;">
-                                ${student.firstname} ${student.lastname}
-                            </h2>
-                            ${student.isAbsent ? '<span style="background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">ABSENT</span>' : ''}
+                    <div style="text-align: right;">
+                        <div style="font-size: 13px; opacity: 0.8; margin-bottom: 3px;">Total</div>
+                        <div style="font-size: 24px; font-weight: 700; line-height: 1;">
+                            ${student.isAbsent ? '-' : student.totalScore.toFixed(1)} <span style="font-size: 16px; font-weight: 400;">/ ${student.totalMaxScore}</span>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 2px;">Total</div>
-                            <div style="font-size: 1.8rem; font-weight: 700; line-height: 1;">
-                                ${student.isAbsent ? '-' : student.totalScore.toFixed(1)} <span style="font-size: 1.2rem; font-weight: 400;">/ ${student.totalMaxScore}</span>
-                            </div>
-                            ${!student.isAbsent ? `<div style="font-size: 0.85rem; opacity: 0.8;">${((student.totalScore / student.totalMaxScore) * 100).toFixed(1)}%</div>` : ''}
-                        </div>
+                        ${!student.isAbsent ? `<div style="font-size: 12px; opacity: 0.8;">${((student.totalScore / student.totalMaxScore) * 100).toFixed(1)}%</div>` : ''}
                     </div>
                 </div>
-            `;
+            </div>
+        `;
 
-                // Tableau des critères
-                const tableHtml = `
-                <div style="overflow: hidden; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                        <thead>
-                            <tr style="background: linear-gradient(135deg, rgba(98, 151, 241, 0.94) 0%, rgba(6, 182, 212, 1) 100%); color: white;">
-                                <th style="padding: 16px; text-align: left; font-weight: 600; width: 35%;">Critère</th>
-                                <th style="padding: 16px; text-align: center; font-weight: 600; width: 15%;">Note</th>
-                                <th style="padding: 16px; text-align: left; font-weight: 600; width: 50%;">Commentaire</th>
-                            </tr>
-                        </thead>
+            // Fonction pour créer le tableau
+            const createTable = (student, criteriaSlice, showHeader = true) => {
+                const headerRow = showHeader ? `
+                <thead>
+                    <tr style="background: linear-gradient(135deg, rgba(98, 151, 241, 0.94) 0%, rgba(6, 182, 212, 1) 100%); color: white;">
+                        <th style="padding: 18px; text-align: left; font-weight: 600; width: 35%;">Critère</th>
+                        <th style="padding: 18px; text-align: center; font-weight: 600; width: 15%;">Note</th>
+                        <th style="padding: 18px; text-align: left; font-weight: 600; width: 50%;">Commentaire</th>
+                    </tr>
+                </thead>
+            ` : '';
+
+                return `
+                <div style="overflow: hidden; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">
+                        ${headerRow}
                         <tbody>
-                            ${student.scores.map((score, scoreIndex) => {
+                            ${criteriaSlice.map((score, scoreIndex) => {
                     const isEven = scoreIndex % 2 === 0;
                     const percentage = score.score !== '-' ? (Number(score.score) / Number(score.maxScore)) * 100 : 0;
                     let scoreColor = '#64748b';
@@ -274,16 +290,18 @@ const CorrectionList = () => {
 
                     return `
                                     <tr style="background-color: ${isEven ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0;">
-                                        <td style="padding: 16px; border-right: 1px solid #e2e8f0; font-weight: 500; color: #334155;">
-                                            ${score.label}
+                                        <td style="padding: 18px; border-right: 1px solid #e2e8f0; font-weight: 500; color: #334155; vertical-align: top; width: 35%; word-wrap: break-word;">
+                                            ${escapeHtml(score.label)}
                                         </td>
-                                        <td style="padding: 16px; text-align: center; border-right: 1px solid #e2e8f0;">
-                                            <div style="display: inline-flex; align-items: center; background: ${score.score === '-' ? '#f1f5f9' : 'rgba(98, 151, 241, 0.1)'}; padding: 6px 12px; border-radius: 20px; font-weight: 600; color: ${scoreColor};">
+                                        <td style="padding: 18px; text-align: center; border-right: 1px solid #e2e8f0; vertical-align: top; width: 15%;">
+                                            <div style="display: inline-flex; align-items: center; background: ${score.score === '-' ? '#f1f5f9' : 'rgba(98, 151, 241, 0.1)'}; padding: 8px 15px; border-radius: 20px; font-weight: 600; color: ${scoreColor};">
                                                 ${score.score !== null && score.score !== '' ? score.score : '0'} / ${score.maxScore}
                                             </div>
                                         </td>
-                                        <td style="padding: 16px; line-height: 1.5; color: #475569;">
-                                            ${score.comment ? formatCommentHtml(score.comment) : '<em style="color: #94a3b8;">Aucun commentaire</em>'}
+                                        <td style="padding: 18px; line-height: 1.4; color: #475569; vertical-align: top; width: 50%;">
+                                            <div style="word-wrap: break-word; hyphens: auto; overflow-wrap: break-word;">
+                                                ${score.comment ? formatCommentHtml(score.comment) : '<em style="color: #94a3b8;">Aucun commentaire</em>'}
+                                            </div>
                                         </td>
                                     </tr>
                                 `;
@@ -292,67 +310,186 @@ const CorrectionList = () => {
                     </table>
                 </div>
             `;
+            };
 
-                // Pied de page
-                const footerHtml = `
-                <div style="
-                    position: absolute;
-                    bottom: 15mm;
-                    left: 20mm;
-                    right: 20mm;
-                    text-align: center;
-                    font-size: 0.8rem;
-                    color: #64748b;
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 10px;
-                ">
-                    Page ${index + 1} / ${studentGrades.length} - Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
-                </div>
-            `;
+            // Fonction pour créer le pied de page
+            const createFooter = (pageNum, totalPages, studentName) => `
+            <div style="
+                position: absolute;
+                bottom: 20px;
+                left: 60px;
+                right: 60px;
+                text-align: center;
+                font-size: 11px;
+                color: #64748b;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 12px;
+            ">
+                ${escapeHtml(studentName)} - Page ${pageNum} / ${totalPages} - Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+            </div>
+        `;
 
-                pdfContainer.innerHTML = headerHtml + studentInfoHtml + tableHtml + footerHtml;
-                pdfPages.push(pdfContainer);
-            });
+            // Fonction améliorée pour calculer la hauteur d'une ligne
+            const calculateCriteriaHeight = (criterion) => {
+                const CHARS_PER_LINE = 50;
+                const MIN_HEIGHT = 60;
+                const PADDING = 36;
+                const LINE_HEIGHT = 18;
 
-            // Créer le PDF avec toutes les pages
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
+                let totalLines = 1; // Au moins 1 ligne pour le label
 
-            for (let i = 0; i < pdfPages.length; i++) {
-                const container = pdfPages[i];
-                document.body.appendChild(container);
-
-                const options = {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    width: container.scrollWidth,
-                    height: container.scrollHeight,
-                    backgroundColor: '#ffffff'
-                };
-
-                const canvas = await html2canvas(container, options);
-                const imgData = canvas.toDataURL('image/png', 1.0);
-
-                if (i > 0) {
-                    pdf.addPage();
+                if (criterion.comment) {
+                    // Calculer approximativement le nombre de lignes nécessaires
+                    const commentLength = criterion.comment.length;
+                    const estimatedLines = Math.ceil(commentLength / CHARS_PER_LINE);
+                    totalLines = Math.max(totalLines, estimatedLines);
                 }
 
-                const imgProps = pdf.getImageProperties(imgData);
-                const pdfWidth = pageWidth;
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                return Math.max(MIN_HEIGHT, totalLines * LINE_HEIGHT + PADDING);
+            };
 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(pdfHeight, pageHeight));
+            // Fonction pour échapper les caractères HTML (définie globalement)
+            const escapeHtml = (unsafe) => {
+                if (typeof unsafe !== 'string') return '';
+                return unsafe.replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            };
 
-                document.body.removeChild(container);
+            // Traiter chaque étudiant
+            for (let studentIndex = 0; studentIndex < studentGrades.length; studentIndex++) {
+                const student = studentGrades[studentIndex];
+
+                // Calculer le nombre de pages nécessaires pour cet étudiant
+                let currentCriteriaIndex = 0;
+                let totalPagesForStudent = 0;
+                let isFirstPageOfStudent = true;
+
+                // Première passe : calculer le nombre total de pages
+                while (currentCriteriaIndex < student.scores.length) {
+                    const headerHeight = isFirstPageOfStudent ? 150 : 100;
+                    const studentInfoHeight = isFirstPageOfStudent ? 100 : 0;
+                    const availableHeight = CONTAINER_HEIGHT - CONTAINER_PADDING - headerHeight -
+                        studentInfoHeight - FOOTER_HEIGHT - MARGIN_SAFETY - TABLE_HEADER_HEIGHT;
+
+                    let usedHeight = 0;
+                    let criteriaCount = 0;
+
+                    while (currentCriteriaIndex < student.scores.length) {
+                        const nextCriterion = student.scores[currentCriteriaIndex];
+                        const nextHeight = calculateCriteriaHeight(nextCriterion);
+
+                        if (usedHeight + nextHeight <= availableHeight) {
+                            usedHeight += nextHeight;
+                            currentCriteriaIndex++;
+                            criteriaCount++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    totalPagesForStudent++;
+                    isFirstPageOfStudent = false;
+                }
+
+                // Deuxième passe : générer les pages
+                currentCriteriaIndex = 0;
+                isFirstPageOfStudent = true;
+
+                for (let pageIndex = 0; pageIndex < totalPagesForStudent; pageIndex++) {
+                    if (!isFirstOverallPage) {
+                        pdf.addPage();
+                    }
+                    isFirstOverallPage = false;
+
+                    const headerHeight = isFirstPageOfStudent ? 150 : 100;
+                    const studentInfoHeight = isFirstPageOfStudent ? 100 : 0;
+                    const availableHeight = CONTAINER_HEIGHT - CONTAINER_PADDING - headerHeight -
+                        studentInfoHeight - FOOTER_HEIGHT - MARGIN_SAFETY - TABLE_HEADER_HEIGHT;
+
+                    // Déterminer les critères pour cette page
+                    const criteriaForThisPage = [];
+                    let usedHeight = 0;
+
+                    while (currentCriteriaIndex < student.scores.length) {
+                        const nextCriterion = student.scores[currentCriteriaIndex];
+                        const nextHeight = calculateCriteriaHeight(nextCriterion);
+
+                        if (usedHeight + nextHeight <= availableHeight) {
+                            usedHeight += nextHeight;
+                            criteriaForThisPage.push(nextCriterion);
+                            currentCriteriaIndex++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Créer le conteneur pour cette page
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.style.cssText = `
+                    width: 794px;
+                    height: ${CONTAINER_HEIGHT}px;
+                    padding: 60px;
+                    box-sizing: border-box;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    color: #1a1a1a;
+                    font-size: 12px;
+                    background-color: #ffffff;
+                    position: absolute;
+                    left: -9999px;
+                    top: 0;
+                `;
+
+                    let content = createHeader(isFirstPageOfStudent);
+                    if (isFirstPageOfStudent) {
+                        content += createStudentInfo(student);
+                    }
+                    content += createTable(student, criteriaForThisPage, true);
+                    content += createFooter(pageIndex + 1, totalPagesForStudent, `${student.firstname} ${student.lastname}`);
+
+                    pdfContainer.innerHTML = content;
+                    document.body.appendChild(pdfContainer);
+
+                    try {
+                        const canvas = await html2canvas(pdfContainer, {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: false,
+                            backgroundColor: '#ffffff',
+                            width: 794,
+                            height: 1123,
+                            scrollX: 0,
+                            scrollY: 0,
+                            windowWidth: 794,
+                            windowHeight: 1123,
+                            ignoreElements: (element) => {
+                                return element.tagName === 'SCRIPT' || element.tagName === 'STYLE';
+                            }
+                        });
+
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+
+                    } catch (canvasError) {
+                        console.error('Erreur lors de la capture canvas:', canvasError);
+                        throw canvasError;
+                    } finally {
+                        document.body.removeChild(pdfContainer);
+                    }
+
+                    isFirstPageOfStudent = false;
+                }
             }
 
-            pdf.save(`Evaluation-${evaluationName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+            // Sauvegarder le PDF
+            const fileName = `Evaluation-${evaluationName.replace(/[^a-zA-Z0-9\s]/g, '_').replace(/\s+/g, '_')}.pdf`;
+            pdf.save(fileName);
             success('PDF exporté avec succès !');
 
         } catch (err) {
-            console.error(err);
+            console.error('Erreur lors de l\'exportation du PDF:', err);
             showError('Erreur lors de l\'exportation du PDF.');
         }
     };
