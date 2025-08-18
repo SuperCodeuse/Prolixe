@@ -220,5 +220,22 @@
         border-color: var(--accent-cyan);
       }
     }
+
+    .btn-export {
+      @include btn-action-base;
+      font-size: 0.9rem;
+      padding: 0.4rem;
+      background-color: var(--white-transparent-md);
+      svg {
+        width: 1rem;
+        height: 1rem;
+      }
+      &:hover {
+        background: rgba(var(--red-transparent-sm), 0.15);
+        border-color: var(--accent-orange);
+      }
+    }
   }
+
+
 }
