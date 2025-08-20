@@ -1,13 +1,15 @@
 // index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom'; // <-- Importez BrowserRouter
-import { AuthProvider } from './hooks/useAuth';      // Assurez-vous que le chemin est correct
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
 import { JournalProvider } from './hooks/useJournal';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -24,4 +26,5 @@ root.render(
     </React.StrictMode>
 );
 
+serviceWorkerRegistration.register();
 reportWebVitals();

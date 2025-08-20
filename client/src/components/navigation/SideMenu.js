@@ -23,7 +23,8 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
         { id: 'horaire', label: 'Emploi du temps', icon: '⏰', path: '/horaire' },
         { id: 'correction', label: 'Correction', icon: '✅', path: '/correction' },
         { id: 'conseilDeClasse', label: 'Conseil de classe', icon: '👥', path: '/conseilDeClasse' },
-        { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' }
+        //{ id: 'document-generator', label: 'Générateur Document', icon: '📑', path: '/document-generator' },
+        { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' },
     ];
 
     // Gère le clic sur un élément du menu de navigation

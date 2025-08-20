@@ -2,6 +2,7 @@
 const mysql = require('mysql2/promise');
 const express = require('express');
 const cors = require('cors');
+const PDFDocument = require('pdfkit');
 const multer = require('multer');
 
 require('dotenv').config();
@@ -41,174 +42,6 @@ async function initDatabase() {
         const connection = await pool.getConnection();
         console.log('🔗 Connexion à la base de données réussie.');
         console.log('📝 Vérification et création des tables si nécessaire...');
-
-        // Tables sans dépendances externes
-  /*      
-await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`journal\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`name\` varchar(255) NOT NULL,
-                \`school_year\` varchar(100) DEFAULT NULL,
-                \`is_archived\` tinyint(1) DEFAULT 0,
-                \`is_current\` tinyint(1) DEFAULT 0,
-                \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (\`id\`)
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`class\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`name\` varchar(100) NOT NULL,
-                \`students\` int DEFAULT NULL,
-                \`lesson\` text,
-                \`level\` int DEFAULT NULL,
-                PRIMARY KEY (\`id\`)
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`schedule_hours\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`libelle\` text,
-                PRIMARY KEY (\`id\`)
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`attributions\` (
-                \`id\` INT NOT NULL AUTO_INCREMENT,
-                \`school_year\` VARCHAR(100) NOT NULL,
-                \`school_name\` VARCHAR(255) NOT NULL,
-                \`start_date\` DATE NOT NULL,
-                \`end_date\` DATE NOT NULL,
-                \`esi_hours\` INT DEFAULT 0,
-                \`ess_hours\` INT DEFAULT 0,
-                \`created_at\` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-                \`updated_at\` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (\`id\`)
-            ) ENGINE=InnoDB;
-        `);
-
-        // Tables avec dépendances
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`students\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`firstname\` varchar(100) NOT NULL,
-                \`lastname\` varchar(100) NOT NULL,
-                \`class_id\` int NOT NULL,
-                \`school_year\` varchar(100) NOT NULL,
-                PRIMARY KEY (\`id\`),
-                KEY \`fk_students_class_idx\` (\`class_id\`),
-                CONSTRAINT \`fk_students_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`evaluations\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`name\` varchar(255) NOT NULL,
-                \`evaluation_date\` date NOT NULL,
-                \`class_id\` int NOT NULL,
-                \`school_year\` varchar(20) NOT NULL,
-            PRIMARY KEY (\`id\`),
-                KEY \`fk_evaluations_class_idx\` (\`class_id\`),
-                CONSTRAINT \`fk_evaluations_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`evaluation_criteria\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`evaluation_id\` int NOT NULL,
-                \`label\` text NOT NULL,
-                \`max_score\` decimal(5,2) NOT NULL,
-                PRIMARY KEY (\`id\`),
-                KEY \`fk_criteria_evaluation_idx\` (\`evaluation_id\`),
-                CONSTRAINT \`fk_criteria_evaluation\` FOREIGN KEY (\`evaluation_id\`) REFERENCES \`evaluations\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`student_grades\` (
-                                                              \`id\` int NOT NULL AUTO_INCREMENT,
-                                                              \`student_id\` int NOT NULL,
-                                                              \`criterion_id\` int NOT NULL,
-                                                              \`score\` decimal(5,2) DEFAULT NULL,
-                                                              \`comment\` text,
-                                                              PRIMARY KEY (\`id\`),
-                                                              UNIQUE KEY \`uq_student_criterion\` (\`student_id\`,\`criterion_id\`),
-                                                              KEY \`fk_grades_student_idx\` (\`student_id\`),
-                                                              KEY \`fk_grades_criterion_idx\` (\`criterion_id\`),
-                                                              CONSTRAINT \`fk_grades_student\` FOREIGN KEY (\`student_id\`) REFERENCES \`students\` (\`id\`) ON DELETE CASCADE,
-                                                              CONSTRAINT \`fk_grades_criterion\` FOREIGN KEY (\`criterion_id\`) REFERENCES \`evaluation_criteria\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`schedule\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`day\` varchar(20) NOT NULL,
-                \`time_slot_id\` int NOT NULL,
-                \`subject\` varchar(100) NOT NULL,
-                \`class_id\` int NOT NULL,
-                \`room\` varchar(50) NOT NULL,
-                \`notes\` text,
-                \`journal_id\` int NOT NULL,
-                PRIMARY KEY (\`id\`),
-                UNIQUE KEY \`uq_schedule_journal_slot\` (\`journal_id\`,\`day\`,\`time_slot_id\`),
-                CONSTRAINT \`fk_schedule_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE,
-                CONSTRAINT \`fk_schedule_time_slot\` FOREIGN KEY (\`time_slot_id\`) REFERENCES \`schedule_hours\` (\`id\`) ON DELETE CASCADE,
-                CONSTRAINT \`fk_schedule_journal\` FOREIGN KEY (\`journal_id\`) REFERENCES \`journal\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`journal_entry\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`schedule_id\` int NOT NULL,
-                \`date\` date NOT NULL,
-                \`planned_work\` text,
-                \`actual_work\` text,
-                \`notes\` text,
-                \`journal_id\` int NOT NULL,
-                PRIMARY KEY (\`id\`),
-                UNIQUE KEY \`uq_journal_session\` (\`schedule_id\`,\`date\`),
-                CONSTRAINT \`fk_journal_schedule\` FOREIGN KEY (\`schedule_id\`) REFERENCES \`schedule\` (\`id\`) ON DELETE CASCADE,
-                CONSTRAINT \`fk_entry_journal\` FOREIGN KEY (\`journal_id\`) REFERENCES \`journal\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        await connection.execute(`
-            CREATE TABLE IF NOT EXISTS \`assignment\` (
-                \`id\` int NOT NULL AUTO_INCREMENT,
-                \`class_id\` int NOT NULL,
-                \`subject\` varchar(100) NOT NULL,
-                \`type\` enum('Interro','Devoir','Projet','Examen','Autre') NOT NULL,
-                \`description\` text,
-                \`due_date\` date NOT NULL,
-                \`is_completed\` tinyint(1) DEFAULT 0,
-                \`is_corrected\` tinyint(1) DEFAULT 0,
-                PRIMARY KEY (\`id\`),
-                CONSTRAINT \`fk_assignment_class\` FOREIGN KEY (\`class_id\`) REFERENCES \`class\` (\`id\`) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        `);
-
-        console.log('✅ Tables créées ou déjà existantes.');
-
-        // Insertion des données par défaut pour les créneaux horaires
-        const [hours] = await connection.execute('SELECT COUNT(*) as count FROM schedule_hours');
-        if (hours[0].count === 0) {
-            await connection.execute(`
-                INSERT INTO \`schedule_hours\` (id, libelle) VALUES
-                (1, '08:25-09:15'), (2, '09:15-10:05'), (3, '10:20-11:10'),
-                (4, '11:10-12:00'), (5, '12:45-13:35'), (6, '13:35-14:20'),
-                (7, '14:30-15:15'), (8, '15:15-16:05');
-            `);
-            console.log('👍 Créneaux horaires insérés.');
-        }
-*/
         connection.release();
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation de la base de données:', error);
@@ -306,6 +139,393 @@ app.use((err, req, res, next) => {
     });
 });
 
+app.post('/api/generate-document', (req, res) => {
+    const { text, orientation = 'portrait' } = req.body;
+
+    if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: 'Le texte est requis et doit être une chaîne de caractères' });
+    }
+
+    const COLORS = {
+        bg: '#FDFAF7',
+        textDark: '#2d3748',
+        textMuted: '#4a5568',
+        accentPrimary: '#6237C8',
+        accentSecondary: '#e0d7f4',
+        titleGradientStart: '#591CE6',
+        titleGradientMid: '#F9598D',
+        titleGradientEnd: '#FB8B61'
+    };
+
+    function addFooter(doc) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('fr-FR');
+
+        // Sauvegarder la position actuelle
+        const currentY = doc.y;
+
+        // Calculer la position du pied de page
+        const footerY = doc.page.height - doc.page.margins.bottom - 15;
+
+        // Positionner le pied de page en bas de la page courante
+        doc.fontSize(8)
+            .fillColor(COLORS.textMuted)
+            .text(`DEGUELDRE C. - ${dateStr}`, 50, footerY, {
+                align: 'center',
+                width: doc.page.width - 100,
+                lineBreak: false
+            });
+
+        // Ajouter la ligne de séparation
+        doc.moveTo(doc.page.margins.left, footerY - 5)
+            .lineTo(doc.page.width - doc.page.margins.right, footerY - 5)
+            .stroke();
+
+        // Restaurer la position du curseur à sa position précédente
+        doc.y = currentY;
+    }
+
+    try {
+        const doc = new PDFDocument({
+            layout: orientation,
+            size: 'A4',
+            margins: {
+                top: 50,
+                bottom: 50,
+                left: 50,
+                right: 50
+            }
+        });
+
+        doc.on('error', (err) => {
+            console.error('Erreur PDFKit:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Erreur lors de la génération du PDF' });
+            }
+        });
+
+        const buffers = [];
+        doc.on('data', (chunk) => buffers.push(chunk));
+
+        doc.on('end', () => {
+            try {
+                const pdfData = Buffer.concat(buffers);
+                if (!res.headersSent) {
+                    res.writeHead(200, {
+                        'Content-Type': 'application/pdf',
+                        'Content-Disposition': 'attachment; filename="document.pdf"',
+                        'Content-Length': pdfData.length
+                    });
+                    res.end(pdfData);
+                }
+            } catch (err) {
+                console.error('Erreur lors de l\'envoi du PDF:', err);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: 'Erreur lors de l\'envoi du PDF' });
+                }
+            }
+        });
+
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        doc.rect(0, 0, pageWidth, pageHeight).fill(COLORS.bg);
+
+        const titleGradient = doc.linearGradient(0, 0, 300, 0);
+        titleGradient.stop(0, COLORS.titleGradientStart)
+            .stop(0.45, COLORS.titleGradientMid)
+            .stop(0.85, COLORS.titleGradientEnd);
+
+        // Variables pour gérer les pages et références
+        let currentPage = 1;
+        let titlesWithPages = [];
+
+        // Fonction pour extraire les titres et sous-titres
+        const extractTitles = (content) => {
+            const lines = content.split('\n');
+            const titles = [];
+            let isFirstTitle = true;
+
+            lines.forEach((line) => {
+                const trimmedLine = line.trim();
+                if (trimmedLine.length === 0) return;
+
+                if (isFirstTitle) {
+                    isFirstTitle = false;
+                    titles.push(trimmedLine);
+                }
+                else if (trimmedLine.endsWith(':') || /^[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ\s]+\s*:/.test(trimmedLine)) {
+                    titles.push(trimmedLine);
+                }
+            });
+            return titles;
+        };
+
+        // Fonction pour ajouter la table des matières
+        const addTableOfContents = (doc, titlesWithPages) => {
+            // Titre de la table des matières avec couleur d'accentuation
+            doc.fillColor(COLORS.accentPrimary)
+                .font('Helvetica-Bold')
+                .fontSize(20)
+                .text('Table des matières', { align: 'center' })
+                .moveDown(1);
+
+            doc.font('Helvetica');
+
+            // Contenu de la table des matières avec couleur secondaire
+            titlesWithPages.forEach((item) => {
+                const { title, page } = item;
+                const maxWidth = 400;
+                const pageNumWidth = 30;
+
+                // Calculer l'espace disponible pour le titre
+                const titleWidth = maxWidth - pageNumWidth;
+
+                doc.fillColor(COLORS.textDark)
+                    .fontSize(12)
+                    .text(title, {
+                        width: titleWidth,
+                        continued: true,
+                        lineBreak: false
+                    })
+                    .text(' '.repeat(Math.max(1, Math.floor((titleWidth - doc.widthOfString(title)) / doc.widthOfString(' ')))), {
+                        continued: true
+                    })
+                    .text(page.toString(), {
+                        align: 'right',
+                        width: pageNumWidth
+                    })
+                    .moveDown(0.5);
+            });
+
+            doc.addPage();
+            doc.rect(0, 0, pageWidth, pageHeight).fill(COLORS.bg);
+            currentPage++;
+        };
+
+        // Fonction d'ajout de texte formaté avec suivi des pages
+        const addFormattedText = (doc, content) => {
+            const lines = content.split('\n');
+            let isFirstTitle = true;
+
+            lines.forEach((line) => {
+                const trimmedLine = line.trim();
+
+                if (trimmedLine.length === 0) {
+                    return;
+                }
+
+                // Vérifier s'il faut changer de page
+                const remainingSpace = doc.page.height - doc.y - doc.page.margins.bottom;
+                if (remainingSpace < 100) {
+                    doc.addPage();
+                    doc.rect(0, 0, pageWidth, pageHeight).fill(COLORS.bg);
+                    currentPage++;
+                }
+
+                if (isFirstTitle) {
+                    isFirstTitle = false;
+                    titlesWithPages.push({ title: trimmedLine, page: currentPage });
+                    doc.fill(titleGradient)
+                        .font('Helvetica-Bold')
+                        .fontSize(28)
+                        .text(trimmedLine)
+                        .moveDown(1.5);
+                }
+                else if (trimmedLine.endsWith(':') || /^[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ\s]+\s*:/.test(trimmedLine)) {
+                    titlesWithPages.push({ title: trimmedLine, page: currentPage });
+                    doc.fill(titleGradient)
+                        .font('Helvetica-Bold')
+                        .fontSize(18)
+                        .text(trimmedLine)
+                        .moveDown(0.8);
+                }
+                else if (/^-\s+.*:/.test(trimmedLine)) {
+                    // Gestion des listes avec format "- élément : description"
+                    const listMatch = trimmedLine.match(/^-\s+([^:]+):\s*(.+)$/);
+                    if (listMatch) {
+                        const element = listMatch[1].trim();
+                        const description = listMatch[2].trim();
+
+                        // Sauvegarder l'état complet du document
+                        const startY = doc.y;
+                        const startX = doc.x;
+                        doc.save(); // Sauvegarder l'état graphique
+
+                        // Calculer les dimensions nécessaires
+                        doc.fontSize(11).font('Helvetica-Bold');
+                        const elementTextWidth = doc.widthOfString(element);
+
+                        // Largeur minimale de 80px, mais s'adapte au contenu avec padding
+                        const minElementWidth = 80;
+                        const elementPadding = 24; // 12px de chaque côté
+                        const elementWidth = Math.max(minElementWidth, elementTextWidth + elementPadding);
+
+                        doc.font('Helvetica');
+                        const descriptionWidth = doc.widthOfString(description);
+
+                        // Calculer la largeur totale nécessaire avec marges
+                        const totalWidth = Math.min(
+                            elementWidth + 18 + descriptionWidth + 20, // largeur optimale
+                            doc.page.width - startX - 50 // largeur maximum (marge droite)
+                        );
+
+                        // Si la largeur totale dépasse, on peut réduire la description mais pas l'élément
+                        const maxDescWidth = Math.max(100, totalWidth - elementWidth - 38);
+
+                        // Boîte de fond pour l'élément - largeur dynamique
+                        doc.roundedRect(startX, startY - 2, totalWidth, 28, 5)
+                            .fillOpacity(0.08)
+                            .fill(COLORS.accentPrimary)
+                            .strokeOpacity(0.2)
+                            .stroke(COLORS.accentPrimary);
+
+                        // Restaurer l'opacité et les couleurs
+                        doc.restore();
+                        doc.save();
+
+                        // Boîte pour l'élément principal - largeur adaptée au contenu
+                        doc.roundedRect(startX + 6, startY + 2, elementWidth, 18, 3)
+                            .fill(COLORS.accentPrimary);
+
+                        // Restaurer et configurer pour le texte de l'élément
+                        doc.restore();
+                        doc.save();
+                        doc.fontSize(11)
+                            .font('Helvetica-Bold')
+                            .fillColor('#FFFFFF');
+
+                        // Texte de l'élément - centré dans sa boîte
+                        doc.text(element, startX + 6, startY + 6, {
+                            width: elementWidth,
+                            align: 'center',
+                            lineBreak: false,
+                            continued: false
+                        });
+
+                        // Restaurer et configurer pour la description
+                        doc.restore();
+                        doc.fontSize(11)
+                            .font('Helvetica')
+                            .fillColor(COLORS.textDark);
+
+                        // Description - avec largeur calculée dynamiquement
+                        doc.text(description, startX + elementWidth + 18, startY + 6, {
+                            width: maxDescWidth,
+                            lineBreak: false,
+                            continued: false
+                        });
+
+                        // Repositionner manuellement le curseur
+                        doc.x = startX;
+                        doc.y = startY + 35;
+                    }
+                }
+                else if (/^[\s]*[\•\-\*\d+\.]\s+/.test(trimmedLine)) {
+                    const bulletMatch = trimmedLine.match(/^[\s]*([\•\-\*\d+\.])\s+(.+)$/);
+                    if (bulletMatch) {
+                        const bullet = bulletMatch[1];
+                        const text = bulletMatch[2];
+
+                        doc.fontSize(12)
+                            .fillColor(COLORS.accentPrimary)
+                            .font('Helvetica-Bold')
+                            .text(bullet, { continued: true })
+                            .fillColor(COLORS.textMuted)
+                            .font('Helvetica')
+                            .text('  ' + text)
+                            .moveDown(0.3);
+                    }
+                }
+                else if (/^[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]{2,}\s+/.test(trimmedLine)) {
+                    const parts = trimmedLine.split(/\s+/);
+                    const keyword = parts[0];
+                    const rest = parts.slice(1).join(' ');
+
+                    doc.fontSize(13)
+                        .fillColor(COLORS.accentPrimary)
+                        .font('Helvetica-Bold')
+                        .text(keyword, { continued: true })
+                        .fillColor(COLORS.textMuted)
+                        .font('Helvetica')
+                        .text(' ' + rest)
+                        .moveDown(0.4);
+                }
+                else {
+                    doc.fontSize(12)
+                        .fillColor(COLORS.textDark)
+                        .font('Helvetica')
+                        .text(trimmedLine, { align: 'left', lineGap: 2 })
+                        .moveDown(0.5);
+                }
+            });
+        };
+
+        // Première passe pour collecter les titres et leurs pages
+        const tempDoc = new PDFDocument({
+            layout: orientation,
+            size: 'A4',
+            margins: {
+                top: 50,
+                bottom: 50,
+                left: 50,
+                right: 50
+            }
+        });
+
+        // Simuler l'ajout du contenu pour collecter les pages
+        currentPage = 2; // Commencer à la page 2 (après la table des matières)
+        titlesWithPages = [];
+
+        // Réinitialiser et générer le vrai document
+        currentPage = 1;
+        titlesWithPages = [];
+
+        // Première passe rapide pour déterminer les pages des titres
+        const lines = text.split('\n');
+        let isFirstTitle = true;
+        let simulatedPage = 2; // Page de départ après table des matières
+        let simulatedY = 50; // Position Y simulée
+
+        lines.forEach((line) => {
+            const trimmedLine = line.trim();
+            if (trimmedLine.length === 0) return;
+
+            // Simulation de saut de page
+            if (simulatedY > 700) {
+                simulatedPage++;
+                simulatedY = 50;
+            }
+
+            if (isFirstTitle) {
+                isFirstTitle = false;
+                titlesWithPages.push({ title: trimmedLine, page: simulatedPage });
+                simulatedY += 50; // Espace pour le titre principal
+            }
+            else if (trimmedLine.endsWith(':') || /^[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ][a-zàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ\s]+\s*:/.test(trimmedLine)) {
+                titlesWithPages.push({ title: trimmedLine, page: simulatedPage });
+                simulatedY += 30; // Espace pour les sous-titres
+            }
+            else {
+                simulatedY += 15; // Espace pour le texte normal
+            }
+        });
+
+        // Ajouter la table des matières
+        addTableOfContents(doc, titlesWithPages);
+
+        // Réinitialiser pour le contenu réel
+        currentPage = 2;
+        addFormattedText(doc, text);
+        addFooter(doc);
+        doc.end();
+
+    } catch (error) {
+        console.error('Erreur lors de la génération du PDF:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Erreur interne du serveur lors de la génération du PDF' });
+        }
+    }
+});
 
 async function startServer() {
     try {

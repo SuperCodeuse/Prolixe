@@ -8,10 +8,12 @@ import Horaire from "./components/horaire/Horaire";
 import Journal from "./components/journal/Journal";
 import Login from './components/authentification/login';
 import { useAuth } from './hooks/useAuth';
-import { useToast } from './hooks/useToast'; // Import du hook
-import Toast from './components/Toast';     // Import du composant
-import CorrectionList from "./components/Correction/CorrectionList"; // Ajout de l'import
-import CorrectionView from "./components/Correction/CorrectionView"; // Ajout de l'import
+import { useToast } from './hooks/useToast';
+import Toast from './components/Toast';
+import CorrectionList from "./components/Correction/CorrectionList";
+import CorrectionView from "./components/Correction/CorrectionView";
+import DocumentGenerator from "./components/DocumentGenerator/DocumentGenerator";
+
 
 
 import './App.scss';
@@ -37,6 +39,7 @@ const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
                     <Route path="/correction" element={<CorrectionList />} />
                     <Route path="/conseilDeClasse" element={<ConseilDeClasse />} />
                     <Route path="/correction/:evaluationId" element={<CorrectionView />} />
+                    <Route path="/document-generator" element={<DocumentGenerator />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

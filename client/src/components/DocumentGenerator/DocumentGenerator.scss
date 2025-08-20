@@ -1,0 +1,132 @@
+@import '../../App';
+
+.document-generator-container {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  gap: 1.5rem; // Utilisation de `gap` pour espacer les éléments
+
+  .document-generator__textarea {
+    width: 100%;
+    min-height: 400px;
+    padding: 1rem;
+    font-size: 1rem;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    resize: vertical;
+    box-shadow: 0 2px 4px var(--shadow-light, rgba(0,0,0,0.1));
+    transition: all 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-dark-blue);
+      box-shadow: 0 0 8px rgba(63, 81, 181, 0.4);
+    }
+  }
+
+  // Dans votre fichier DocumentGenerator.scss
+
+  // Dans votre fichier DocumentGenerator.scss
+
+  // Dans votre fichier DocumentGenerator.scss
+
+  // Dans votre fichier DocumentGenerator.scss
+
+  .document-generator__options {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      border: 2px solid var(--border-color, #ddd);
+      border-radius: 12px;
+      background-color: var(--background-light, #f8f9fa);
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      font-size: 1.1em;
+      font-weight: 500;
+      color: var(--text-color-light, #666);
+      text-align: center;
+
+      // Masque l'input radio de manière simple et propre
+      input[type="radio"] {
+        display: none;
+      }
+
+      // Styles des éléments à l'intérieur de la carte
+      .icon {
+        font-size: 2.5em;
+        margin-bottom: 0.5rem;
+        color: var(--text-color-primary, #333);
+        transition: color 0.3s ease;
+      }
+
+      // Styles de l'état de survol
+      &:hover {
+        border-color: var(--accent-dark-blue);
+        background-color: var(--background-hover, #f0f2f5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      // NOUVEAU: Applique les styles de sélection au label entier
+      &.selected {
+        border-color: var(--accent-dark-blue);
+        background-color: var(--accent-dark-blue);
+        color: white; // Texte en blanc
+        box-shadow: 0 4px 12px rgba(63, 81, 181, 0.25);
+
+        .icon {
+          color: white; // Icône en blanc
+        }
+      }
+    }
+  }
+
+  .document-generator__error {
+    background-color: var(--red-danger);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .document-generator__button {
+    padding: 12px 25px;
+    font-size: 1.1em;
+    color: #fff;
+    background-color: var(--accent-blue);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+
+    &:hover:not(:disabled) {
+      background-color: var(--accent-dark-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    &:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+}
+
+// Animation pour les messages d'erreur
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
