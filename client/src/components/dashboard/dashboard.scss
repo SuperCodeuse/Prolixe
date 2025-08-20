@@ -1,5 +1,7 @@
 /* Dashboard.scss - Styles spécifiques au tableau de bord */
+
 @import '../../App';
+@import './dashboard_mobile.scss';
 
 /* =============================================== */
 /* =============== BASE & LAYOUT ================= */
@@ -391,27 +393,6 @@ textarea, .note-state-select, .note-date-input {
     }
 }
 
-/* =============================================== */
-/* ================== RESPONSIVE ================= */
-/* =============================================== */
-
-@media (max-width: 1600px) {
-    .dashboard-content {
-        grid-template-columns: 1fr;
-    }
-    .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Styles à ajouter ou modifier dans _dashboard.scss */
-
 // Cible le conteneur principal du contenu de la note
 .note-content-wrapper {
     flex-grow: 1; // Permet au contenu de prendre tout l'espace disponible
@@ -446,8 +427,6 @@ textarea, .note-state-select, .note-date-input {
     }
 }
 
-
-
 .note-date {
     font-size: 0.8rem;
     font-weight: 600;
@@ -459,8 +438,6 @@ textarea, .note-state-select, .note-date-input {
     color: var(--text-light);
     line-height: 1.6;
 }
-
-// Dans client/src/components/dashboard/dashboard.scss
 
 .schedule-item.is-cancelled {
     background-color: var(--grey-100);

@@ -42,6 +42,16 @@ const Horaire = () => {
         onConfirm: null
     });
 
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const subjects = ['Programmation', 'Informatique', 'Exp.logiciels', 'Database'];
     const timeSlots = getSortedHours().map(hour => hour.libelle);
 
@@ -90,7 +100,7 @@ const Horaire = () => {
             setCourseForm({ subject: '', classId: '', room: '', notes: '' });
         } catch (err) {
             console.error("Erreur lors de la sauvegarde du cours:", err);
-            showError(`Erreur lors de l'enregistrement: ${(err && err.message) || String(err)}`, 5000); // Amélioration message erreur
+            showError(`Erreur lors de l'enregistrement: ${(err && err.message) || String(err)}`, 5000);
         }
     };
 
@@ -134,7 +144,7 @@ const Horaire = () => {
             setCourseForm({ subject: '', classId: '', room: '', notes: '' });
         } catch (err) {
             console.error("Erreur lors de la suppression du cours:", err);
-            showError(`Erreur lors de la suppression: ${(err && err.message) || String(err)}`, 5000); // Amélioration message erreur
+            showError(`Erreur lors de la suppression: ${(err && err.message) || String(err)}`, 5000);
         }
     };
 
@@ -163,6 +173,16 @@ const Horaire = () => {
         );
     }
 
+    // Générer une liste de tous les créneaux pour le rendu mobile
+    const allSlots = daysOfWeek.flatMap(day =>
+        timeSlots.map(time_libelle => ({
+            day: day.key,
+            dayLabel: day.label,
+            time: time_libelle,
+            slotKey: `${day.key}-${time_libelle}`
+        }))
+    );
+
     return (
         <div className="horaire">
             <div className="horaire-header">
@@ -171,51 +191,96 @@ const Horaire = () => {
             </div>
 
             <div className="schedule-container">
-                <div className="schedule-grid">
-                    <div className="time-header">Horaires</div>
-                    {daysOfWeek.map(day => (
-                        <div key={day.key} className="day-header">
-                            {day.label}
-                        </div>
-                    ))}
+                {/* Rendu pour les écrans de bureau */}
+                {!isMobile && (
+                    <div className="schedule-grid desktop-grid">
+                        <div className="time-header">Horaires</div>
+                        {daysOfWeek.map(day => (
+                            <div key={day.key} className="day-header">
+                                {day.label}
+                            </div>
+                        ))}
 
-                    {timeSlots.map(time_libelle => (
-                        <React.Fragment key={time_libelle}>
-                            <div className="time-slot-label">{time_libelle}</div>
-                            {daysOfWeek.map(day => {
-                                const slotKey = `${day.key}-${time_libelle}`;
-                                const course = getCourseBySlotKey(slotKey);
-                                const classInfo = course ? getClassInfo(course.classId) : null;
-                                return (
-                                    <div
-                                        key={slotKey}
-                                        className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
-                                        onClick={() => handleSlotClick(day.key, time_libelle)}
-                                        style={{
-                                            backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
-                                            borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
-                                        }}
-                                    >
-                                        {course && (
-                                            <div className="course-info">
-                                                <div className="course-subject">{course.subject}</div>
-                                                <div className="course-class">{classInfo?.name}</div>
-                                                <div className="course-room">{course.room}</div>
-                                            </div>
-                                        )}
-                                        {!course && (
-                                            <div className="empty-slot">
-                                                <span>+</span>
-                                            </div>
-                                        )}
+                        {timeSlots.map(time_libelle => (
+                            <React.Fragment key={time_libelle}>
+                                <div className="time-slot-label">{time_libelle}</div>
+                                {daysOfWeek.map(day => {
+                                    const slotKey = `${day.key}-${time_libelle}`;
+                                    const course = getCourseBySlotKey(slotKey);
+                                    const classInfo = course ? getClassInfo(course.classId) : null;
+                                    return (
+                                        <div
+                                            key={slotKey}
+                                            className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
+                                            onClick={() => handleSlotClick(day.key, time_libelle)}
+                                            style={{
+                                                backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
+                                                borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
+                                            }}
+                                        >
+                                            {course && (
+                                                <div className="course-info">
+                                                    <div className="course-subject">{course.subject}</div>
+                                                    <div className="course-class">{classInfo?.name}</div>
+                                                    <div className="course-room">{course.room}</div>
+                                                </div>
+                                            )}
+                                            {!course && (
+                                                <div className="empty-slot">
+                                                    <span>+ Ajouter un cours </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
+
+                {/* Rendu pour les écrans mobiles */}
+                {isMobile && (
+                    <div className="schedule-list mobile-list">
+                        {allSlots.map(slot => {
+                            const course = getCourseBySlotKey(slot.slotKey);
+                            const classInfo = course ? getClassInfo(course.classId) : null;
+                            const slotHasCourse = !!course;
+                            return (
+                                <div
+                                    key={slot.slotKey}
+                                    className={`schedule-list-item ${slotHasCourse ? 'has-course' : 'empty'}`}
+                                    onClick={() => handleSlotClick(slot.day, slot.time)}
+                                    style={{
+                                        borderLeftColor: slotHasCourse ? getClassColor(course.subject, classInfo?.level) : 'var(--accent-blue)'
+                                    }}
+                                >
+                                    <div className="slot-header">
+                                        <span className="slot-day">{slot.dayLabel}</span>
+                                        <span className="slot-time">{slot.time}</span>
                                     </div>
-                                );
-                            })}
-                        </React.Fragment>
-                    ))}
-                </div>
+                                    {slotHasCourse ? (
+                                        <div className="course-info-mobile">
+                                            <div className="course-subject">{course.subject}</div>
+                                            <div className="course-details">
+                                                <span className="course-class">{classInfo?.name}</span>
+                                                <span className="course-room">
+                                                    <i className="fas fa-map-marker-alt"></i> {course.room}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-slot-mobile">
+                                            <span>Ajouter un cours</span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
+            {/* Le reste du code (modals, toasts) est inchangé */}
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal">
@@ -320,7 +385,6 @@ const Horaire = () => {
                 </div>
             )}
 
-            {/* Affichage des toasts */}
             <div className="toast-container">
                 {toasts.map(toast => (
                     <Toast
@@ -333,7 +397,6 @@ const Horaire = () => {
                 ))}
             </div>
 
-            {/* Modal de confirmation */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 title={confirmModal.title}

@@ -1,0 +1,19 @@
+/* _dashboard-mobile.scss */
+@media (max-width: 1600px) {
+  .dashboard-content {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .dashboard-section{
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

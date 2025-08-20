@@ -1,6 +1,7 @@
 /* Journal.scss - Styles spécifiques au Journal / Agenda */
 
 @import '../../App.scss'; // Assurez-vous que le chemin est correct vers votre App.scss global
+@import './journal_mobile.scss'; // Ajoutez cette ligne pour les styles mobiles
 
 .journal-page {
   @include page-container-base;
@@ -20,9 +21,6 @@
       font-weight: 700;
       margin: 0;
       color: var(--text-light);
-      @media (max-width: 768px) {
-        font-size: 1.8rem;
-      }
     }
 
     .journal-header-left{
@@ -65,21 +63,6 @@
           border-color: var(--border-color);
         }
       }
-
-      @media (max-width: 768px) {
-        flex-direction: column;
-        gap: 0.5rem;
-        span {
-          font-size: 0.9rem;
-        }
-      }
-    }
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: 1rem;
-      text-align: center;
-      padding: 1rem;
     }
   }
 
