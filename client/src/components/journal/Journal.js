@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import './Journal.scss';
 import { useJournal } from '../../hooks/useJournal';
 import { useClasses } from '../../hooks/useClasses';
 import { useScheduleHours } from '../../hooks/useScheduleHours';

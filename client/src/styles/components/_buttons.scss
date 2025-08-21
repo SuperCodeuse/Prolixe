@@ -1,0 +1,12 @@
+// Fichier : client/src/styles/components/_buttons.scss
+
+.btn-primary { @include btn-primary-base; }
+.btn-secondary { @include btn-secondary-base; }
+.btn-danger { @include btn-danger-base; }
+.btn-action { @include btn-action-base; }
+.btn-select {
+  @include btn-secondary-base;
+  font-size: 0.8rem;
+  padding-inline: 0.5rem !important;
+  margin-left: 0.5rem;
+}

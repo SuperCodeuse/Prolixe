@@ -1,6 +1,5 @@
 import React from 'react';
 import { useJournal } from '../../hooks/useJournal';
-import './JournalPicker.scss';
 
 const JournalPicker = () => {
     const { journals, selectJournal, loading, error } = useJournal();

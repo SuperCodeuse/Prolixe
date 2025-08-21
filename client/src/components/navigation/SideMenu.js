@@ -4,8 +4,6 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import useOutsideClick from '../../hooks/useOutsideClick'; // Assurez-vous que le chemin est correct
 
-import './SideMenu.scss';
-
 const SideMenu = ({ isMenuOpen, toggleMenu }) => {
     const { logout, user } = useAuth();
     const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = React.useState(false);

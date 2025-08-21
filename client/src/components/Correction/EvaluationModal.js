@@ -3,7 +3,6 @@ import { useClasses } from '../../hooks/useClasses';
 import { useJournal } from '../../hooks/useJournal';
 import { getEvaluationTemplates, getEvaluationById } from '../../services/EvaluationService';
 import { useToast } from '../../hooks/useToast';
-import './EvaluationModal.scss';
 import { TextField } from "@mui/material";
 
 const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy }) => {

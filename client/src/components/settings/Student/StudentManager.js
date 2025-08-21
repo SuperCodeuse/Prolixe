@@ -4,7 +4,6 @@ import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
 import { useJournal } from '../../../hooks/useJournal';
 import ConfirmModal from '../../ConfirmModal'; // Assurez-vous d'importer votre modale
-import './StudentManager.scss';
 
 const StudentManager = () => {
     const { currentJournal } = useJournal();

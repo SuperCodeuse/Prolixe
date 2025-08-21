@@ -6,7 +6,6 @@ import EvaluationModal from './EvaluationModal';
 import ConfirmModal from '../ConfirmModal';
 import { useToast } from '../../hooks/useToast';
 import { useJournal } from '../../hooks/useJournal';
-import './CorrectionList.scss';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 

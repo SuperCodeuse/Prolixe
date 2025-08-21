@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import ClassesManager from "./Class/ClassManager";
 import ScheduleManager from "./Schedule/ScheduleManager";
 import HolidaysManager from "./holidays/HolidaysManager";
-import './Settings.scss';
 import JournalManager from "../journal/JournalManager";
 import AttributionManager from "./Attribution/AttributionManager";
 import StudentManager from "./Student/StudentManager";

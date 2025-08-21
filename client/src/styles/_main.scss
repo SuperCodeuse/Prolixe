@@ -1,0 +1,33 @@
+// Fichier : client/src/styles/_main.scss
+
+// 1. Utilities and Abstracts
+@import 'abstracts/variables';
+@import 'abstracts/mixins';
+
+// 2. Base styles
+@import 'base/reset';
+
+// 3. Layout styles
+@import 'layout/main_content';
+@import 'layout/sidemenu';
+
+// 4. Component styles
+@import 'components/toast';
+@import 'components/modal';
+@import 'components/buttons';
+@import 'components/login';
+@import 'components/document_generator';
+@import 'components/correction';
+@import 'components/evaluation_modal';
+@import 'components/settings';
+
+// 5. Page-specific styles
+@import 'pages/dashboard';
+@import 'pages/horaire';
+@import 'pages/journal';
+@import 'pages/conseil_classe';
+
+// 6. Responsive and media queries
+@import 'responsive/dashboard_responsive';
+@import 'responsive/horaire_responsive';
+@import 'responsive/journal_responsive';

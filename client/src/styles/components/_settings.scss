@@ -1,0 +1,234 @@
+// Fichier : client/src/styles/components/_settings.scss
+
+.settings-page {
+  @include page-container-base;
+}
+
+.settings-header {
+  margin-bottom: 2rem;
+  h1 {
+    font-size: 2rem; font-weight: 600; color: var(--text-light);
+    margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+  p {
+    color: #9ca3af; font-size: 1rem;
+  }
+}
+
+.settings-content {
+  display: flex; gap: 2rem; max-width: 1600px;
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.settings-sidebar {
+  width: 250px; background: var(--bg-dark-tertiary);
+  border-radius: 12px; padding: 1rem;
+  border: 1px solid #333333; height: fit-content;
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.settings-nav {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  @media (max-width: 768px) {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+}
+
+.settings-tab {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 1rem; background: transparent; border: none;
+  border-radius: 8px; color: #9ca3af; cursor: pointer;
+  transition: all 0.3s ease; font-size: 0.875rem; text-align: left;
+  &:hover {
+    background: var(--blue-transparent-sm); color: var(--text-light);
+    transform: translateX(4px);
+  }
+  &.active {
+    background: linear-gradient(90deg, var(--blue-transparent-md) 0%, rgba(59, 130, 246, 0.08) 100%);
+    color: var(--text-light); border-left: 3px solid var(--accent-blue);
+  }
+}
+
+.tab-icon {
+  font-size: 1.125rem;
+}
+
+.settings-main {
+  flex: 1; background: var(--bg-dark-tertiary);
+  border-radius: 12px; padding: 2rem;
+  border: 1px solid #333333;
+}
+
+/* Classes Manager */
+.classes-manager h2 { color: var(--text-light); margin-bottom: 1.5rem; font-size: 1.5rem; }
+.classes-header { display: flex; align-items: center; justify-content: space-between; }
+.btn-primary {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 1.5rem; background: linear-gradient(135deg, var(--accent-blue), var(--accent-dark-blue));
+  color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;
+  font-size: 0.875rem; transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  &:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+}
+
+.classes-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem; margin-top: 2rem;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.class-card {
+  background: var(--bg-dark-secondary); border: 1px solid #333333;
+  border-radius: 12px; padding: 1.5rem; transition: all 0.3s ease;
+  &:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); border-color: var(--accent-blue); }
+  h3 { color: var(--text-light); font-size: 1.25rem; font-weight: 600; }
+  .class-actions { display: flex; gap: 0.5rem; }
+  .class-actions .btn-edit {
+    @include btn-action-base;
+    &:hover { background: var(--blue-transparent-sm); border-color: var(--accent-blue); }
+  }
+  .class-actions .btn-delete {
+    @include btn-action-base;
+    &:hover { background: var(--red-transparent-sm); border-color: var(--red-danger); }
+  }
+}
+
+.info-item {
+  display: flex; justify-content: space-between; align-items: center;
+  .info-label { color: #9ca3af; font-size: 0.875rem; }
+  .info-value { color: var(--text-light); font-weight: 500; font-size: 0.875rem; }
+}
+
+/* Attribution Manager */
+.attribution-manager h2 { margin-bottom: 0.5rem; }
+.attribution-list {
+  .attribution-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.5rem; background-color: var(--bg-dark-secondary); border: 1px solid var(--border-color);
+    border-radius: 8px; margin-bottom: 1rem;
+    .item-details {
+      flex-grow: 1;
+      strong { font-size: 1.1rem; }
+      p { margin: 0.25rem 0 0; color: var(--text-muted); }
+    }
+    .item-actions { display: flex; gap: 0.5rem; }
+  }
+}
+
+/* Student Manager */
+.student-manager {
+  h2 { color: var(--text-light); margin-bottom: 1.5rem; }
+  .add-student-form {
+    display: flex; gap: 1rem; margin-bottom: 2rem;
+    input { flex-grow: 1; }
+  }
+  .student-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .student-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-dark-secondary); padding: 0.75rem 1rem; border-radius: 8px;
+  }
+  .current-year-info {
+    font-size: 0.9rem; color: var(--text-muted);
+    background-color: var(--white-transparent-sm); padding: 0.75rem 1rem;
+    border-radius: 6px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);
+    strong { color: var(--accent-cyan); font-weight: 600; }
+  }
+}
+
+/* Holidays Manager */
+.holidays-manager {
+  h2 { color: var(--text-light); margin-bottom: 0.5rem; }
+  p { color: var(--text-muted); margin-bottom: 2rem; }
+  .import-area {
+    display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;
+    .btn-primary { @include btn-primary-base; cursor: pointer; }
+    .file-name { color: var(--accent-green); font-style: italic; }
+  }
+  .help-box {
+    background-color: var(--bg-dark-secondary); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 1.5rem;
+    h4 { margin-top: 0; color: var(--text-light); }
+    pre {
+      background-color: var(--bg-dark-blue); padding: 1rem;
+      border-radius: 4px; white-space: pre-wrap; word-break: break-all;
+      font-family: monospace; color: var(--text-secondary);
+    }
+  }
+}
+
+/* Schedule Manager (attention, styles clairs) */
+.schedule-manager {
+  background: var(--gray-light); border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; margin-top: 20px;
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--light-border);
+    h3 { margin: 0; color: var(--text-dark); font-size: 1.2em; }
+  }
+  .btn {
+    padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 0.9em; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn-primary { background: #4299e1; color: white; &:hover { background: #3182ce; } }
+  .btn-secondary { background: var(--light-border); color: var(--text-dark-tertiary); &:hover { background: var(--light-border-hover); } }
+  .btn-edit { background: #fbd38d; color: #744210; padding: 6px 8px; &:hover { background: #f6ad55; } }
+  .btn-delete { background: var(--error-light); color: var(--red-danger); padding: 6px 8px; &:hover { background: #feb2b2; } }
+  .schedule-grid { display: grid; gap: 10px; max-height: 400px; overflow-y: auto; }
+  .schedule-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px; background: var(--light-bg-secondary); border-radius: 8px;
+    border: 1px solid var(--light-border); transition: all 0.2s;
+    &:hover { background: var(--light-bg-tertiary); border-color: var(--light-border-hover); }
+  }
+}
+
+/* Styles communs à toutes les modales de settings */
+.settings-page {
+  .modal-overlay {
+    @include modal-overlay-base;
+    z-index: 2000;
+  }
+  .modal {
+    @include modal-base;
+    border-radius: 16px;
+  }
+  .modal-header { @include modal-header-base; }
+  .modal-close {
+    @include modal-close-btn-base;
+    background: none; border: none; color: #9ca3af;
+    &:hover { background: var(--red-transparent-sm); color: var(--red-danger); }
+  }
+  .class-form { padding: 1.5rem; }
+  .form-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+    @media (max-width: 768px) { grid-template-columns: 1fr; }
+  }
+  .form-group {
+    @include form-group-base;
+    label { color: var(--text-light); }
+    input, select {
+      background: var(--bg-dark-tertiary); border: 1px solid #333333;
+      border-radius: 8px;
+    }
+  }
+  .form-actions { @include form-actions-base; }
+  .btn-secondary {
+    @include btn-secondary-base;
+    background: transparent; color: #9ca3af; border: 1px solid #333333;
+    border-radius: 8px;
+    &:hover { background: #333333; color: var(--text-light); }
+  }
+  .empty-state { text-align: center; padding: 3rem; color: #9ca3af; }
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+}

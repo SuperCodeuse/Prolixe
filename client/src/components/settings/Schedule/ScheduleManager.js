@@ -1,7 +1,6 @@
 // frontend/src/components/ScheduleManager.js
 import React, { useState } from 'react';
 import { useScheduleHours } from '../../../hooks/useScheduleHours';
-import './ScheduleManager.scss';
 
 const ScheduleManager = () => {
     const {

@@ -1,6 +1,5 @@
 // Horaire.jsx
 import React, { useState, useEffect } from 'react';
-import './Horaire.scss';
 import { useClasses } from "../../hooks/useClasses";
 import { useScheduleHours } from "../../hooks/useScheduleHours";
 import { useToast } from '../../hooks/useToast';

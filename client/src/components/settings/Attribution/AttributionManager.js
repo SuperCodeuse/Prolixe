@@ -5,7 +5,6 @@ import { useToast } from '../../../hooks/useToast';
 import ConfirmModal from '../../ConfirmModal';
 import SchoolYearDisplay from '../../../hooks/SchoolYearDisplay'; // Assurez-vous que le chemin d'importation est correct
 import { format } from 'date-fns';
-import './AttributionManager.scss';
 
 const AttributionManager = () => {
     // Utilisation de votre hook personnalisé pour les années scolaires

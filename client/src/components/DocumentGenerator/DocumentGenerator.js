@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './DocumentGenerator.scss';
 import {format} from "date-fns";
 import {fr} from "date-fns/locale";
 

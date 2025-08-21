@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEvaluationForGrading, saveGrades } from '../../services/EvaluationService';
 import { useToast } from '../../hooks/useToast';
-import './CorrectionView.scss';
 
 const CommentDisplay = ({ text }) => {
     if (!text) {

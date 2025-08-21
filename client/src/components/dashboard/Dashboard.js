@@ -6,8 +6,6 @@ import { useJournal } from '../../hooks/useJournal';
 import { useHolidays } from '../../hooks/useHolidays';
 import { format, parseISO } from 'date-fns';
 import { fr, enGB } from 'date-fns/locale';
-import '../../App.scss';
-import './dashboard.scss';
 import NotesSection from "./NoteSection";
 
 const Dashboard = () => {

@@ -1,0 +1,110 @@
+// Fichier : client/src/styles/components/_modal.scss
+
+/* Modal pour le thème sombre (utilisé dans Journal.scss par exemple) */
+.modal-overlay { @include modal-overlay-base; }
+.modal {
+  @include modal-base;
+  padding-inline: 1rem !important;
+  max-height: 100vh;
+}
+.modal-header {
+  @include modal-header-base;
+  border-bottom: 0;
+}
+.modal-close { @include modal-close-btn-base; }
+.modal-form {
+  padding: 0 1.5rem 1.5rem;
+  margin-top: 1.5rem;
+}
+.form-group { @include modal-form-group-base; }
+.modal-footer {
+  @include modal-form-actions-base;
+  .btn-primary { @include modal-form-btn-base; background: var(--accent-blue); color: white; &:hover { background: var(--accent-dark-blue); } }
+  .btn-secondary { @include modal-form-btn-base; background: var(--gray-button); color: white; &:hover { background: var(--gray-button-hover); } }
+  .btn-danger { @include modal-form-btn-base; background: var(--red-danger); color: white; &:hover { background: var(--red-dark-danger); } }
+}
+
+/* Modale pour le thème clair */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.confirm-modal-header {
+  padding: 20px 20px 0;
+}
+
+.confirm-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.confirm-modal-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.confirm-message {
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.confirm-modal-actions {
+  padding: 0 20px 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-modal-actions .btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-modal-actions .btn-secondary {
+  background: var(--gray-light);
+  color: var(--text-dark-secondary);
+}
+
+.confirm-modal-actions .btn-secondary:hover {
+  background: var(--gray-medium);
+}
+
+.confirm-modal-actions .btn-danger {
+  background: var(--red-danger);
+  color: white;
+}
+
+.confirm-modal-actions .btn-danger:hover {
+  background: var(--red-dark-danger);
+}

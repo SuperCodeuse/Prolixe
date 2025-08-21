@@ -14,9 +14,6 @@ import CorrectionList from "./components/Correction/CorrectionList";
 import CorrectionView from "./components/Correction/CorrectionView";
 import DocumentGenerator from "./components/DocumentGenerator/DocumentGenerator";
 
-
-
-import './App.scss';
 import ConseilDeClasse from "./components/cc/conseilClasse";
 
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {

@@ -1,0 +1,339 @@
+// Fichier : client/src/styles/pages/_journal.scss
+
+.journal-page {
+  @include page-container-base;
+
+  .journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, var(--bg-dark-secondary) 0%, var(--border-color) 100%);
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-light);
+    }
+
+    .journal-header-left{
+      display: flex;
+      flex-direction: row;
+      gap: 2rem;
+      span{
+        padding-top: 1rem;
+        font-weight: bold;
+        color: var(--accent-cyan);
+      }
+    }
+
+    .week-navigation {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 500;
+      .btn-secondary {
+        @include btn-secondary-base;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        &:disabled {
+          background-color: var(--bg-dark-tertiary);
+          color: var(--text-muted);
+          border-color: var(--border-color);
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+        &:disabled:hover {
+          background: var(--bg-dark-tertiary);
+          border-color: var(--border-color);
+        }
+      }
+    }
+  }
+
+  .journal-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+
+    @media (min-width: 1024px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .assignments-section {
+    @include card-base;
+    padding: 1.5rem;
+    min-height: 20rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin: 0;
+    }
+    .btn-primary {
+      @include btn-primary-base;
+      width: fit-content;
+      font-size: 0.9rem;
+      padding: 0.6rem 1.2rem;
+    }
+    .assignment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+    .assignment-item {
+      background: var(--white-transparent-sm);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: all 0.2s ease;
+      &:hover {
+        background: var(--white-transparent-md);
+      }
+      &.fully-corrected {
+        text-decoration: line-through;
+        opacity: 0.6;
+        h4, p { color: var(--text-muted); }
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-green);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .assignment-details {
+        flex: 1;
+        h4 { font-size: 1rem; color: var(--text-light); margin: 0 0 0.25rem 0; }
+        p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+      }
+      .btn-edit {
+        @include btn-action-base;
+        font-size: 0.9rem;
+        padding: 0.4rem;
+        &:hover { background: var(--blue-transparent-sm); border-color: var(--accent-blue); }
+      }
+    }
+  }
+
+  .weekly-agenda-section {
+    @include card-base;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    h2 { font-size: 1.4rem; font-weight: 600; color: var(--text-light); margin: 1rem; }
+  }
+
+  .journal-days-container {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    min-height: 12.5rem;
+
+    &::-webkit-scrollbar { height: 8px; }
+    &::-webkit-scrollbar-track { background: var(--bg-dark-blue); border-radius: 4px; }
+    &::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    &::-webkit-scrollbar-thumb:hover { background: #475569; }
+  }
+
+  .day-column {
+    flex: 1;
+    min-width: 250px;
+    min-height: 12rem;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-dark-secondary);
+    border-right: 1px solid var(--border-color);
+    &:last-child { border-right: none; }
+    &:first-child { border-top-left-radius: 0.5rem; border-bottom-left-radius: 0.5rem; }
+    &:last-child { border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+    &.is-holiday {
+      background-color: var(--bg-dark-tertiary);
+      background-image: repeating-linear-gradient(
+                      45deg,
+                      rgba(255, 255, 255, 0.02),
+                      rgba(255, 255, 255, 0.02) 10px,
+                      rgba(255, 255, 255, 0.04) 10px,
+                      rgba(255, 255, 255, 0.04) 20px
+      );
+      border-color: var(--accent-orange);
+      .day-header-journal { background: var(--accent-dark-orange); color: white; }
+    }
+  }
+
+  .day-header-journal {
+    background: #475569;
+    color: var(--text-light);
+    padding: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .day-courses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    flex-grow: 1;
+  }
+
+  .no-courses-for-day-message {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .journal-slot {
+    background: var(--white-transparent-sm);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    min-height: 80px;
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+    &:hover { background: var(--white-transparent-md); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+    &.is-exam {
+      background-color: rgba(var(--accent-orange-rgb), 0.1);
+      .course-summary { display: none; }
+    }
+    &.is-interro {
+      background-color: rgba(139, 92, 246, 0.15);
+      border-left-color: #8B5CF6;
+      .interro-prefix {
+        font-weight: 500; color: #a78bfa; font-size: 0.9rem;
+        margin-right: 6px;
+      }
+    }
+
+    .course-summary {
+      display: flex; flex-direction: column; gap: 0.2rem; width: 100%;
+      .course-info-header {
+        display: flex; justify-content: space-between;
+        align-items: baseline; font-size: 0.9rem; font-weight: 600; color: var(--text-light);
+      }
+      .course-time-display { color: var(--text-muted); font-size: 0.8rem; font-weight: 400; }
+      .course-class-display { color: var(--accent-blue); font-size: 0.9rem; font-weight: 600; }
+      .course-details {
+        margin-top: 0.25rem; font-size: 0.9rem; color: var(--text-light);
+        .course-title-display { font-weight: 600; }
+        .course-room-display { color: var(--text-muted); font-size: 0.85rem; }
+      }
+    }
+    .journal-entry-indicator {
+      position: absolute; bottom: 0.5rem; right: 0.5rem;
+      font-size: 0.75rem; color: var(--accent-green);
+      background: rgba(var(--accent-green-rgb), 0.1); padding: 0.2rem 0.4rem;
+      border-radius: 0.3rem; font-weight: 500;
+    }
+  }
+
+  .cancellation-display {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    .cancellation-icon { font-size: 1.5rem; }
+    .cancellation-label { font-weight: 700; margin: 0.25rem 0; letter-spacing: 1px; }
+    .cancellation-reason { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+    &.exam-display {
+      .cancellation-label { color: var(--accent-orange); }
+    }
+  }
+
+  .journal-entry-preview {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    .preview-text {
+      margin: 0; font-size: 0.8rem; white-space: pre-wrap; word-break: break-word;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    &.planned-work .preview-text { color: var(--text-gray); font-style: italic; }
+    &.actual-work .preview-text { color: var(--accent-green); font-weight: 500; }
+  }
+
+  textarea { padding: 0.2rem !important; background: var(--border-color) !important; }
+  .holiday-card {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; height: 100%; padding: 1rem;
+    background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(5px);
+    border-radius: 0.5rem; color: white; border: 1px solid var(--accent-orange);
+  }
+  .holiday-icon { font-size: 2.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  .holiday-name { font-weight: 600; font-size: 1.1rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
+  .corrected-checkbox-wrapper {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-left: 1rem; padding-left: 1rem; border-left: 1px solid var(--border-color);
+    label { font-size: 0.8rem; color: var(--text-muted); cursor: pointer; }
+  }
+  .copy-next-group {
+    margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);
+    flex-direction: row; align-items: center;
+    label { font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+  }
+  .loading-message, .error-message {
+    @include card-base;
+    padding: 2rem; text-align: center; font-size: 1.2rem;
+    color: var(--text-muted);
+  }
+  .error-message { color: var(--red-danger); }
+  .no-courses-message {
+    padding: 2rem; text-align: center; color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .journal-header {
+    h1 { font-size: 1.8rem; }
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .week-navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+    span { font-size: 0.9rem; }
+  }
+
+  .journal-page .journal-days-container{
+    flex-direction: column;
+  }
+}

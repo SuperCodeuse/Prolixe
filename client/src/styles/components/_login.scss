@@ -1,0 +1,88 @@
+// Fichier : client/src/styles/components/_login.scss
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-dark-blue);
+  color: var(--text-light);
+}
+
+.login-card {
+  @include card-base;
+  background: var(--bg-dark-secondary);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 40rem;
+  height: auto;
+  padding: 2.5rem 3rem;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+.login-header {
+  margin-bottom: 2rem;
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+    color: var(--text-light);
+  }
+  p {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  .form-group {
+    margin-bottom: 0;
+    text-align: left;
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    input {
+      width: 95%;
+      padding: 0.85rem;
+      background: var(--bg-dark-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      color: var(--text-light);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      &:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px var(--blue-transparent-sm);
+      }
+    }
+  }
+  .login-btn {
+    @include btn-primary-base;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.9rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(var(--accent-blue-rgb), 0.3);
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(var(--accent-blue-rgb), 0.4);
+    }
+  }
+}

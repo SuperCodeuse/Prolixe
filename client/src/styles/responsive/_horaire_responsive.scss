@@ -1,11 +1,11 @@
-/* _horaire-mobile.scss - Styles mobiles */
+// Fichier : client/src/styles/responsive/_horaire_responsive.scss
 
 @media (max-width: 768px) {
   .schedule-grid.desktop-grid {
     display: none;
   }
 
-  .empty{
+  .empty {
     display: none !important;
   }
 
@@ -32,7 +32,7 @@
     }
 
     &.has-course {
-      border-left-color: var(--color-course); // Cette variable sera définie par le style en ligne
+      border-left-color: var(--color-course);
     }
 
     .slot-header {
@@ -66,7 +66,7 @@
     }
 
     .empty-slot-mobile {
-     display: none;
+      display: none;
     }
   }
 }

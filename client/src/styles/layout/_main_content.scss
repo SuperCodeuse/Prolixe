@@ -1,0 +1,58 @@
+// Fichier : client/src/styles/layout/_main_content.scss
+
+.app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-dark-blue);
+  transition: padding-left 0.3s ease;
+}
+
+.app.menu-open {
+  @media (min-width: 1600px) {
+    padding-left: 280px;
+  }
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 2rem;
+  width: 100%;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  position: relative;
+}
+
+.sidemenu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+  display: none;
+}
+
+.menu-toggle-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--accent-dark-blue);
+  }
+
+  .app.menu-open & {
+    left: calc(280px + 1rem);
+  }
+}

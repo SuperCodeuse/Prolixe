@@ -1,0 +1,34 @@
+// Fichier : client/src/styles/base/_reset.scss
+@import '../abstracts/variables';
+
+// Styles du body depuis index.css
+body {
+  margin: 0;
+  font-family: $font-family-sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: $font-family-code;
+}
+
+/* Scrollbar personnalisée (pour éléments avec overflow) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $bg-dark-blue;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-color;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

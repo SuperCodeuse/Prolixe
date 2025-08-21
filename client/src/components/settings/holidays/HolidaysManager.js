@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useToast } from '../../../hooks/useToast';
 import { useJournal } from '../../../hooks/useJournal'; // Importer le hook de journal
 
-import './HolidaysManager.scss';
-
 const HolidaysManager = () => {
     const { success, error: showError } = useToast();
     const [fileName, setFileName] = useState('');

@@ -6,7 +6,6 @@ import { useToast } from '../../hooks/useToast';
 import ConfirmModal from '../ConfirmModal';
 import JournalService from '../../services/JournalService';
 import SchoolYearDisplay from '../../hooks/SchoolYearDisplay'; // Предполагая, что это компонент, а не хук
-import './JournalManager.scss';
 
 const JournalManager = () => {
     const {

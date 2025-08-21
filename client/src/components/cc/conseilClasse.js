@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useJournal } from '../../hooks/useJournal';
 import { useClasses } from '../../hooks/useClasses';
 import { useConseilDeClasse } from '../../hooks/useCC';
-import './conseilClasse.scss';
-
 
 // Indicateur de sauvegarde (inchangé)
 const SavingIndicator = ({ status }) => {

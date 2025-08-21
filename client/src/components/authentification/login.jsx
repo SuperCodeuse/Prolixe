@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth'; // Assurez-vous du chemin
 import { useToast } from '../../hooks/useToast'; // Pour les notifications
-import './login.scss'; // Votre fichier CSS pour le formulaire de connexion
 
 const Login = () => {
     const { login } = useAuth();

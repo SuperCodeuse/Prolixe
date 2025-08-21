@@ -1,13 +1,10 @@
-/* _journal-mobile.scss - Styles mobiles spécifiques au Journal */
+// Fichier : client/src/styles/responsive/_journal_responsive.scss
 
 @media (max-width: 768px) {
   .journal-header {
     h1 {
       font-size: 1.8rem;
     }
-  }
-
-  .journal-header {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
@@ -22,7 +19,7 @@
     }
   }
 
-  .journal-page .journal-days-container{
+  .journal-page .journal-days-container {
     flex-direction: column;
   }
 }
