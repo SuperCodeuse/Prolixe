@@ -4,7 +4,7 @@ const db = require('../../config/database');
 // Récupérer les notes (avec état, date, heure et local)
 const getNotes = async (req, res) => {
     try {
-        const [notes] = await db.query('SELECT id, text, state, date, time, location FROM NOTES');
+        const [notes] = await db.query('SELECT id, text, state, date, time, location FROM NOTES ORDER BY date ASC, time ASC');
         res.status(200).json(notes);
     } catch (error) {
         res.status(500).json({ message: "Erreur serveur" });
