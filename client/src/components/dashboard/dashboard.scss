@@ -454,27 +454,56 @@ textarea, .note-state-select, .note-date-input {
 
 // Style pour le nouvel en-tête de la note
 .note-header {
-    display: flex;
-    justify-content: space-between; // Aligne les éléments aux extrémités
+    display: grid;
+    grid-template-columns: min-content min-content 1fr min-content;
+    gap: 1rem;
+    width: 100%;
     align-items: center;
-    gap: 1rem; // Espace si les éléments sont proches
 }
 
-// Style amélioré pour la catégorie, pour qu'elle ressemble à une "étiquette"
+.note-date, .note-time, .note-location, .note-category {
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.note-date {
+    grid-column: 1 / 2;
+}
+
+.note-time {
+    grid-column: 2 / 3;
+}
+
+.note-location {
+    grid-column: 3 / 4;
+}
+
 .note-category {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: capitalize;
-    background-color: rgba(255, 255, 255, 0.1); // Fond semi-transparent
+    grid-column: 4 / 5;
+    text-align: right;
+    justify-self: end;
+
+    background-color: transparent;
     padding: 0.25rem 0.75rem;
-    border-radius: 2rem; // Pour un effet "pilule"
-    white-space: nowrap; // Empêche le retour à la ligne
+    border-radius: 2rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 50px;
+    text-align: center;
+
+    &.state-autre {
+        color: transparent;
+        background-color: transparent;
+    }
 
     &.state-conseil-de-classe {
         background-color: var(--accent-orange);
+        color: var(--white);
     }
     &.state-réunions-de-parents {
         background-color: var(--red-danger);
+        color: var(--white);
     }
 }
 
