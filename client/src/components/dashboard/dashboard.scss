@@ -7,6 +7,8 @@
 /* =============== BASE & LAYOUT ================= */
 /* =============================================== */
 
+
+
 .dashboard {
     @include page-container-base;
 }
@@ -286,6 +288,40 @@ textarea, .note-state-select, .note-date-input {
         display: flex;
         align-items: center;
         gap: 1rem;
+
+        .btn-select{
+            background-color: var(--light-bg-secondary) !important;
+            color: black;
+            padding: 1rem 1rem;
+        }
+    }
+
+
+    .btn-actions{
+        margin: 1rem 0.5rem;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--white);
+        font-size: 1rem;
+    }
+
+    .save-btn{
+        background-color: var(--accent-blue);
+        &:hover{
+            background-color: var(--accent-dark-blue);
+        }
+    }
+
+
+    .cancel-btn{
+        background-color: var(--red-danger);
+        &:hover{
+            background-color: var(--red-dark-danger);
+        }
     }
 
     .note-state-select { flex-grow: 1; }

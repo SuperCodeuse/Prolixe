@@ -6,6 +6,7 @@ const NoteController = require('../controllers/NoteController');
 
 router.get('/', NoteController.getNotes);
 router.post('/', NoteController.createNote);
+router.put('/:id', NoteController.updateNote);
 router.delete('/:id', NoteController.deleteNote);
 
     module.exports = router;
