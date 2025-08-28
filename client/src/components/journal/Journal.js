@@ -268,7 +268,7 @@ const JournalView = () => {
     const isCourseDayForClass = useCallback((classId, date) => {
         if (!classId || !date || !schedule.data) return false;
         const dayKey = getDayKeyFromDateFnsString(format(date, 'EEEE', { locale: fr }).toLowerCase());
-        return Object.values(schedule.data).some(course => course.day === dayKey && course.classId === classId);
+        return Object.values(schedule.data).some(course => course.day === dayKey && course.classId == classId);
     }, [schedule.data, getDayKeyFromDateFnsString]);
 
     const availableDueDates = useMemo(() => {
@@ -310,6 +310,8 @@ const JournalView = () => {
     }, [isArchived]);
 
     const handleEditAssignment = useCallback((assignment) => {
+        console.log("here");
+        console.log("here");
         if (isArchived) return;
         setSelectedAssignment(assignment);
         setAssignmentForm({ ...assignment, due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : '' });
@@ -516,6 +518,86 @@ const JournalView = () => {
                         <div className="modal-footer">
                             {currentJournalEntryId && !isArchived && <button type="button" className="btn-danger" onClick={handleDeleteJournalEntry}>Supprimer l'entrée</button>}
                             <button type="button" className="btn-secondary" onClick={handleCloseJournalModal}>Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {showAssignmentModal && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3>{selectedAssignment ? 'Modifier l\'assignation' : 'Nouvelle assignation'}</h3>
+                            <button className="modal-close" onClick={() => setShowAssignmentModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body-content">
+                            <form onSubmit={handleSaveAssignment}>
+                                <div className="form-group">
+                                    <label>Classe</label>
+                                    <select
+                                        value={assignmentForm.class_id}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, class_id: e.target.value })}
+                                        required
+                                        disabled={isArchived}
+                                    >
+                                        <option value="">Sélectionnez une classe</option>
+                                        {classes.map(cls => (
+                                            <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Matière</label>
+                                    <input
+                                        type="text"
+                                        value={assignmentForm.subject}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, subject: e.target.value })}
+                                        required
+                                        disabled={isArchived}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Type</label>
+                                    <select
+                                        value={assignmentForm.type}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, type: e.target.value })}
+                                        required
+                                        disabled={isArchived}
+                                    >
+                                        {assignmentTypes.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Description</label>
+                                    <textarea
+                                        value={assignmentForm.description}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
+                                        rows="3"
+                                        disabled={isArchived}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Date d'échéance</label>
+                                    <select
+                                        value={assignmentForm.due_date}
+                                        onChange={(e) => setAssignmentForm({ ...assignmentForm, due_date: e.target.value })}
+                                        required
+                                        disabled={isArchived}
+                                    >
+                                        <option value="">Sélectionnez une date</option>
+                                        {availableDueDates.map(date => (
+                                            <option key={date.value} value={date.value}>{date.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="modal-footer">
+                                    {selectedAssignment && !isArchived && (
+                                        <button type="button" className="btn-danger" onClick={handleDeleteAssignmentConfirm}>Supprimer</button>
+                                    )}
+                                    <button type="submit" className="btn-primary" disabled={isArchived}>Sauvegarder</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
