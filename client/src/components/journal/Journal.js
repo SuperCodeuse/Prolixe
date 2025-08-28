@@ -49,6 +49,7 @@ const JournalView = () => {
     const journalBounds = useMemo(() => {
         if (!holidays || holidays.length === 0) return null;
         try {
+            console.log("here !");
             const allDates = holidays.flatMap(h => [parseISO(h.start), parseISO(h.end)]);
             return {
                 start: startOfWeek(min(allDates), { weekStartsOn: 1 }),
