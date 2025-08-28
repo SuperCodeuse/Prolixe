@@ -208,7 +208,7 @@ const JournalView = () => {
         }
     };
 
-    const handleIsInterroChange = (e) => {
+    const handleIsInterroChange = async (e) => {
         const isChecked = e.target.checked;
         setIsInterro(isChecked);
 
@@ -218,6 +218,59 @@ const JournalView = () => {
         const updatedForm = { ...journalForm, actual_work: newActualWork };
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...updatedForm };
         debouncedSave(entryData);
+
+        // --- NOUVELLE LOGIQUE POUR L'ASSIGNATION ---
+        if (isChecked) {
+            // Créer une nouvelle assignation (ou la mettre à jour si elle existe)
+            const newAssignment = {
+                // On utilise les informations du cours sélectionné
+                class_id: selectedCourseForJournal.classId,
+                subject: selectedCourseForJournal.subject,
+                type: 'Interro',
+                description: updatedForm.actual_work.replace('[INTERRO]', '').trim(),
+                due_date: selectedDayForJournal.key, // La date de l'interro est la date d'échéance
+                is_completed: true, // L'interro est considérée comme "terminée"
+                is_corrected: false,
+            };
+
+            // Chercher si une assignation pour cette interro existe déjà
+            const existingAssignment = assignments.find(
+                a => a.class_id === newAssignment.class_id &&
+                    a.subject === newAssignment.subject &&
+                    a.type === 'Interro' &&
+                    a.due_date === newAssignment.due_date
+            );
+
+            // Si elle existe, on met à jour son ID pour la fonction upsert
+            if (existingAssignment) {
+                newAssignment.id = existingAssignment.id;
+                // On s'assure de ne pas écraser l'état "corrigé" si c'est déjà fait
+                newAssignment.is_corrected = existingAssignment.is_corrected;
+            }
+
+            try {
+                await upsertAssignment(newAssignment);
+                success('Une assignation "Interro" a été créée ou mise à jour.');
+            } catch (err) {
+                showError('Erreur lors de la création de l\'assignation: ' + err.message);
+            }
+        } else {
+            // Si on décoche la case, on peut potentiellement supprimer l'assignation si elle existe
+            const existingAssignment = assignments.find(
+                a => a.class_id === selectedCourseForJournal.classId &&
+                    a.subject === selectedCourseForJournal.subject &&
+                    a.type === 'Interro' &&
+                    a.due_date === selectedDayForJournal.key
+            );
+            if (existingAssignment) {
+                try {
+                    await deleteAssignment(existingAssignment.id);
+                    success('L\'assignation "Interro" a été supprimée.');
+                } catch (err) {
+                    showError('Erreur lors de la suppression de l\'assignation: ' + err.message);
+                }
+            }
+        }
     };
 
     const handleCopyToNextSlotChange = async (e) => {
