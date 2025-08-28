@@ -161,7 +161,7 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--text-muted);
+    background: var(--bg-dark-blue);
     border-radius: 0.5rem;
     transition: background-color 0.3s ease;
 
@@ -520,7 +520,6 @@ textarea, .note-state-select, .note-date-input {
 }
 
 .schedule-item.is-cancelled {
-    background-color: var(--grey-100);
     h4.cancelled-text {
         text-decoration: line-through;
         color: var(--red-danger);
