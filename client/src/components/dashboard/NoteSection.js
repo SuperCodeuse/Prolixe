@@ -1,13 +1,20 @@
-// client/src/components/dashboard/NotesSection.js
 import React, { useState, useEffect } from 'react';
 import NoteService from '../../services/NoteService';
 import Note from './Note';
+
+// Fonction utilitaire pour formater la date au format YYYY-MM-DD
+const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 const NotesSection = () => {
     const [notes, setNotes] = useState([]);
     const [newNoteText, setNewNoteText] = useState('');
     const [newNoteState, setNewNoteState] = useState('autre');
-    const [newNoteDate, setNewNoteDate] = useState('');
+    const [newNoteDate, setNewNoteDate] = useState(formatDate(new Date()));
     const [newNoteTime, setNewNoteTime] = useState('');
     const [newNoteLocation, setNewNoteLocation] = useState('');
     const [loading, setLoading] = useState(true);
@@ -28,7 +35,9 @@ const NotesSection = () => {
 
     const isFormInvalid = !newNoteText.trim() && !newNoteDate && !newNoteTime && !newNoteLocation;
 
-    const handleAddNote = async () => {
+    const handleAddNote = async (event) => {
+        event.preventDefault(); // Empêche le comportement de soumission par défaut qui rafraîchit la page
+
         if (isFormInvalid) return;
 
         try {
@@ -36,7 +45,7 @@ const NotesSection = () => {
             setNotes([newNote, ...notes]);
             setNewNoteText('');
             setNewNoteState('autre');
-            setNewNoteDate('');
+            setNewNoteDate(formatDate(new Date()));
             setNewNoteTime('');
             setNewNoteLocation('');
         } catch (error) {
@@ -67,7 +76,7 @@ const NotesSection = () => {
                 <h2>📌 Notes rapides</h2>
             </div>
             <div className="notes-widget">
-                <div className="note-input-area">
+                <form onSubmit={handleAddNote} className="note-input-area">
                     <textarea
                         value={newNoteText}
                         onChange={(e) => setNewNoteText(e.target.value)}
@@ -89,7 +98,10 @@ const NotesSection = () => {
                             type="date"
                             className="note-date-input"
                             value={newNoteDate}
-                            onChange={(e) => setNewNoteDate(e.target.value)}
+                            onChange={(e) => {
+                                const newDate = e.target.value;
+                                setNewNoteDate(newDate);
+                            }}
                         />
                         <input
                             type="time"
@@ -105,14 +117,14 @@ const NotesSection = () => {
                             placeholder="Local"
                         />
                         <button
-                            onClick={handleAddNote}
+                            type="submit"
                             className="add-note-btn"
                             disabled={isFormInvalid}
                         >
                             Ajouter
                         </button>
                     </div>
-                </div>
+                </form>
                 <div className="notes-list-container">
                     {notes.length > 0 ? (
                         notes.map((note) => (

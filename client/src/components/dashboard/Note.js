@@ -1,22 +1,29 @@
-// client/src/components/dashboard/Note.js
 import React, { useState } from 'react';
 import NoteService from '../../services/NoteService';
 
 const Note = ({ note, onDelete, onUpdate }) => {
+    // Fonction utilitaire pour s'assurer que la date est au bon format
+    const getFormattedDate = (dateString) => {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).toISOString().split('T')[0];
+        } catch {
+            return '';
+        }
+    };
+
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(note.text);
-    const [editDate, setEditDate] = useState(note.date);
+    const [editDate, setEditDate] = useState(getFormattedDate(note.date));
     const [editTime, setEditTime] = useState(note.time);
     const [editLocation, setEditLocation] = useState(note.location);
     const [editState, setEditState] = useState(note.state);
 
     const handleSave = async () => {
         try {
-            const formattedDate = editDate ? new Date(editDate).toISOString().split('T')[0] : null;
-
             const updatedNote = await NoteService.updateNote(note.id, {
                 text: editText,
-                date: formattedDate,
+                date: editDate,
                 time: editTime,
                 location: editLocation,
                 state: editState,
@@ -31,13 +38,12 @@ const Note = ({ note, onDelete, onUpdate }) => {
     const handleCancel = () => {
         setIsEditing(false);
         setEditText(note.text);
-        setEditDate(note.date);
+        setEditDate(getFormattedDate(note.date));
         setEditTime(note.time);
         setEditLocation(note.location);
         setEditState(note.state);
     };
 
-    // The component Note individuall
     const NoteDisplay = () => (
         <div className={`note-item state-${note.state?.replace(/\s+/g, '-').toLowerCase()}`} onDoubleClick={() => setIsEditing(true)}>
             <div className="note-content-wrapper">
