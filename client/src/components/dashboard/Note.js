@@ -70,6 +70,7 @@ const Note = ({ note, onDelete, onUpdate }) => {
             <div className="note-controls form-group">
                 <select value={editState} onChange={(e) => setEditState(e.target.value)} className="btn-select">
                     <option value="autre">Autre</option>
+                    <option value="cap">CAP</option>
                     <option value="conseil de classe">Conseil de classe</option>
                     <option value="réunions de parents">Réunions de parents</option>
                 </select>

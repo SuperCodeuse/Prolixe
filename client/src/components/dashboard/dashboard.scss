@@ -281,6 +281,9 @@ textarea, .note-state-select, .note-date-input {
         &.state-réunions-de-parents {
             border-left-color: var(--red-danger);
         }
+        &.state-cap {
+            border-left-color: var(--accent-green);
+        }
     }
 
     textarea {
@@ -402,6 +405,7 @@ textarea, .note-state-select, .note-date-input {
     &.state-autre { border-left-color: var(--accent-cyan); }
     &.state-conseil-de-classe { border-left-color: var(--accent-orange); }
     &.state-réunions-de-parents { border-left-color: var(--red-danger); }
+    &.state-cap { border-left-color: var(--accent-green); }
 
     &:hover {
         background-color: var(--white-transparent-md);
@@ -503,6 +507,10 @@ textarea, .note-state-select, .note-date-input {
     }
     &.state-réunions-de-parents {
         background-color: var(--red-danger);
+        color: var(--white);
+    }
+    &.state-cap {
+        background-color: var(--accent-green);
         color: var(--white);
     }
 }
