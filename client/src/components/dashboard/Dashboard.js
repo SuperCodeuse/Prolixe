@@ -209,22 +209,21 @@ const Dashboard = () => {
                         ) : <p className="empty-state">Aucun devoir programmé.</p>}
                     </div>
                 </div>
-
-                <div className="stats-grid">
-                    {stats.map((stat, index) => (
-                        <div key={index} className={`stat-card ${stat.color}`}>
-                            <div className="stat-header">
-                                <div className="stat-icon">{stat.icon}</div>
-                            </div>
-                            <div className="stat-content">
-                                <h3>{stat.value}</h3>
-                                <p>{stat.title}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
             </div>
+            <div className="stats-grid">
+                {stats.map((stat, index) => (
+                    <div key={index} className={`stat-card ${stat.color}`}>
+                        <div className="stat-header">
+                            <div className="stat-icon">{stat.icon}</div>
+                        </div>
+                        <div className="stat-content">
+                            <h3>{stat.value}</h3>
+                            <p>{stat.title}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
         </div>
     );
 };
