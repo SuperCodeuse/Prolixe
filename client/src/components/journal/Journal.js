@@ -230,7 +230,7 @@ const JournalView = () => {
                 type: 'Interro',
                 description: updatedForm.actual_work.replace('[INTERRO]', '').trim(),
                 due_date: selectedDayForJournal.key, // La date de l'interro est la date d'échéance
-                is_completed: true, // L'interro est considérée comme "terminée"
+                is_completed: false,
                 is_corrected: false,
             };
 
