@@ -7,6 +7,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import Horaire from "./components/horaire/Horaire";
 import Journal from "./components/journal/Journal";
 import Login from './components/authentification/login';
+import Register from './components/authentification/Register';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import Toast from './components/Toast';
@@ -65,12 +66,12 @@ const App = () => {
         if (!loadingAuth) {
             const currentPath = window.location.pathname;
             if (isAuthenticated) {
-                if (currentPath === '/login' || currentPath === '/') {
+                if (currentPath === '/login' || currentPath === '/' || currentPath === '/register') {
                     navigate('/dashboard', { replace: true });
                 }
             } else {
-                if (currentPath !== '/login') {
-                    navigate('./login', { replace: true });
+                if (currentPath !== '/login' && currentPath !== '/register') {
+                    navigate('./register', { replace: true });
                 }
             }
         }
@@ -90,7 +91,8 @@ const App = () => {
             ) : (
                 <Routes>
                     <Route path="/login" element={<Login />} />
-                    <Route path="*" element={<Navigate to="/login" replace />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="*" element={<Navigate to="/register" replace />} />
                 </Routes>
             )}
 

@@ -1,4 +1,6 @@
 // backend/config/users.js
+
+/*
 module.exports = {
     "degueldrec@p.cslw.be": {
         password: "Ua$#n6dg",
@@ -6,4 +8,4 @@ module.exports = {
         firstname: "Céline",
         name: "Degueldre"
     }
-};
+};*/

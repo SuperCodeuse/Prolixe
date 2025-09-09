@@ -1,0 +1,109 @@
+/* register.scss */
+@import '../../App.scss';
+
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-dark-blue);
+  color: var(--text-light);
+}
+
+.register-card {
+  @include card-base;
+  background: var(--bg-dark-secondary);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 40rem;
+  padding: 2.5rem 3rem;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+
+  h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0 0 2rem 0;
+    color: var(--text-light);
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .input-group {
+    text-align: left;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 1rem;
+      background: var(--bg-dark-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      color: var(--text-light);
+      font-size: 1rem;
+      transition: all 0.2s ease-in-out;
+
+      &::placeholder {
+        color: var(--text-muted);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        background: var(--bg-dark-secondary);
+        box-shadow: 0 0 0 3px var(--blue-transparent-sm);
+      }
+    }
+  }
+
+  .register-button {
+    @include btn-primary-base;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(var(--accent-blue-rgb), 0.3);
+    border: none;
+    border-radius: 0.5rem;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(var(--accent-blue-rgb), 0.4);
+    }
+  }
+
+  > p {
+      margin-top: 2rem;
+      color: var(--text-muted);
+      a {
+        color: var(--accent-blue);
+        text-decoration: none;
+        font-weight: 600;
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+  }
+}

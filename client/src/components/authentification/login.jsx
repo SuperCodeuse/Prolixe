@@ -6,9 +6,9 @@ import './login.scss'; // Votre fichier CSS pour le formulaire de connexion
 
 const Login = () => {
     const { login } = useAuth();
-    const { toasts, removeToast, success, error: showError, warning } = useToast();
+    const { addToast } = useToast();
 
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -16,17 +16,21 @@ const Login = () => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        if (!username || !password) {
-            showError('Veuillez entrer votre nom d\'utilisateur et votre mot de passe.', 3000);
+        if (!email || !password) {
+            addToast('Veuillez entrer votre email et votre mot de passe.', 'error');
             setIsSubmitting(false);
             return;
         }
 
-        const result = await login(username, password);
-        if (!result.success) {
-            showError(result.message || 'Échec de la connexion. Veuillez réessayer.', 3000);
+        try {
+            const result = await login(email, password);
+            if (!result.success) {
+                addToast(result.message || 'Échec de la connexion. Veuillez réessayer.', 'error');
+            }
+        } catch (err) {
+            addToast(err.message || 'Une erreur est survenue.', 'error');
         }
-        // Si succès, useAuth mettra à jour l'état et App.jsx redirigera
+
         setIsSubmitting(false);
     };
 
@@ -39,12 +43,12 @@ const Login = () => {
                 </div>
                 <form onSubmit={handleSubmit} className="login-form">
                     <div className="form-group">
-                        <label htmlFor="username">Nom d'utilisateur</label>
+                        <label htmlFor="email">Adresse e-mail</label>
                         <input
-                            type="text"
-                            id="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             disabled={isSubmitting}
                             required
                             autoFocus

@@ -42,12 +42,31 @@ async function initDatabase() {
         const connection = await pool.getConnection();
         console.log('🔗 Connexion à la base de données réussie.');
         console.log('📝 Vérification et création des tables si nécessaire...');
+        
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS USER (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                role ENUM('ADMIN', 'USER') NOT NULL DEFAULT 'USER',
+                firstname VARCHAR(255),
+                name VARCHAR(255)
+            )
+        `);
+        console.log('✅ Table USER vérifiée/créée.');
+
         connection.release();
     } catch (error) {
         console.error('❌ Erreur lors de l\'initialisation de la base de données:', error);
         process.exit(1);
     }
 }
+
+// Middleware pour attacher le pool de connexions à chaque requête
+app.use((req, res, next) => {
+    req.pool = pool;
+    next();
+});
 
 // Configuration pour les uploads de fichiers JSON
 const upload = multer({ dest: 'uploads/' });
@@ -64,6 +83,7 @@ app.use('/api/students', require('./routes/StudentRoute'));
 app.use('/api/conseilDeClasse', require('./routes/ConseilRoutes'));
 app.use('/api/notes', require('./routes/NoteRoute'));
 app.use('/api/school-years', require('./routes/SchoolYearRoute'));
+app.use('/api/users', require('./routes/UserRoute'));
 
 
 // Route de test
