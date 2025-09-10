@@ -29,7 +29,6 @@ class ScheduleController {
     }
 
     static validateCourseData(data) {
-        // ... (la validation ne change pas)
         const errors = {};
         const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
         if (!data.day || !validDays.includes(data.day)) errors.day = 'Jour de la semaine invalide.';
@@ -41,15 +40,15 @@ class ScheduleController {
         return errors;
     }
 
-    static async getScheduleData(journal_id, connection = null) {
+    static async getScheduleData(journal_id, userId, connection = null) {
         const executeQuery = async (conn) => {
             const [rows] = await conn.execute(`
                 SELECT s.id, s.day, s.time_slot_id, h.libelle AS time_slot_libelle, s.subject, s.class_id, c.name AS class_name, c.level AS class_level, s.room, s.notes
                 FROM SCHEDULE s
                 JOIN SCHEDULE_HOURS h ON s.time_slot_id = h.id
                 JOIN CLASS c ON s.class_id = c.id
-                WHERE s.journal_id = ?
-            `, [journal_id]);
+                WHERE s.journal_id = ? AND s.userId = ?
+            `, [journal_id, userId]);
             return rows;
         };
         const scheduleData = connection ? await executeQuery(connection) : await ScheduleController.withConnection(executeQuery);
@@ -63,9 +62,13 @@ class ScheduleController {
 
     static async getSchedule(req, res) {
         const { journal_id } = req.query;
+        const userId = req.user.id; 
+
         if (!journal_id) return ScheduleController.handleError(res, new Error('ID de journal manquant'), "L'ID du journal est requis.", 400);
+        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+
         try {
-            const formattedSchedule = await ScheduleController.getScheduleData(journal_id);
+            const formattedSchedule = await ScheduleController.getScheduleData(journal_id, userId);
             res.json({ success: true, data: formattedSchedule, count: Object.keys(formattedSchedule).length, message: Object.keys(formattedSchedule).length === 0 ? 'Aucun créneau horaire trouvé pour ce journal.' : `${Object.keys(formattedSchedule).length} créneau(x) récupéré(s).` });
         } catch (error) {
             ScheduleController.handleError(res, error, 'Erreur lors de la récupération de l\'emploi du temps.');
@@ -74,19 +77,25 @@ class ScheduleController {
 
     static async upsertCourse(req, res) {
         const { day, time_slot_id, subject, classId, room, notes, journal_id } = req.body;
+        const userId = req.user.id; 
+
+        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+
         const validationErrors = ScheduleController.validateCourseData({ day, time_slot_id, subject, class_id: classId, room, journal_id });
         if (Object.keys(validationErrors).length > 0) return ScheduleController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
+
         try {
             const result = await ScheduleController.withConnection(async (connection) => {
-                const [existing] = await connection.execute('SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ?', [day, parseInt(time_slot_id), parseInt(journal_id)]);
+                const [existing] = await connection.execute('SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND userId = ?', [day, parseInt(time_slot_id), parseInt(journal_id), userId]);
+
                 if (existing.length > 0) {
                     const courseId = existing[0].id;
-                    await connection.execute('UPDATE SCHEDULE SET subject = ?, class_id = ?, room = ?, notes = ? WHERE id = ?', [subject.trim(), parseInt(classId), room.trim(), notes || null, courseId]);
-                    const updatedSchedule = await ScheduleController.getScheduleData(journal_id, connection);
+                    await connection.execute('UPDATE SCHEDULE SET subject = ?, class_id = ?, room = ?, notes = ? WHERE id = ? AND userId = ?', [subject.trim(), parseInt(classId), room.trim(), notes || null, courseId, userId]);
+                    const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, connection);
                     return { type: 'updated', id: courseId, schedule: updatedSchedule };
                 } else {
-                    const [insertResult] = await connection.execute('INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id) VALUES (?, ?, ?, ?, ?, ?, ?)', [day, parseInt(time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id)]);
-                    const updatedSchedule = await ScheduleController.getScheduleData(journal_id, connection);
+                    const [insertResult] = await connection.execute('INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [day, parseInt(time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id), userId]);
+                    const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, connection);
                     return { type: 'created', id: insertResult.insertId, schedule: updatedSchedule };
                 }
             });
@@ -100,15 +109,23 @@ class ScheduleController {
 
     static async deleteCourse(req, res) {
         const { journal_id, day, time_slot_id } = req.params;
+        const userId = req.user.id;
+
+        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
         if (!day || !time_slot_id || isNaN(parseInt(time_slot_id)) || !journal_id || isNaN(parseInt(journal_id))) return ScheduleController.handleError(res, new Error('Paramètres de suppression invalides'), 'Paramètres de suppression invalides.', 400);
+
         try {
             const result = await ScheduleController.withConnection(async (connection) => {
-                const [deleteResult] = await connection.execute('DELETE FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ?', [day, parseInt(time_slot_id), parseInt(journal_id)]);
+                const [deleteResult] = await connection.execute('DELETE FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND userId = ?', [day, parseInt(time_slot_id), parseInt(journal_id), userId]);
+
                 if (deleteResult.affectedRows === 0) return { deleted: false, schedule: null };
-                const updatedSchedule = await ScheduleController.getScheduleData(journal_id, connection);
+
+                const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, connection);
                 return { deleted: true, affectedRows: deleteResult.affectedRows, schedule: updatedSchedule };
             });
-            if (!result.deleted) return ScheduleController.handleError(res, new Error('Cours non trouvé'), 'Cours non trouvé pour suppression.', 404);
+
+            if (!result.deleted) return ScheduleController.handleError(res, new Error('Cours non trouvé'), 'Cours non trouvé pour suppression (ou vous n\'avez pas les droits).', 404);
+
             res.json({ success: true, message: 'Cours supprimé avec succès.', data: { schedule: result.schedule, deletedCourse: { day, time_slot_id } }, count: Object.keys(result.schedule).length });
         } catch (error) {
             ScheduleController.handleError(res, error, 'Erreur lors de la suppression du cours.');
