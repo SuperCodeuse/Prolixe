@@ -6,7 +6,7 @@ import './login.scss'; // Votre fichier CSS pour le formulaire de connexion
 
 const Login = () => {
     const { login } = useAuth();
-    const { addToast } = useToast();
+    const { success, error: showError } = useToast();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,7 +17,7 @@ const Login = () => {
         setIsSubmitting(true);
 
         if (!email || !password) {
-            addToast('Veuillez entrer votre email et votre mot de passe.', 'error');
+            showError('Veuillez entrer votre email et votre mot de passe.', 'error');
             setIsSubmitting(false);
             return;
         }
@@ -25,10 +25,10 @@ const Login = () => {
         try {
             const result = await login(email, password);
             if (!result.success) {
-                addToast(result.message || 'Échec de la connexion. Veuillez réessayer.', 'error');
+                showError(result.message || 'Échec de la connexion. Veuillez réessayer.', 'error');
             }
         } catch (err) {
-            addToast(err.message || 'Une erreur est survenue.', 'error');
+            showError(err.message || 'Une erreur est survenue.', 'error');
         }
 
         setIsSubmitting(false);

@@ -11,7 +11,8 @@ const Register = () => {
     const [name, setName] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
-    const { addToast } = useToast();
+    const { success, error: showError } = useToast();
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,12 +20,12 @@ const Register = () => {
 
         try {
             await UserService.register(firstname, name, email, password);
-            addToast('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success');
+            success('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success');
             navigate('/login');
         } catch (err) {
             const errorMessage = err.message || 'Une erreur est survenue lors de l\'inscription.';
             setError(errorMessage);
-            addToast(errorMessage, 'error');
+            showError(errorMessage, 'error');
         }
     };
 
