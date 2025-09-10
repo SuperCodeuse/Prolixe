@@ -2,9 +2,8 @@
 @import '../../App.scss'; // Assurez-vous que le chemin est correct vers votre App.scss global
 
 .login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  place-items: center;
   min-height: 100vh;
   width: 100%; // S'assure que le conteneur prend toute la largeur
   background-color: var(--bg-dark-blue);

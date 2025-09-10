@@ -22,6 +22,7 @@ import ConseilDeClasse from "./components/cc/conseilClasse";
 
 const AuthenticatedAppContent = ({ isMenuOpen, toggleMenu }) => {
     const breakpoint = 1600;
+
     return (
         <>
             {isMenuOpen && window.innerWidth < breakpoint && (
@@ -55,9 +56,20 @@ const App = () => {
     const navigate = useNavigate();
     const { toasts, removeToast } = useToast(); // Récupération des toasts
 
-    const [isMenuOpen, setIsMenuOpen] = useState(true);
+    const breakpoint = 1600;
+    const [isMenuOpen, setIsMenuOpen] = useState(window.innerWidth >= breakpoint);
+
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMenuOpen(window.innerWidth >= breakpoint);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const toggleMenu = () => {
-        if(window.innerWidth < 1600){
+        if(window.innerWidth < breakpoint){
             setIsMenuOpen(prev => !prev);
         }
     }
@@ -85,6 +97,7 @@ const App = () => {
         <div className={`app ${isMenuOpen ? 'menu-open' : 'menu-closed'}`}>
             {isAuthenticated ? (
                 <AuthenticatedAppContent
+
                     isMenuOpen={isMenuOpen}
                     toggleMenu={toggleMenu}
                 />
