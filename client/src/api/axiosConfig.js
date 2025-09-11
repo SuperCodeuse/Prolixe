@@ -10,7 +10,6 @@ apiClient.interceptors.request.use(
     (config) => {
         // Récupère le token depuis le localStorage (ou l'endroit où vous le stockez)
         const token = localStorage.getItem('authToken');
-        console.log('Token:', token);
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }

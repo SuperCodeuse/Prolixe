@@ -1,10 +1,13 @@
 // client/src/services/api.js
 
+import {useAuth} from "../hooks/useAuth";
+
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
-    static async request(endpoint, options = {}, requireAuth = true) {
-        const url = `${API_BASE_URL}${endpoint}`;
+static async request(endpoint, options = {}, requireAuth = true) {
+
+    const url = `${API_BASE_URL}${endpoint}`;
         const config = {
             ...options,
             headers: {
@@ -26,7 +29,6 @@ class ApiService {
 
         try {
             const response = await fetch(url, config);
-
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
                     window.dispatchEvent(new Event('auth-error'));
