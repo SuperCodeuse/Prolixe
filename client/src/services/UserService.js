@@ -3,7 +3,6 @@ import ApiService from './api';
 class UserService {
     static async register(firstname, name, email, password) {
         try {
-            console.log("here!!");
             const response = await ApiService.request('/users/register', {
                 method: 'POST',
                 body: JSON.stringify({ firstname, name, email, password })

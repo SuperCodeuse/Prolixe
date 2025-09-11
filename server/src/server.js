@@ -71,19 +71,34 @@ app.use((req, res, next) => {
 // Configuration pour les uploads de fichiers JSON
 const upload = multer({ dest: 'uploads/' });
 
+// Middleware d'authentification
+const verifyToken = require('./middleware/authMiddleware');
+
 // Routes
-app.use('/api/auth', require('./routes/AuthRoute'));
-app.use('/api/classes', require('./routes/ClassRoutes'));
-app.use('/api/hours', require('./routes/ScheduleHours'));
-app.use('/api/schedule', require('./routes/ScheduleRoute'));
-app.use('/api/journal', require('./routes/JournalRoute'));
-app.use('/api/attributions', require('./routes/AttributionRoute'));
-app.use('/api/evaluations', require('./routes/EvaluationRoute'));
-app.use('/api/students', require('./routes/StudentRoute'));
-app.use('/api/conseilDeClasse', require('./routes/ConseilRoutes'));
-app.use('/api/notes', require('./routes/NoteRoute'));
-app.use('/api/school-years', require('./routes/SchoolYearRoute'));
-app.use('/api/users', require('./routes/UserRoute'));
+
+// --- Routes Publiques ---
+// Ces routes n'ont pas besoin de jeton d'authentification.
+app.use('/api/auth', require('./routes/AuthRoute')); // Contient /login, /register
+
+// --- Routes Protégées ---
+// Un routeur dédié pour toutes les routes qui nécessitent une authentification.
+const protectedRouter = express.Router();
+protectedRouter.use(verifyToken); // Le middleware s'applique à toutes les routes ci-dessous.
+
+protectedRouter.use('/classes', require('./routes/ClassRoutes'));
+protectedRouter.use('/hours', require('./routes/ScheduleHours'));
+protectedRouter.use('/schedule', require('./routes/ScheduleRoute'));
+protectedRouter.use('/journal', require('./routes/JournalRoute'));
+protectedRouter.use('/attributions', require('./routes/AttributionRoute'));
+protectedRouter.use('/evaluations', require('./routes/EvaluationRoute'));
+protectedRouter.use('/students', require('./routes/StudentRoute'));
+protectedRouter.use('/conseilDeClasse', require('./routes/ConseilRoutes'));
+protectedRouter.use('/notes', require('./routes/NoteRoute'));
+protectedRouter.use('/school-years', require('./routes/SchoolYearRoute'));
+protectedRouter.use('/users', require('./routes/UserRoute'));
+
+// On attache le routeur protégé au préfixe /api
+app.use('/api', protectedRouter);
 
 
 // Route de test

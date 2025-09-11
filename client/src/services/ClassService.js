@@ -1,50 +1,37 @@
 // client/src/services/classService.js
-import ApiService from './api';
+import apiClient from '../api/axiosConfig'; // <-- Utiliser apiClient
 
-class ClassService {
-
-    static async getClasses(journal_id) {
+const ClassService = {
+    getClasses: (journal_id) => {
         if (!journal_id) {
             return Promise.resolve({ data: [] });
         }
-        return ApiService.request(`/classes?journal_id=${journal_id}`);
-    }
+        // Utiliser apiClient et passer les paramètres correctement
+        return apiClient.get('/classes', { params: { journal_id } });
+    },
 
-    static async getClass(id) {
-        return ApiService.request(`/classes/${id}`);
-    }
+    getClass: (id) => {
+        return apiClient.get(`/classes/${id}`);
+    },
 
-    static async createClass(classData) {
-        return ApiService.request('/classes', {
-            method: 'POST',
-            body: JSON.stringify(classData),
-        });
-    }
+    createClass: (classData) => {
+        return apiClient.post('/classes', classData);
+    },
 
-    static async updateClass(id, classData) {
-        return ApiService.request(`/classes/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(classData),
-        });
-    }
+    updateClass: (id, classData) => {
+        return apiClient.put(`/classes/${id}`, classData);
+    },
 
-    static async deleteClass(id) {
-        return ApiService.request(`/classes/${id}`, {
-            method: 'DELETE',
-        });
-    }
+    deleteClass: (id) => {
+        return apiClient.delete(`/classes/${id}`);
+    },
 
-    // Vous pouvez ajouter de la logique métier spécifique aux classes
-    static async getActiveClasses() {
-        const classes = await this.getClasses();
-        return classes.filter(cls => cls.active);
-    }
-
-    static async getClassWithStudents(id) {
-        const classData = await this.getClass(id);
-        // Logique supplémentaire si nécessaire
-        return classData;
-    }
-}
+    /*
+     * NOTE: La méthode getActiveClasses a été commentée car elle ne peut pas fonctionner
+     * sans un `journal_id`. La logique métier pour filtrer les classes actives
+     * devrait probablement être implémentée dans le composant qui utilise ce service,
+     * où le `journal_id` est disponible.
+     */
+};
 
 export default ClassService;
