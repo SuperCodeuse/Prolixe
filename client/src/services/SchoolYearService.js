@@ -1,6 +1,6 @@
 // frontend/services/schoolYearService.js
 
-const API_URL = '/api/school-years'; // Adaptez si votre préfixe d'API est différent
+const SY_API_URL = 'http://localhost:5000/api/school-years'; // Adaptez si votre préfixe d'API est différent
 
 /**
  * Gère la réponse de l'API, renvoie les données JSON ou lève une erreur.
@@ -23,7 +23,7 @@ const schoolYearService = {
      * @returns {Promise<Array>} Une promesse résolue avec le tableau des années scolaires.
      */
     getAll: async () => {
-        const response = await fetch(API_URL);
+        const response = await fetch(SY_API_URL);
         const data = await handleResponse(response);
         return data.data; // Le contrôleur renvoie { success: true, data: [...] }
     },
@@ -34,7 +34,7 @@ const schoolYearService = {
      * @returns {Promise<object>}
      */
     getById: async (id) => {
-        const response = await fetch(`${API_URL}/${id}`);
+        const response = await fetch(`${SY_API_URL}/${id}`);
         const data = await handleResponse(response);
         return data.data;
     },
@@ -45,7 +45,7 @@ const schoolYearService = {
      * @returns {Promise<object>} Une promesse résolue avec l'objet de la nouvelle année scolaire.
      */
     create: async (schoolYearData) => {
-        const response = await fetch(API_URL, {
+        const response = await fetch(SY_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(schoolYearData),
@@ -61,7 +61,7 @@ const schoolYearService = {
      * @returns {Promise<object>} Une promesse résolue avec l'objet de l'année scolaire mise à jour.
      */
     update: async (id, schoolYearData) => {
-        const response = await fetch(`${API_URL}/${id}`, {
+        const response = await fetch(`${SY_API_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(schoolYearData),
@@ -76,7 +76,7 @@ const schoolYearService = {
      * @returns {Promise<void>}
      */
     remove: async (id) => {
-        const response = await fetch(`${API_URL}/${id}`, {
+        const response = await fetch(`${SY_API_URL}/${id}`, {
             method: 'DELETE',
         });
         await handleResponse(response);

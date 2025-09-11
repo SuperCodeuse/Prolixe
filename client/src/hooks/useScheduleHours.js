@@ -102,6 +102,10 @@ export const useScheduleHours = () => {
 
     // Trier les créneaux par heure de début
     const getSortedHours = () => {
+        if (!Array.isArray(hours)) {
+            return [];
+        }
+
         return [...hours].sort((a, b) => {
             const aStart = a.libelle.split('-')[0];
             const bStart = b.libelle.split('-')[0];
