@@ -7,7 +7,7 @@ class AuthService {
             const response = await ApiService.request('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password })
-            });
+            }, false);
             // Stocker le token et les infos utilisateur si la connexion est réussie
             if (response.success) {
                 localStorage.setItem('authToken', response.token);

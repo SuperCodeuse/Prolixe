@@ -79,6 +79,8 @@ const verifyToken = require('./middleware/authMiddleware');
 // --- Routes Publiques ---
 // Ces routes n'ont pas besoin de jeton d'authentification.
 app.use('/api/auth', require('./routes/AuthRoute')); // Contient /login, /register
+app.use('/api/users', require('./routes/UserRoute'));
+
 
 // --- Routes Protégées ---
 // Un routeur dédié pour toutes les routes qui nécessitent une authentification.
@@ -95,7 +97,6 @@ protectedRouter.use('/students', require('./routes/StudentRoute'));
 protectedRouter.use('/conseilDeClasse', require('./routes/ConseilRoutes'));
 protectedRouter.use('/notes', require('./routes/NoteRoute'));
 protectedRouter.use('/school-years', require('./routes/SchoolYearRoute'));
-protectedRouter.use('/users', require('./routes/UserRoute'));
 
 // On attache le routeur protégé au préfixe /api
 app.use('/api', protectedRouter);

@@ -1,3 +1,5 @@
+// client/src/pages/Register/Register.jsx
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import UserService from '../../services/UserService';
@@ -11,8 +13,9 @@ const Register = () => {
     const [name, setName] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
-    const { success, error: showError } = useToast();
 
+    // Correction ici : Renommez la propriété success pour éviter le conflit
+    const { success: showSuccessToast, error: showErrorToast } = useToast();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,12 +23,12 @@ const Register = () => {
 
         try {
             await UserService.register(firstname, name, email, password);
-            success('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success');
+            showSuccessToast('Inscription réussie ! Vous pouvez maintenant vous connecter.');
             navigate('/login');
         } catch (err) {
             const errorMessage = err.message || 'Une erreur est survenue lors de l\'inscription.';
             setError(errorMessage);
-            showError(errorMessage, 'error');
+            showErrorToast(errorMessage);
         }
     };
 

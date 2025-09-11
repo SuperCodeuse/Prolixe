@@ -3,10 +3,8 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class ApiService {
-    static async request(endpoint, options = {}) {
+    static async request(endpoint, options = {}, requireAuth = true) {
         const url = `${API_BASE_URL}${endpoint}`;
-        const token = localStorage.getItem('token');
-
         const config = {
             ...options,
             headers: {
@@ -15,24 +13,28 @@ class ApiService {
             },
         };
 
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+        if (requireAuth) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                config.headers['Authorization'] = `Bearer ${token}`;
+            } else {
+                // Si l'authentification est requise mais qu'il n'y a pas de jeton, on lève une erreur.
+                throw new Error('Authentication token not found.');
+            }
         }
+
 
         try {
             const response = await fetch(url, config);
 
             if (!response.ok) {
-                // Si le token est invalide (401/403), on notifie l'application
                 if (response.status === 401 || response.status === 403) {
-                    // Dispatch a global event that the AuthProvider can listen to.
                     window.dispatchEvent(new Event('auth-error'));
                 }
                 const data = await response.json();
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
             }
 
-            // Si la réponse n'a pas de contenu (ex: 204 No Content)
             if (response.status === 204) {
                 return { success: true };
             }
