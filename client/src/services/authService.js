@@ -10,7 +10,7 @@ class AuthService {
             });
             // Stocker le token et les infos utilisateur si la connexion est réussie
             if (response.success) {
-                localStorage.setItem('userToken', response.token);
+                localStorage.setItem('authToken', response.token);
                 localStorage.setItem('user', JSON.stringify(response.user));
             }
             return response;
@@ -21,7 +21,7 @@ class AuthService {
     }
 
     static logout() {
-        localStorage.removeItem('userToken');
+        localStorage.removeItem('authToken');
         localStorage.removeItem('user');
     }
 
@@ -31,7 +31,7 @@ class AuthService {
     }
 
     static getToken() {
-        return localStorage.getItem('userToken');
+        return localStorage.getItem('authToken');
     }
 }
 
