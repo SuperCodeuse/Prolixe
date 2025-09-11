@@ -1,8 +1,7 @@
 // client/src/services/NoteService.js
 //test
 import axios from 'axios';
-
-const api = axios.create({ baseURL: '/api' });
+import api from '../api/axiosConfig';
 
 const getNotes = async () => {
     const response = await api.get('/notes');

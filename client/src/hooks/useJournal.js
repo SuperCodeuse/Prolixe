@@ -17,8 +17,10 @@ export const JournalProvider = ({ children }) => {
         setLoading(true);
         try {
             const response = await JournalService.getAllJournals();
-            const all = response.data || [];
+            // Check if response.data is an array. If not, default to an empty array.
+            const all = Array.isArray(response.data) ? response.data : [];
             setJournals(all);
+
             const current = all.find(j => j.is_current && !j.is_archived);
             const archived = all.filter(j => j.is_archived);
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
@@ -28,6 +30,8 @@ export const JournalProvider = ({ children }) => {
             setCurrentJournal(journalToSet);
             setArchivedJournals(archived);
         } catch (err) {
+            // Log the error for debugging purposes
+            console.error("Failed to load journals:", err);
             setError(err.message || "Erreur lors du chargement des journaux.");
         } finally {
             setLoading(false);
