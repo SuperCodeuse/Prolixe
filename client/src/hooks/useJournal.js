@@ -17,16 +17,19 @@ export const JournalProvider = ({ children }) => {
         setLoading(true);
         try {
             const response = await JournalService.getAllJournals();
-            // Check if response.data is an array. If not, default to an empty array.
-            const all = Array.isArray(response.data) ? response.data : [];
+            const all = response.data;
+            const journalsArray = all.data || []; // Accéder au tableau dans la propriété `data`
+
             setJournals(all);
 
-            const current = all.find(j => j.is_current && !j.is_archived);
-            const archived = all.filter(j => j.is_archived);
+            const current = journalsArray.find(j => j.is_current && !j.is_archived);
+            const archived = journalsArray.filter(j => j.is_archived);
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
-            const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
+            const lastSelected = journalsArray.find(j => j.id === parseInt(lastSelectedId));
 
-            const journalToSet = lastSelected || current || all.find(j => !j.is_archived);
+            const journalToSet = lastSelected || current
+            // journalsArray.find(j => !j.is_archived);
+
             setCurrentJournal(journalToSet);
             setArchivedJournals(archived);
         } catch (err) {

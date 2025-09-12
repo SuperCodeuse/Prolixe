@@ -1,11 +1,11 @@
 // client/src/components/settings/Journal/JournalManager.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useJournal } from '../../hooks/useJournal';
 import { useSchoolYears } from '../../hooks/useSchoolYear';
 import { useToast } from '../../hooks/useToast';
 import ConfirmModal from '../ConfirmModal';
 import JournalService from '../../services/JournalService';
-import SchoolYearDisplay from '../../hooks/SchoolYearDisplay'; // Предполагая, что это компонент, а не хук
+import SchoolYearDisplay from '../../hooks/SchoolYearDisplay';
 import './JournalManager.scss';
 
 const JournalManager = () => {
@@ -27,12 +27,17 @@ const JournalManager = () => {
     const { success, error: showError } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    // Le formulaire contient maintenant le nom et l'ID de l'année scolaire
     const [formData, setFormData] = useState({ name: '', school_year_id: '' });
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
     const [selectedFile, setSelectedFile] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
     const [importTargetJournalId, setImportTargetJournalId] = useState('');
+
+    useEffect(() => {
+        if (journalError) {
+            showError(journalError.message || journalError);
+        }
+    }, [journalError, showError]);
 
     const handleClear = (journal) => {
         showConfirmModal(
@@ -42,7 +47,7 @@ const JournalManager = () => {
                 try {
                     await clearJournal(journal.id);
                     success(`Journal "${journal.name}" vidé avec succès.`);
-                    closeConfirmModal(); // Pas besoin de recharger, le hook doit mettre à jour l'état
+                    closeConfirmModal();
                 } catch (err) {
                     showError(err.message || "Erreur lors du vidage du journal.");
                     closeConfirmModal();
@@ -58,7 +63,7 @@ const JournalManager = () => {
         } else {
             showError('Veuillez sélectionner un fichier JSON valide.');
             setSelectedFile(null);
-            event.target.value = null; // Réinitialiser l'input
+            event.target.value = null;
         }
     };
 
@@ -71,21 +76,20 @@ const JournalManager = () => {
         try {
             const response = await JournalService.importJournal(selectedFile, importTargetJournalId);
             success(response.message || 'Importation réussie !');
-            loadAllJournals(); // Recharger pour voir les nouvelles données
+            loadAllJournals();
         } catch (err) {
             showError(err.message || 'Erreur lors de l\'importation.');
         } finally {
             setIsImporting(false);
             setSelectedFile(null);
             setImportTargetJournalId('');
-            // Réinitialiser la valeur de l'input de fichier
             const fileInput = document.getElementById('import-journal-input');
             if(fileInput) fileInput.value = null;
         }
     };
 
     const handleOpenModal = () => {
-        setFormData({ name: '', school_year_id: '' }); // Réinitialiser le formulaire
+        setFormData({ name: '', school_year_id: '' });
         setIsModalOpen(true);
     };
 
@@ -104,7 +108,6 @@ const JournalManager = () => {
             return;
         }
         try {
-            // On envoie le nom et l'ID de l'année scolaire
             await createJournal(formData);
             success('Nouveau journal créé avec succès !');
             handleCloseModal();
@@ -160,13 +163,9 @@ const JournalManager = () => {
         setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
     };
 
-    const activeJournals = journals.filter(j => !j.is_archived);
+    const activeJournals = journals.data.filter(j => !j.is_archived);
 
     if (journalLoading && !journals.length) return <p>Chargement des journaux...</p>;
-    if (journalError){
-        showError(journalError.message || journalError);
-        return;
-    }
 
     return (
         <div className="journal-manager">
@@ -265,7 +264,6 @@ const JournalManager = () => {
                             <div key={journal.id} className={`journal-card archived ${journal.id === currentJournal?.id ? 'current' : ''}`}>
                                 <div className="journal-info">
                                     <strong>{journal.name}</strong>
-                                    {/* Ajout de l'année scolaire pour la cohérence */}
                                     <span><SchoolYearDisplay schoolYearId={journal.school_year_id} /></span>
                                 </div>
                                 <div className="journal-actions">
