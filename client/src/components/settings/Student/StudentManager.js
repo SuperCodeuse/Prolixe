@@ -33,7 +33,8 @@ const StudentManager = () => {
         setIsLoading(true);
         try {
             const response = await StudentService.getStudentsByClass(selectedClass);
-            setStudents(response.data);
+
+            setStudents(response.data.data);
         } catch (err) {
             error('Erreur de chargement des élèves.');
         } finally {
@@ -120,7 +121,6 @@ const StudentManager = () => {
                 >
                     <option value="">-- Choisissez une classe --</option>
                     {classesLoading && <option>Chargement des classes...</option>}
-                    {/* Correction ici : on s'assure que 'classes' est un tableau avant de l'utiliser */}
                     {Array.isArray(classes) && classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>

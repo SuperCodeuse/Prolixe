@@ -27,6 +27,7 @@ class StudentController {
     static async getStudentsByClass(req, res) {
         const { classId } = req.params;
 
+        console.log("here");
         if (!classId) {
             return StudentController.handleError(res, new Error("Paramètres manquants"), "L'ID de la classe est requis.", 400);
         }
