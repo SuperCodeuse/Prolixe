@@ -1,40 +1,42 @@
 // client/src/services/AttributionService.js
-import ApiService from './api';
 
-const ATTRIBUTION_API_URL = '/attributions'; // Base URL pour les attributions
+import api from '../api/axiosConfig';
 
-class AttributionService {
+const AttributionService = {
     /**
      * Récupère toutes les attributions.
+     * @returns {Promise<Array>} Une promesse résolue avec le tableau des attributions.
      */
-    static async getAttributions() {
-        return ApiService.request(ATTRIBUTION_API_URL);
-    }
+    getAttributions: async () => {
+        const response = await api.get('/attributions');
+        return response.data;
+    },
 
     /**
-     * Sauvegarde une attribution (crée ou met à jour).
+     * Sauvegarde ou met à jour une attribution.
      * @param {object} attributionData - Les données de l'attribution.
+     * @returns {Promise<object>} L'attribution sauvegardée ou mise à jour.
      */
-    static async saveAttribution(attributionData) {
-        const { id, ...data } = attributionData;
-        const method = id ? 'PUT' : 'POST';
-        const endpoint = id ? `${ATTRIBUTION_API_URL}/${id}` : ATTRIBUTION_API_URL;
-
-        return ApiService.request(endpoint, {
-            method,
-            body: JSON.stringify(data),
-        });
-    }
+    saveAttribution: async (attributionData) => {
+        if (attributionData.id) {
+            // Mise à jour si l'ID existe
+            const response = await api.put(`/attributions/${attributionData.id}`, attributionData);
+            return response.data;
+        } else {
+            // Création si c'est une nouvelle attribution
+            const response = await api.post('/attributions', attributionData);
+            return response.data;
+        }
+    },
 
     /**
-     * Supprime une attribution par son ID.
-     * @param {number} id - L'ID de l'attribution à supprimer.
+     * Supprime une attribution.
+     * @param {number|string} id - L'ID de l'attribution à supprimer.
+     * @returns {Promise<void>}
      */
-    static async deleteAttribution(id) {
-        return ApiService.request(`${ATTRIBUTION_API_URL}/${id}`, {
-            method: 'DELETE',
-        });
-    }
-}
+    deleteAttribution: async (id) => {
+        await api.delete(`/attributions/${id}`);
+    },
+};
 
 export default AttributionService;

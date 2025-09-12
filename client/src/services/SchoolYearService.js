@@ -1,21 +1,6 @@
-// frontend/services/schoolYearService.js
+// client/src/services/SchoolYearService.js
 
-const SY_API_URL = 'http://localhost:5000/api/school-years'; // Adaptez si votre préfixe d'API est différent
-
-/**
- * Gère la réponse de l'API, renvoie les données JSON ou lève une erreur.
- * @param {Response} response La réponse de l'API
- * @returns {Promise<any>} Les données JSON
- */
-const handleResponse = async (response) => {
-    const data = await response.json();
-    if (!response.ok) {
-        // Tente de récupérer le message d'erreur du backend, sinon utilise un message par défaut.
-        const error = (data && data.message) || response.statusText;
-        throw new Error(error);
-    }
-    return data;
-};
+import api from '../api/axiosConfig'; // Importation de l'instance axios configurée
 
 const schoolYearService = {
     /**
@@ -23,9 +8,8 @@ const schoolYearService = {
      * @returns {Promise<Array>} Une promesse résolue avec le tableau des années scolaires.
      */
     getAll: async () => {
-        const response = await fetch(SY_API_URL);
-        const data = await handleResponse(response);
-        return data.data; // Le contrôleur renvoie { success: true, data: [...] }
+        const response = await api.get('/school-years');
+        return response.data.data; // Accéder aux données via response.data
     },
 
     /**
@@ -34,9 +18,8 @@ const schoolYearService = {
      * @returns {Promise<object>}
      */
     getById: async (id) => {
-        const response = await fetch(`${SY_API_URL}/${id}`);
-        const data = await handleResponse(response);
-        return data.data;
+        const response = await api.get(`/school-years/${id}`);
+        return response.data.data;
     },
 
     /**
@@ -45,13 +28,8 @@ const schoolYearService = {
      * @returns {Promise<object>} Une promesse résolue avec l'objet de la nouvelle année scolaire.
      */
     create: async (schoolYearData) => {
-        const response = await fetch(SY_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schoolYearData),
-        });
-        const data = await handleResponse(response);
-        return data.data;
+        const response = await api.post('/school-years', schoolYearData);
+        return response.data.data;
     },
 
     /**
@@ -61,13 +39,8 @@ const schoolYearService = {
      * @returns {Promise<object>} Une promesse résolue avec l'objet de l'année scolaire mise à jour.
      */
     update: async (id, schoolYearData) => {
-        const response = await fetch(`${SY_API_URL}/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(schoolYearData),
-        });
-        const data = await handleResponse(response);
-        return data.data;
+        const response = await api.put(`/school-years/${id}`, schoolYearData);
+        return response.data.data;
     },
 
     /**
@@ -76,12 +49,8 @@ const schoolYearService = {
      * @returns {Promise<void>}
      */
     remove: async (id) => {
-        const response = await fetch(`${SY_API_URL}/${id}`, {
-            method: 'DELETE',
-        });
-        await handleResponse(response);
+        await api.delete(`/school-years/${id}`);
     },
 };
 
 export default schoolYearService;
-
