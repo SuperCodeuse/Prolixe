@@ -27,8 +27,7 @@ export const JournalProvider = ({ children }) => {
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
             const lastSelected = journalsArray.find(j => j.id === parseInt(lastSelectedId));
 
-            const journalToSet = lastSelected || current
-            // journalsArray.find(j => !j.is_archived);
+            const journalToSet = lastSelected || current || journalsArray.find(j => !j.is_archived);
 
             setCurrentJournal(journalToSet);
             setArchivedJournals(archived);

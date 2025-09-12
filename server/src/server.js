@@ -42,7 +42,7 @@ async function initDatabase() {
         const connection = await pool.getConnection();
         console.log('🔗 Connexion à la base de données réussie.');
         console.log('📝 Vérification et création des tables si nécessaire...');
-        
+
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS USER (
                 id INT AUTO_INCREMENT PRIMARY KEY,

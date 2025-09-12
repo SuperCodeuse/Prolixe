@@ -9,6 +9,7 @@ import { fr, enGB } from 'date-fns/locale';
 import './dashboard.scss';
 import './dashboard_mobile.scss';
 import NoteSection from './NoteSection';
+import ScheduleSection from './ScheduleSection';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -107,12 +108,15 @@ const Dashboard = () => {
     }, [schedule, journalEntries, todayStr, classes, holidayInfo]); // Ajout de `holidays` comme dépendance
 
     const stats = useMemo(() => {
-        if (!classes || !assignments || !todaySchedule) {
+        // Correction : S'assurer que `assignments` est un tableau avant de l'utiliser
+        const safeAssignments = Array.isArray(assignments) ? assignments : [];
+
+        if (!classes || !safeAssignments || !todaySchedule) {
             return [];
         }
 
-        const programmedAssignments = assignments.filter(a => !a.is_completed).length;
-        const pendingCorrections = assignments.filter(a => a.is_completed && !a.is_corrected).length;
+        const programmedAssignments = safeAssignments.filter(a => !a.is_completed).length;
+        const pendingCorrections = safeAssignments.filter(a => a.is_completed && !a.is_corrected).length;
 
         return [
             { title: 'Total Classes', value: classes.length, icon: '🏫', color: 'primary' },
@@ -123,10 +127,12 @@ const Dashboard = () => {
     }, [classes, todaySchedule, assignments]);
 
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
-        if (!assignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
+        // Correction : S'assurer que `assignments` est un tableau avant de l'utiliser
+        const safeAssignments = Array.isArray(assignments) ? assignments : [];
+        if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
 
-        const toCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
-        const upcoming = assignments
+        const toCorrect = safeAssignments.filter(a => a.is_completed && !a.is_corrected);
+        const upcoming = safeAssignments
             .filter(a => !a.is_completed)
             .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
             .slice(0, 5);
@@ -146,7 +152,8 @@ const Dashboard = () => {
 
             <div className="dashboard-content">
                 <div className="dashboard-columns">
-                    <div className="column main-column">
+                    <div className="column main-column margin-bottom-lg">
+                        <ScheduleSection />
                     </div>
                     <div className="column side-column">
                         <NoteSection />

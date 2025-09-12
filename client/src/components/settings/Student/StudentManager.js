@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useClasses } from '../../../hooks/useClasses'; // Votre hook pour les classes
+import { useClasses } from '../../../hooks/useClasses';
 import StudentService from '../../../services/StudentService';
 import { useToast } from '../../../hooks/useToast';
 import { useJournal } from '../../../hooks/useJournal';
-import ConfirmModal from '../../ConfirmModal'; // Assurez-vous d'importer votre modale
+import ConfirmModal from '../../ConfirmModal';
 import './StudentManager.scss';
 
 const StudentManager = () => {
     const { currentJournal } = useJournal();
-    const journalId = currentJournal?.id; // On extrait l'ID du journal actif
+    const journalId = currentJournal?.id;
 
     const { classes, loading: classesLoading } = useClasses(journalId);
 
@@ -25,7 +25,6 @@ const StudentManager = () => {
         onConfirm: null,
     });
 
-    // Charge les élèves pour la classe et le journal sélectionnés.
     const fetchStudents = useCallback(async () => {
         if (!selectedClass) {
             setStudents([]);
@@ -42,19 +41,14 @@ const StudentManager = () => {
         }
     }, [selectedClass, error]);
 
-    // Déclenche le rechargement des élèves si la sélection change.
     useEffect(() => {
         fetchStudents();
     }, [fetchStudents]);
 
-    // Réinitialise la classe sélectionnée si la liste des classes change (ex: changement de journal).
     useEffect(() => {
         setSelectedClass('');
     }, [classes]);
 
-
-
-    // Gère l'ajout d'un élève.
     const handleAddStudent = async (e) => {
         e.preventDefault();
         if (!formData.firstname.trim() || !formData.lastname.trim()) {
@@ -101,14 +95,12 @@ const StudentManager = () => {
     };
 
 
-    // Vérifie si l'interface doit être désactivée.
     const isUiDisabled = !currentJournal || currentJournal.is_archived;
 
     return (
         <div className="student-manager">
             <h2>👥 Gestion des Élèves par Classe</h2>
 
-            {/* Affiche le contexte du journal de classe actif */}
             {currentJournal ? (
                 <p className="current-year-info">
                     Gestion pour le journal : <strong>{currentJournal.name}</strong>
@@ -124,11 +116,12 @@ const StudentManager = () => {
                     className="btn-select"
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
-                    disabled={isUiDisabled || classesLoading || classes.length === 0}
+                    disabled={isUiDisabled || classesLoading || (Array.isArray(classes) && classes.length === 0)}
                 >
                     <option value="">-- Choisissez une classe --</option>
                     {classesLoading && <option>Chargement des classes...</option>}
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {/* Correction ici : on s'assure que 'classes' est un tableau avant de l'utiliser */}
+                    {Array.isArray(classes) && classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
             </div>
 

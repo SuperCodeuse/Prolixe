@@ -94,7 +94,8 @@ const ClassesManager = () => {
         if (isUiDisabled) {
             return <div className="empty-state"><h3>Sélectionnez un journal de classe actif pour gérer les classes.</h3></div>;
         }
-        if (classes.length === 0) {
+        // Correction : S'assurer que 'classes' est un tableau avant de vérifier sa longueur ou de le parcourir
+        if (!Array.isArray(classes) || classes.length === 0) {
             return (
                 <div className="empty-state">
                     <span className="empty-icon">🏫</span>

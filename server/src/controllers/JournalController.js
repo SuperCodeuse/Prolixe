@@ -44,8 +44,9 @@ class JournalController {
                     SELECT j.id, j.name, j.is_archived, j.is_current, j.school_year_id
                     FROM JOURNAL j
                     JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
+                    WHERE j.user_id = ?
                     ORDER BY start_date DESC
-                `);
+                `, [req.user.id]);
                 return rows;
             });
             res.json({ success: true, data: journals });
@@ -59,24 +60,27 @@ class JournalController {
      */
     static async createJournal(req, res) {
         // Attend `school_year_id` au lieu de `school_year`
+        console.log('Received request to create journal:', req.body);
         const { name, school_year_id } = req.body;
-        if (!name || !school_year_id) {
-            return JournalController.handleError(res, new Error('Champs manquants'), "Le nom et l'ID de l'année scolaire sont requis.", 400);
+        const userId = req.user.id; // <--- AJOUTÉ : Récupération de l'ID de l'utilisateur
+
+        if (!name || !school_year_id || !userId) {
+            return JournalController.handleError(res, new Error('Champs manquants'), "Le nom, l'ID de l'année scolaire et l'ID de l'utilisateur sont requis.", 400);
         }
         let connection;
         try {
             connection = await pool.getConnection();
 
             // Vérifie l'existence avec school_year_id
-            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year_id = ?', [school_year_id]);
+            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year_id = ? AND user_id = ?', [school_year_id, userId]); // <--- AJOUTÉ : Vérification de l'utilisateur
             if (existingJournal.length > 0) {
                 return JournalController.handleError(res, new Error('Conflit'), 'Un journal pour cette année scolaire existe déjà.', 409);
             }
 
             await connection.beginTransaction();
-            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1');
-            // Insère avec school_year_id
-            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year_id, is_current, is_archived) VALUES (?, ?, 1, 0)', [name, school_year_id]);
+            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1 AND user_id = ?', [userId]); // <--- AJOUTÉ : Mise à jour pour l'utilisateur
+            // Insère avec school_year_id et user_id
+            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year_id, user_id, is_current, is_archived) VALUES (?, ?, ?, 1, 0)', [name, school_year_id, userId]); // <--- AJOUTÉ : Insertion de l'ID de l'utilisateur
             const newJournalId = insertResult.insertId;
             await connection.commit();
 
@@ -422,7 +426,7 @@ class JournalController {
         }
     }
 
-        static formatDateForDatabase(dateInput) {
+    static formatDateForDatabase(dateInput) {
         if (!dateInput) return null;
         let date;
         if (dateInput instanceof Date) date = dateInput;
