@@ -88,15 +88,16 @@ class ClassController {
     }
 
     /**
-     * Récupère toutes les classes pour un journal donné.
+     * Récupère toutes les classes pour un journal donné, appartenant à l'utilisateur.
      * @param {Request} req - L'objet requête Express.
      * @param {Response} res - L'objet réponse Express.
      */
     static async getAllClasses(req, res) {
         const { journal_id } = req.query;
+        const userId = req.user.id;
 
         if (!journal_id) {
-            return ClassController.handleError(res, new Error('ID de l\'année scolaire manquant'), 'Un ID d\'année scolaire est requis.', 400);
+            return ClassController.handleError(res, new Error('ID du journal manquant'), 'Un ID de journal est requis.', 400);
         }
 
         try {
@@ -104,9 +105,9 @@ class ClassController {
                 const [rows] = await connection.execute(`
                     SELECT id, name, students, level
                     FROM CLASS
-                    WHERE journal_id = ?
+                    WHERE journal_id = ? AND user_id = ?
                     ORDER BY name ASC
-                `, [journal_id]);
+                `, [journal_id, userId]);
                 return rows;
             });
 
@@ -114,7 +115,7 @@ class ClassController {
                 success: true,
                 data: data,
                 count: data.length,
-                message: data.length === 0 ? 'Aucune classe trouvée pour cette année scolaire.' : `${data.length} classe(s) récupérée(s).`
+                message: data.length === 0 ? 'Aucune classe trouvée pour ce journal.' : `${data.length} classe(s) récupérée(s).`
             });
         } catch (error) {
             ClassController.handleError(res, error, 'Erreur lors de la récupération des classes.');
@@ -128,6 +129,7 @@ class ClassController {
      */
     static async getClassById(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
 
         if (!id || isNaN(parseInt(id))) {
             return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
@@ -136,13 +138,13 @@ class ClassController {
         try {
             const classData = await ClassController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
-                    SELECT id, name, students, level FROM CLASS WHERE id = ?
-                `, [parseInt(id)]);
+                    SELECT id, name, students, level FROM CLASS WHERE id = ? AND user_id = ?
+                `, [parseInt(id), userId]);
                 return rows[0] || null;
             });
 
             if (!classData) {
-                return ClassController.handleError(res, new Error('Classe non trouvée'), 'Classe non trouvée.', 404);
+                return ClassController.handleError(res, new Error('Classe non trouvée'), 'Classe non trouvée ou non autorisée.', 404);
             }
 
             res.json({
@@ -161,8 +163,10 @@ class ClassController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async createClass(req, res) {
-        const { name, students, level, journal_id } = req.body;
-        const validationErrors = ClassController.validateClassData({ name, students, level, journal_id });
+        const { name, students, level, journal_id, subject } = req.body;
+        const userId = req.user.id;
+
+        const validationErrors = ClassController.validateClassData({ name, students, level, journal_id, subject });
 
         if (Object.keys(validationErrors).length > 0) {
             return ClassController.handleError(res, new Error('Données invalides'), 'Données invalides.', 400, validationErrors);
@@ -171,23 +175,23 @@ class ClassController {
         try {
             const newClass = await ClassController.withConnection(async (connection) => {
                 const [existing] = await connection.execute(
-                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND journal_id = ?',
-                    [name.trim(), journal_id]
+                    'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND journal_id = ? AND user_id = ?',
+                    [name.trim(), journal_id, userId]
                 );
 
                 if (existing.length > 0) {
-                    const err = new Error('Une classe avec ce nom existe déjà pour cette année scolaire.');
+                    const err = new Error('Une classe avec ce nom existe déjà pour ce journal.');
                     err.name = 'DUPLICATE_NAME';
                     throw err;
                 }
 
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, level, journal_id) VALUES (?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), parseInt(level), parseInt(journal_id)]
+                    'INSERT INTO CLASS (name, students, level, journal_id, user_id, subject) VALUES (?, ?, ?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), parseInt(level), parseInt(journal_id), userId, subject]
                 );
 
                 const [newClassData] = await connection.execute(
-                    'SELECT id, name, students, level FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, level, subject FROM CLASS WHERE id = ?',
                     [result.insertId]
                 );
 
@@ -216,6 +220,7 @@ class ClassController {
     static async updateClass(req, res) {
         const { id } = req.params;
         const updateData = req.body;
+        const userId = req.user.id;
 
         if (!id || isNaN(parseInt(id))) {
             return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
@@ -228,14 +233,13 @@ class ClassController {
 
         try {
             const updatedClass = await ClassController.withConnection(async (connection) => {
-                // 1. Vérifier que la classe existe et récupérer son journal_id actuel
                 const [existingRows] = await connection.execute(
-                    'SELECT id, journal_id FROM CLASS WHERE id = ?',
-                    [parseInt(id)]
+                    'SELECT id, journal_id FROM CLASS WHERE id = ? AND user_id = ?',
+                    [parseInt(id), userId]
                 );
 
                 if (existingRows.length === 0) {
-                    const err = new Error('Classe non trouvée.');
+                    const err = new Error('Classe non trouvée ou non autorisée.');
                     err.name = 'CLASS_NOT_FOUND';
                     throw err;
                 }
@@ -244,26 +248,24 @@ class ClassController {
                 const fieldsToUpdate = [];
                 const values = [];
 
-                // 2. Gérer la mise à jour du nom
                 if (updateData.name !== undefined) {
-                    const trimmedName = updateData.name.trim(); // Définir la variable ici
+                    const trimmedName = updateData.name.trim();
                     const journalIdForCheck = updateData.journal_id || existingClass.journal_id;
 
                     const [duplicate] = await connection.execute(
-                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ? AND journal_id = ?',
-                        [trimmedName, parseInt(id), journalIdForCheck]
+                        'SELECT id FROM CLASS WHERE LOWER(name) = LOWER(?) AND id != ? AND journal_id = ? AND user_id = ?',
+                        [trimmedName, parseInt(id), journalIdForCheck, userId]
                     );
 
                     if (duplicate.length > 0) {
-                        const err = new Error('Une autre classe avec ce nom existe déjà pour cette année scolaire.');
+                        const err = new Error('Une autre classe avec ce nom existe déjà pour ce journal.');
                         err.name = 'DUPLICATE_NAME';
                         throw err;
                     }
                     fieldsToUpdate.push('name = ?');
-                    values.push(trimmedName); // CORRECTION: Utiliser la variable définie
+                    values.push(trimmedName);
                 }
 
-                // 3. Gérer les autres champs
                 if (updateData.students !== undefined) {
                     fieldsToUpdate.push('students = ?');
                     values.push(parseInt(updateData.students));
@@ -279,22 +281,26 @@ class ClassController {
                     values.push(parseInt(updateData.level));
                 }
 
+                if (updateData.subject !== undefined) {
+                    fieldsToUpdate.push('subject = ?');
+                    values.push(updateData.subject);
+                }
+
                 if (fieldsToUpdate.length === 0) {
                     const err = new Error('Aucune donnée à mettre à jour.');
                     err.name = 'NO_UPDATE_DATA';
                     throw err;
                 }
 
-                // 4. Exécuter la mise à jour
-                values.push(parseInt(id)); // Ajouter l'ID pour la clause WHERE
+                values.push(parseInt(id), userId);
 
                 await connection.execute(
-                    `UPDATE CLASS SET ${fieldsToUpdate.join(', ')} WHERE id = ?`,
+                    `UPDATE CLASS SET ${fieldsToUpdate.join(', ')} WHERE id = ? AND user_id = ?`,
                     values
                 );
 
                 const [updatedData] = await connection.execute(
-                    'SELECT id, name, students, level FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, level, subject FROM CLASS WHERE id = ?',
                     [parseInt(id)]
                 );
 
@@ -328,6 +334,7 @@ class ClassController {
      */
     static async deleteClass(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
 
         if (!id || isNaN(parseInt(id))) {
             return ClassController.handleError(res, new Error('ID de classe invalide'), 'ID de classe invalide.', 400);
@@ -336,17 +343,17 @@ class ClassController {
         try {
             const deletedClassInfo = await ClassController.withConnection(async (connection) => {
                 const [classToDelete] = await connection.execute(
-                    'SELECT id, name FROM CLASS WHERE id = ?',
-                    [parseInt(id)]
+                    'SELECT id, name FROM CLASS WHERE id = ? AND user_id = ?',
+                    [parseInt(id), userId]
                 );
 
                 if (classToDelete.length === 0) {
-                    const err = new Error('Classe non trouvée.');
+                    const err = new Error('Classe non trouvée ou non autorisée.');
                     err.name = 'CLASS_NOT_FOUND';
                     throw err;
                 }
 
-                await connection.execute('DELETE FROM CLASS WHERE id = ?', [parseInt(id)]);
+                await connection.execute('DELETE FROM CLASS WHERE id = ? AND user_id = ?', [parseInt(id), userId]);
                 return classToDelete[0];
             });
 
@@ -368,11 +375,12 @@ class ClassController {
     }
 
     /**
-     * Récupère les statistiques agrégées des classes.
+     * Récupère les statistiques agrégées des classes de l'utilisateur.
      * @param {Request} req - L'objet requête Express.
      * @param {Response} res - L'objet réponse Express.
      */
     static async getClassesStats(req, res) {
+        const userId = req.user.id;
         try {
             const stats = await ClassController.withConnection(async (connection) => {
                 const [result] = await connection.execute(`
@@ -381,7 +389,8 @@ class ClassController {
                         SUM(students) as total_students,
                         AVG(students) as avg_students_per_class
                     FROM CLASS
-                `);
+                    WHERE user_id = ?
+                `, [userId]);
                 return result[0];
             });
 

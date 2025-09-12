@@ -23,7 +23,7 @@ export const useClasses = (journalId) => {
             setError(null);
             // Assurez-vous que ClassService.getClasses peut filtrer par journalId
             const response = await ClassService.getClasses(journalId);
-            setClasses(response.data || []);
+            setClasses(response.data.data);
         } catch (err) {
             setError(err.message);
             console.error('Erreur chargement classes:', err);
