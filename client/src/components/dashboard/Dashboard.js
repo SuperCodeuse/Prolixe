@@ -1,16 +1,20 @@
-// client/src/components/dashboard/Dashboard.js
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useClasses } from '../../hooks/useClasses';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useJournal } from '../../hooks/useJournal';
-import { useHolidays } from '../../hooks/useHolidays';
+import HolidaysManagerService from '../../services/HolidaysManagerService'; // Importez le service
 import { format, parseISO } from 'date-fns';
 import { fr, enGB } from 'date-fns/locale';
-import '../../App.scss';
 import './dashboard.scss';
-import NotesSection from "./NoteSection";
+import './dashboard_mobile.scss';
+import NoteSection from './NoteSection';
 
 const Dashboard = () => {
+    const { user } = useAuth();
+    const [holidays, setHolidays] = useState([]);
+    const [loadingHolidays, setLoadingHolidays] = useState(true);
+
     const {
         currentJournal,
         assignments,
@@ -24,7 +28,39 @@ const Dashboard = () => {
 
     const { classes, loading: loadingClasses, error: errorClasses, getClassColor } = useClasses(journalId);
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
-    const { getHolidayForDate, loading: loadingHolidays } = useHolidays();
+
+    // Fonction pour récupérer les vacances
+    const fetchHolidays = async () => {
+        setLoadingHolidays(true);
+        try {
+            // Vérifier le cache du localStorage
+            const cachedHolidays = localStorage.getItem('prolixeHolidays');
+            if (cachedHolidays) {
+                setHolidays(JSON.parse(cachedHolidays));
+                setLoadingHolidays(false);
+                return;
+            }
+
+            // Si non présent, appeler l'API
+            const response = await HolidaysManagerService.getHolidays();
+            const fetchedHolidays = response.data;
+            setHolidays(fetchedHolidays);
+            // Stocker dans le localStorage
+            localStorage.setItem('prolixeHolidays', JSON.stringify(fetchedHolidays));
+        } catch (error) {
+            console.error('Erreur lors de la récupération des jours fériés:', error);
+            // En cas d'erreur (fichier non trouvé par exemple), on réinitialise les vacances
+            setHolidays([]);
+            localStorage.removeItem('prolixeHolidays');
+        } finally {
+            setLoadingHolidays(false);
+        }
+    };
+
+    useEffect(() => {
+        // Appeler la fonction de chargement des vacances au montage du composant
+        fetchHolidays();
+    }, []);
 
     useEffect(() => {
         if (journalId) {
@@ -35,7 +71,13 @@ const Dashboard = () => {
     }, [journalId, fetchAssignments, fetchJournalEntries, currentJournal]);
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const getHolidayForDate = (date) => {
+        if (!holidays || holidays.length === 0) return null;
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        return holidays.find(h => h.date === formattedDate) || null;
+    };
     const holidayInfo = getHolidayForDate(new Date());
+
 
     const todaySchedule = useMemo(() => {
         if (!schedule || !schedule.data || !classes) return [];
@@ -62,10 +104,9 @@ const Dashboard = () => {
             const timeB = b.time_slot_libelle.split('-')[0];
             return timeA.localeCompare(timeB);
         });
-    }, [schedule, journalEntries, todayStr, classes, holidayInfo]); // Ajout de `classes` et `holidayInfo` comme dépendances
+    }, [schedule, journalEntries, todayStr, classes, holidayInfo]); // Ajout de `holidays` comme dépendance
 
     const stats = useMemo(() => {
-        // S'assurer que les données sont prêtes
         if (!classes || !assignments || !todaySchedule) {
             return [];
         }
@@ -82,7 +123,6 @@ const Dashboard = () => {
     }, [classes, todaySchedule, assignments]);
 
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
-        // S'assurer que les données sont prêtes
         if (!assignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
 
         const toCorrect = assignments.filter(a => a.is_completed && !a.is_corrected);
@@ -93,120 +133,23 @@ const Dashboard = () => {
         return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
     }, [assignments]);
 
-    // Gérer l'état de chargement de manière plus robuste
-    if (loadingJournal || loadingClasses || loadingSchedule || loadingHolidays) {
-        return <div className="dashboard-status">Chargement du tableau de bord...</div>;
-    }
-
-    // Gestion des erreurs
-    if (errorClasses || errorSchedule) {
-        const errorMessage = (errorClasses?.message || '') + ' ' + (errorSchedule?.message || '');
-        return <div className="dashboard-status error">Erreur de chargement: {errorMessage}</div>;
+    if (!user) {
+        return <div>Chargement...</div>;
     }
 
     return (
-        <div className="dashboard">
+        <div className="dashboard-page">
             <div className="dashboard-header">
-                <div className="header-content">
-                    <h1>📊 Tableau de bord</h1>
-                    <p>Vue d'ensemble de vos activités d'enseignement</p>
-                </div>
-                <div className="header-date">
-                    <span>{format(new Date(), 'PPPP', { locale: fr })}</span>
-                </div>
+                <h1>Bonjour {user.firstname} ! 👋</h1>
+                <p>Bienvenue sur votre tableau de bord Prolixe</p>
             </div>
 
             <div className="dashboard-content">
-                <div className="dashboard-section">
-                    <div className="section-header">
-                        <h2>📅 Emploi du temps d'aujourd'hui</h2>
+                <div className="dashboard-columns">
+                    <div className="column main-column">
                     </div>
-                    <div className="schedule-list">
-                        {holidayInfo ? (
-                            <div className="holiday-card-dashboard">
-                                <span className="holiday-icon">🎉</span>
-                                <div className="holiday-details">
-                                    <h4>Jour de congé</h4>
-                                    <p>{holidayInfo.name}</p>
-                                </div>
-                            </div>
-                        ) : todaySchedule.length > 0 ? (
-                            todaySchedule.map((item) => {
-                                const classInfo = classes.find(c => c.id == item.classId);
-                                const itemColor = getClassColor(item.subject, classInfo?.classLevel);
-
-                                return (
-                                    <div
-                                        key={item.key}
-                                        className={`schedule-item ${item.isCancelled ? 'is-cancelled' : ''}`}
-                                        style={{ borderLeftColor: item.isCancelled ? 'var(--red-danger)' : itemColor }}
-                                    >
-                                        {item.isCancelled ? (
-                                            <>
-                                                <div className="schedule-time">{item.time_slot_libelle.split('-')[0]}</div>
-                                                <div className="schedule-details">
-                                                    <h4 className="cancelled-text">{item.subject} - ANNULÉ</h4>
-                                                    <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
-                                                    {item.cancellationNotes && <p className="cancellation-reason">{item.cancellationNotes}</p>}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="schedule-time">
-                                                    <span>{item.time_slot_libelle.split('-')[0]}</span>
-                                                </div>
-                                                <div className="schedule-details">
-                                                    <h4>{item.subject}</h4>
-                                                    <p>{classInfo?.name || 'Classe inconnue'} - {item.room}</p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <p className="empty-state">Aucun cours programmé pour aujourd'hui.</p>
-                        )}
-                    </div>
-                </div>
-                <NotesSection />
-
-                <div className="dashboard-section">
-                    <div className="section-header">
-                        <h2>✅ À faire</h2>
-                    </div>
-                    <div className="tasks-list">
-                        <h4>Corrections en attente</h4>
-                        {assignmentsToCorrect.length > 0 ? (
-                            assignmentsToCorrect.map(task => {
-                                const classInfo = classes.find(c => c.id == task.class_id);
-                                return (
-                                    <div key={task.id} className="task-item">
-                                        <div className="task-content">
-                                            <h4>{task.subject} - {classInfo?.name || 'Classe inconnue'}</h4>
-                                            {task.description && <p className="description-task">{task.description}</p>}
-                                            <p>Remis le : {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : <p className="empty-state">Aucune correction en attente.</p>}
-
-                        <h4 style={{ marginTop: '1.5rem' }}>Prochains devoirs</h4>
-                        {upcomingAssignments.length > 0 ? (
-                            upcomingAssignments.map(task => {
-                                const classInfo = classes.find(c => c.id == task.class_id);
-                                return (
-                                    <div key={task.id} className="task-item">
-                                        <div className="task-content">
-                                            <h4>{task.subject} - {classInfo?.name || 'Classe inconnue'}</h4>
-                                            {task.description && <p className="description-task">{task.description}</p>}
-                                            <p>À rendre le : {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : <p className="empty-state">Aucun devoir programmé.</p>}
+                    <div className="column side-column">
+                        <NoteSection />
                     </div>
                 </div>
             </div>
@@ -223,7 +166,6 @@ const Dashboard = () => {
                     </div>
                 ))}
             </div>
-
         </div>
     );
 };

@@ -17,13 +17,12 @@ const SideMenu = ({ isMenuOpen, toggleMenu }) => {
         }
     });
 
-    const menuItems = [
+    const menuItems =  [
         { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
         { id: 'journal', label: 'Journal', icon: '📝', path: '/journal' },
         { id: 'horaire', label: 'Emploi du temps', icon: '⏰', path: '/horaire' },
         { id: 'correction', label: 'Correction', icon: '✅', path: '/correction' },
         { id: 'conseilDeClasse', label: 'Conseil de classe', icon: '👥', path: '/conseilDeClasse' },
-        //{ id: 'document-generator', label: 'Générateur Document', icon: '📑', path: '/document-generator' },
         { id: 'settings', label: 'Paramètres', icon: '⚙️', path: '/settings' },
     ];
 

@@ -69,6 +69,9 @@ class ScheduleHoursController {
 
     // Créer un nouveau créneau horaire
     static async createHour(req, res) {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ success: false, message: 'Accès interdit. Seuls les administrateurs peuvent effectuer cette action.' });
+        }
         const { libelle } = req.body;
 
         try {
@@ -143,6 +146,10 @@ class ScheduleHoursController {
     static async updateHour(req, res) {
         const { id } = req.params;
         const { libelle } = req.body;
+
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ success: false, message: 'Accès interdit. Seuls les administrateurs peuvent effectuer cette action.' });
+        }
 
         try {
             // Validation de l'ID
@@ -236,7 +243,9 @@ class ScheduleHoursController {
     // Supprimer un créneau horaire
     static async deleteHour(req, res) {
         const { id } = req.params;
-
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ success: false, message: 'Accès interdit. Seuls les administrateurs peuvent effectuer cette action.' });
+        }
         try {
             // Validation de l'ID
             if (!id || isNaN(parseInt(id))) {

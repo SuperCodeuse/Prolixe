@@ -97,6 +97,8 @@ protectedRouter.use('/students', require('./routes/StudentRoute'));
 protectedRouter.use('/conseilDeClasse', require('./routes/ConseilRoutes'));
 protectedRouter.use('/notes', require('./routes/NoteRoute'));
 protectedRouter.use('/school-years', require('./routes/SchoolYearRoute'));
+protectedRouter.use('/holidays', require('./routes/HolidayRoute'));
+
 
 // On attache le routeur protégé au préfixe /api
 app.use('/api', protectedRouter);

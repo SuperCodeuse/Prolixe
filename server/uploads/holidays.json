@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Grandes vacances 24",
+    "start": "2024-07-06",
+    "end": "2024-08-25"
+  },
+  {
+    "name": "Fête de la Communauté Française",
+    "start": "2024-09-27",
+    "end": "2024-09-27"
+  },
+  {
+    "name": "Congé d'Automne",
+    "start": "2024-10-21",
+    "end": "2024-11-03"
+  },
+  {
+    "name": "Armistice",
+    "start": "2024-11-11",
+    "end": "2024-11-11"
+  },
+  {
+    "name": "Vacances d'hiver",
+    "start": "2024-12-23",
+    "end": "2025-01-05"
+  },
+  {
+    "name": "Congé de détente",
+    "start": "2025-02-24",
+    "end": "2025-03-09"
+  },
+  {
+    "name": "Lundi de Pâques",
+    "start": "2025-04-21",
+    "end": "2025-04-21"
+  },
+  {
+    "name": "Vacances de printemps",
+    "start": "2025-04-28",
+    "end": "2025-05-11"
+  },
+  {
+    "name": "Fête du Travail",
+    "start": "2025-05-01",
+    "end": "2025-05-01"
+  },
+  {
+    "name": "Ascension",
+    "start": "2025-05-29",
+    "end": "2025-05-29"
+  },
+  {
+    "name": "Lundi de Pentecôte",
+    "start": "2025-06-09",
+    "end": "2025-06-09"
+  },
+  {
+    "name": "Grandes vacances 25",
+    "start": "2025-07-05",
+    "end": "2025-08-24"
+  }
+]

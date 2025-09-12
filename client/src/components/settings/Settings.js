@@ -7,19 +7,26 @@ import './Settings.scss';
 import JournalManager from "../journal/JournalManager";
 import AttributionManager from "./Attribution/AttributionManager";
 import StudentManager from "./Student/StudentManager";
+import {useAuth} from "../../hooks/useAuth";
 
 const Settings = () => {
     const [activeTab, setActiveTab] = useState('classes');
+    const { user } = useAuth();
 
-    const settingsTabs = [
+    let settingsTabs = [
         { id: 'classes', label: 'Classes', icon: '🏫' },
         { id: 'students', label: 'Élèves', icon: '👥' },
-        { id: 'schedule', label: 'Horaire', icon: '⏰' },
         { id: 'journals', label: 'Journaux', icon: '📚' },
-        { id: 'holidays', label: 'Calendrier', icon: '📅' },
         { id: 'attributions', label: 'Attributions', icon: '💼' },
-
     ];
+
+    if(user?.role === "ADMIN"){
+        settingsTabs = settingsTabs.concat([
+            { id: 'schedule', label: 'Horaire', icon: '⏰' },
+            { id: 'holidays', label: 'Calendrier', icon: '📅' }
+        ]);
+    }
+
 
     const renderTabContent = () => {
         switch (activeTab) {
