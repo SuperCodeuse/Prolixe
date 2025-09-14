@@ -50,8 +50,6 @@ class StudentController {
      * Crée un nouvel élève lié à une classe et une année scolaire.
      */
     static async createStudent(req, res) {
-        console.log(req);
-        console.log(req.body);
         const { class_id, firstname, lastname } = req.body;
 
         if (!class_id || !firstname || !lastname) {

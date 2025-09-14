@@ -363,8 +363,6 @@ const JournalView = () => {
     }, [isArchived]);
 
     const handleEditAssignment = useCallback((assignment) => {
-        console.log("here");
-        console.log("here");
         if (isArchived) return;
         setSelectedAssignment(assignment);
         setAssignmentForm({ ...assignment, due_date: assignment.due_date ? format(parseISO(assignment.due_date), 'yyyy-MM-dd') : '' });

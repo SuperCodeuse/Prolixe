@@ -126,7 +126,7 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             const response = await JournalService.getAssignments(currentJournal.id, classId, startDate, endDate);
-            setAssignments(response.data || []);
+            setAssignments(response.data.data || []);
         } catch (err) {
             setError(err.message || 'Erreur lors de la récupération des devoirs.');
         } finally {

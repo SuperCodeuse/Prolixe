@@ -41,13 +41,14 @@ class ScheduleController {
     }
 
     static async getScheduleData(journal_id, userId, connection = null) {
+
         const executeQuery = async (conn) => {
             const [rows] = await conn.execute(`
                 SELECT s.id, s.day, s.time_slot_id, h.libelle AS time_slot_libelle, s.subject, s.class_id, c.name AS class_name, c.level AS class_level, s.room, s.notes
                 FROM SCHEDULE s
                 JOIN SCHEDULE_HOURS h ON s.time_slot_id = h.id
                 JOIN CLASS c ON s.class_id = c.id
-                WHERE s.journal_id = ? AND s.userId = ?
+                WHERE s.journal_id = ? AND s.user_id = ?
             `, [journal_id, userId]);
             return rows;
         };
@@ -61,14 +62,16 @@ class ScheduleController {
     }
 
     static async getSchedule(req, res) {
+        console.log("here !");
+
         const { journal_id } = req.query;
-        const userId = req.user.id; 
+        const userId = req.user.id;
 
         if (!journal_id) return ScheduleController.handleError(res, new Error('ID de journal manquant'), "L'ID du journal est requis.", 400);
         if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
 
         try {
-            const formattedSchedule = await ScheduleController.getScheduleData(journal_id, userId);
+            const formattedSchedule = await ScheduleController.getScheduleData(parseInt(journal_id), userId);
             res.json({ success: true, data: formattedSchedule, count: Object.keys(formattedSchedule).length, message: Object.keys(formattedSchedule).length === 0 ? 'Aucun créneau horaire trouvé pour ce journal.' : `${Object.keys(formattedSchedule).length} créneau(x) récupéré(s).` });
         } catch (error) {
             ScheduleController.handleError(res, error, 'Erreur lors de la récupération de l\'emploi du temps.');
@@ -77,7 +80,7 @@ class ScheduleController {
 
     static async upsertCourse(req, res) {
         const { day, time_slot_id, subject, classId, room, notes, journal_id } = req.body;
-        const userId = req.user.id; 
+        const userId = req.user.id;
 
         if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
 

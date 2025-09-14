@@ -14,7 +14,7 @@ export const useScheduleHours = () => {
             setError(null);
 
             const response = await ScheduleHoursService.getHours();
-            setHours(response.data || []);
+            setHours(response.data.data || []);
 
         } catch (err) {
             setError(err.message);
