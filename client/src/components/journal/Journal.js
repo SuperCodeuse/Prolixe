@@ -184,7 +184,6 @@ const JournalView = () => {
         }
     };
 
-    // --- AJOUT : Handler pour la case à cocher d'annulation de journée ---
     const handleCancelEntireDayChange = (e) => {
         const isChecked = e.target.checked;
         setCancelEntireDay(isChecked);
