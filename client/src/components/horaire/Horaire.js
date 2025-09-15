@@ -94,7 +94,6 @@ const Horaire = () => {
 
         try {
             await upsertCourse(selectedSlot.day, selectedSlot.time_libelle, courseForm);
-
             success('Cours enregistré avec succès !', 3000);
             setShowModal(false);
             setCourseForm({ subject: '', classId: '', room: '', notes: '' });

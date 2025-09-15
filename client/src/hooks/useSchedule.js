@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import scheduleService from '../services/ScheduleService';
 import { useScheduleHours } from './useScheduleHours';
-import { useJournal } from './useJournal'; // Importer le hook de journal
+import { useJournal } from './useJournal';
 
 export const useSchedule = () => {
     const [schedule, setSchedule] = useState({});
@@ -10,7 +10,7 @@ export const useSchedule = () => {
     const [error, setError] = useState(null);
 
     const { hours, getHourIdByLibelle, loading: loadingHours, error: errorHours } = useScheduleHours();
-    const { currentJournal } = useJournal(); // Obtenir le journal courant
+    const { currentJournal } = useJournal();
 
     const fetchSchedule = useCallback(async () => {
         if (!currentJournal) {
@@ -22,13 +22,14 @@ export const useSchedule = () => {
         setError(null);
         try {
             const data = await scheduleService.getSchedule(currentJournal.id);
-            setSchedule(data);
+            let dataObject = data.data;
+            setSchedule(dataObject);
         } catch (err) {
             setError(err.message || "Erreur lors de la récupération de l'emploi du temps.");
         } finally {
             setLoading(false);
         }
-    }, [currentJournal]); // Dépendre de currentJournal
+    }, [currentJournal]);
 
     useEffect(() => {
         if (!loadingHours && !errorHours) {
@@ -46,17 +47,18 @@ export const useSchedule = () => {
             const time_slot_id = getHourIdByLibelle(time_libelle);
             if (!time_slot_id) throw new Error(`ID de créneau horaire introuvable pour : ${time_libelle}`);
 
-            const response = await scheduleService.upsertCourse(day, time_slot_id, courseDetails, currentJournal.id);
+            let response = await scheduleService.upsertCourse(day, time_slot_id, courseDetails, currentJournal.id);
+            response = response.data;
 
-            if (response.success && response.data.schedule) {
-                setSchedule({ data: response.data.schedule });
+            if (response.success) {
+                await fetchSchedule();
             }
             return response.data;
         } catch (err) {
             setError(err.message || 'Erreur lors de la sauvegarde du cours.');
             throw err;
         }
-    }, [getHourIdByLibelle, currentJournal]); // Ajouter currentJournal
+    }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
 
     const deleteCourse = useCallback(async (day, time_libelle) => {
         if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
@@ -65,18 +67,18 @@ export const useSchedule = () => {
             const time_slot_id = getHourIdByLibelle(time_libelle);
             if (!time_slot_id) throw new Error(`ID de créneau horaire introuvable pour : ${time_libelle}`);
 
-            // Passer l'ID du journal courant au service
-            const response = await scheduleService.deleteCourse(day, time_slot_id, currentJournal.id);
+            let response = await scheduleService.deleteCourse(day, time_slot_id, currentJournal.id);
+            response = response.data;
 
-            if (response.success && response.data.schedule) {
-                setSchedule({ data: response.data.schedule });
+            if (response.success) {
+                await fetchSchedule();
             }
             return response.data;
         } catch (err) {
             setError(err.message || 'Erreur lors de la suppression du cours.');
             throw err;
         }
-    }, [getHourIdByLibelle, currentJournal]); // Ajouter currentJournal
+    }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
 
     const getCourseBySlotKey = useCallback((slotKey) => {
         return schedule.data ? schedule.data[slotKey] : null;
