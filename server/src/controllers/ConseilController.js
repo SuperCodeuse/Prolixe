@@ -60,6 +60,7 @@ class ConseilDeClasseController {
      * @param {Response} res - L'objet réponse Express.
      */
     static async getConseilDataForClass(req, res) {
+
         const { class_id } = req.params;
 
         if (!class_id || isNaN(parseInt(class_id))) {
@@ -82,11 +83,12 @@ class ConseilDeClasseController {
                     ORDER BY s.lastname ASC, s.firstname ASC
                 `, [class_id]);
 
-                return rows.map(student => ({
+                let rowsData = rows.map(student => ({
                     ...student,
                     notes: student.notes || '',
                     decision: student.decision || 'AO-A' // Décision par défaut
                 }));
+                return rowsData;
             });
 
             res.json({

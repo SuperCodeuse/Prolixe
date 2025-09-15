@@ -142,7 +142,7 @@ const ScheduleManager = () => {
         );
     }
 
-    const sortedHours = hours.data.sort((a, b) => a.libelle.localeCompare(b.libelle));
+    const sortedHours = hours.sort((a, b) => a.libelle.localeCompare(b.libelle));
 
     return (
         <div className="settings-section">
@@ -156,7 +156,7 @@ const ScheduleManager = () => {
             <div className="schedule-manager">
                 <div className="section-header">
                     <div className="section-header">
-                <h3>Créneaux horaires ({hours.data.length})</h3>
+                <h3>Créneaux horaires ({hours.length})</h3>
             </div>
                 </div>
 

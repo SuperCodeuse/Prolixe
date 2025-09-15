@@ -29,7 +29,9 @@ export const useConseilDeClasse = (classId, journalId) => { // MODIFIÉ : Ajout 
                 setLoading(true);
                 setError(null); // Réinitialiser les erreurs précédentes
                 // Le service pourrait aussi avoir besoin du journalId, à adapter si nécessaire
-                const response = await getConseilDataForClass(classId, journalId);
+                let response = await getConseilDataForClass(classId, journalId);
+                response = response.data;
+
                 if (response.success) {
                     setStudents(response.data);
                 } else {
