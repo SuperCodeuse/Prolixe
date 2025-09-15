@@ -18,10 +18,12 @@ const Dashboard = () => {
 
     const {
         currentJournal,
+        lastSelected,
         assignments,
         fetchAssignments,
         journalEntries,
         fetchJournalEntries,
+        loadAllJournals,
         loading: loadingJournal
     } = useJournal();
 
@@ -62,6 +64,10 @@ const Dashboard = () => {
         // Appeler la fonction de chargement des vacances au montage du composant
         fetchHolidays();
     }, []);
+
+    useEffect(() => {
+        loadAllJournals();
+    }, [loadAllJournals]);
 
     useEffect(() => {
         if (journalId) {

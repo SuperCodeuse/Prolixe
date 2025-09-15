@@ -22,8 +22,9 @@ export const useClasses = (journalId) => {
             setLoading(true);
             setError(null);
             // Assurez-vous que ClassService.getClasses peut filtrer par journalId
-            const response = await ClassService.getClasses(journalId);
-            setClasses(response.data.data);
+            let response = await ClassService.getClasses(journalId);
+            response = response.data;
+            setClasses(response.data);
         } catch (err) {
             setError(err.message);
             console.error('Erreur chargement classes:', err);
@@ -43,7 +44,8 @@ export const useClasses = (journalId) => {
         }
         try {
             const dataToSend = { ...classData, journal_id: journalId };
-            const response = await ClassService.createClass(dataToSend);
+            let response = await ClassService.createClass(dataToSend);
+            response = response.data;
             setClasses(prev => [...prev, response.data]);
             return response.data;
         } catch (err) {
@@ -55,7 +57,8 @@ export const useClasses = (journalId) => {
     // Mettre à jour une classe (la logique reste la même)
     const updateClass = async (id, classData) => {
         try {
-            const response = await ClassService.updateClass(id, classData);
+            let response = await ClassService.updateClass(id, classData);
+            response = response.data;
             setClasses(prev => prev.map(cls => (cls.id === id ? response.data : cls)));
             return response.data;
         } catch (err) {
