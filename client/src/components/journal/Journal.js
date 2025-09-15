@@ -49,11 +49,16 @@ const JournalView = () => {
     const journalBounds = useMemo(() => {
         if (!holidays || holidays.length === 0) return null;
         try {
-            console.log("here !");
-            const allDates = holidays.flatMap(h => [parseISO(h.start), parseISO(h.end)]);
+            // Filtrer les entrées de vacances qui n'ont pas de dates valides
+            const validHolidayDates = holidays
+                .filter(h => h.start && h.end)
+                .flatMap(h => [parseISO(h.start), parseISO(h.end)]);
+
+            if (validHolidayDates.length === 0) return null;
+
             return {
-                start: startOfWeek(min(allDates), { weekStartsOn: 1 }),
-                end: startOfWeek(max(allDates), { weekStartsOn: 1 })
+                start: startOfWeek(min(validHolidayDates), { weekStartsOn: 1 }),
+                end: startOfWeek(max(validHolidayDates), { weekStartsOn: 1 })
             };
         } catch (e) {
             console.error("Erreur lors du parsing des dates de congés:", e);
@@ -91,7 +96,7 @@ const JournalView = () => {
         return grouped;
     }, [schedule, hours]);
 
-    const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
+    const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && entry.date && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
 
     const debouncedSave = (entryData) => {
         if (isArchived) return;
@@ -201,7 +206,7 @@ const JournalView = () => {
                     date: selectedDayForJournal.key,
                     planned_work: '',
                     actual_work: '[CANCELLED]',
-                    notes: journalForm.notes // On utilise la note actuelle
+                    notes: journalForm.notes
                 });
             });
             if (otherCoursesToUpdate.length > 0) success(`Toute la journée a été marquée comme "Annulée".`);
@@ -219,21 +224,17 @@ const JournalView = () => {
         const entryData = { id: currentJournalEntryId, schedule_id: selectedCourseForJournal.id, date: selectedDayForJournal.key, ...updatedForm };
         debouncedSave(entryData);
 
-        // --- NOUVELLE LOGIQUE POUR L'ASSIGNATION ---
         if (isChecked) {
-            // Créer une nouvelle assignation (ou la mettre à jour si elle existe)
             const newAssignment = {
-                // On utilise les informations du cours sélectionné
                 class_id: selectedCourseForJournal.classId,
                 subject: selectedCourseForJournal.subject,
                 type: 'Interro',
                 description: updatedForm.actual_work.replace('[INTERRO]', '').trim(),
-                due_date: selectedDayForJournal.key, // La date de l'interro est la date d'échéance
+                due_date: selectedDayForJournal.key,
                 is_completed: false,
                 is_corrected: false,
             };
 
-            // Chercher si une assignation pour cette interro existe déjà
             const existingAssignment = assignments.find(
                 a => a.class_id === newAssignment.class_id &&
                     a.subject === newAssignment.subject &&
@@ -241,10 +242,8 @@ const JournalView = () => {
                     a.due_date === newAssignment.due_date
             );
 
-            // Si elle existe, on met à jour son ID pour la fonction upsert
             if (existingAssignment) {
                 newAssignment.id = existingAssignment.id;
-                // On s'assure de ne pas écraser l'état "corrigé" si c'est déjà fait
                 newAssignment.is_corrected = existingAssignment.is_corrected;
             }
 
@@ -255,7 +254,6 @@ const JournalView = () => {
                 showError('Erreur lors de la création de l\'assignation: ' + err.message);
             }
         } else {
-            // Si on décoche la case, on peut potentiellement supprimer l'assignation si elle existe
             const existingAssignment = assignments.find(
                 a => a.class_id === selectedCourseForJournal.classId &&
                     a.subject === selectedCourseForJournal.subject &&
@@ -402,7 +400,6 @@ const JournalView = () => {
     if (errorHours || errorSchedule) return <div className="journal-page"><div className="error-message">Erreur de chargement des données.</div></div>;
 
     const hasSchedule = schedule?.data && Object.keys(schedule.data).length > 0;
-
     return (
         <div className="journal-page">
             <div className="journal-header">
@@ -424,7 +421,7 @@ const JournalView = () => {
                             weekDays.map(day => {
                                 const dayKeyForSchedule = day.dayOfWeekKey;
                                 const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
-                                const validCoursesForThisDay = coursesForThisDay.filter(course => course.classId != null);
+                                const validCoursesForThisDay = coursesForThisDay.filter(course => course.classId != null && course.id != null);
                                 if (validCoursesForThisDay.length === 0 && !day.isHoliday) { return null; }
                                 return (
                                     <div key={day.key} className={`day-column ${day.isHoliday ? 'is-holiday' : ''}`}>
@@ -493,14 +490,15 @@ const JournalView = () => {
                     {!isArchived && <button className="btn-primary" onClick={handleAddAssignment}>+ Nouvelle Assignation</button>}
                     {assignments.length === 0 ? <p>Aucune assignation prévue cette semaine.</p> : (
                         <div className="assignment-list">
-                            {assignments.map(assign => {
+                            {assignments.filter(a => a.id != null).map(assign => {
                                 const assignClass = getClassInfo(assign.class_id);
                                 return (
                                     <div key={assign.id} className={`assignment-item ${assign.is_completed && assign.is_corrected ? 'fully-corrected' : ''}`}>
                                         <input type="checkbox" checked={assign.is_completed} title="Terminé ?" onChange={() => { if(!isArchived) {const payload = { ...assign, is_completed: !assign.is_completed }; if (!payload.is_completed) payload.is_corrected = false; upsertAssignment(payload); }}} disabled={isArchived} />
                                         <div className="assignment-details">
                                             <h4>{assign.subject} ({assign.type})</h4>
-                                            <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>
+                                            {/* Vérification pour s'assurer que due_date existe avant l'appel à parseISO */}
+                                            {assign.due_date && <p>Pour le: {format(parseISO(assign.due_date), 'dd/MM/yy', { locale: fr })} - {assignClass?.name}</p>}
                                         </div>
                                         {assign.is_completed && (
                                             <div className="corrected-checkbox-wrapper">

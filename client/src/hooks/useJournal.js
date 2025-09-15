@@ -168,20 +168,14 @@ export const JournalProvider = ({ children }) => {
         try {
             const dataWithJournalId = { ...assignmentData, journal_id: currentJournal.id };
             const response = await JournalService.upsertAssignment(dataWithJournalId);
-            const newAssignment = response.data;
-            setAssignments(prev => {
-                const existingIndex = prev.findIndex(a => a.id === newAssignment.id);
-                if (existingIndex > -1) {
-                    return prev.map((a, i) => (i === existingIndex ? newAssignment : a));
-                }
-                return [...prev, newAssignment].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-            });
-            return newAssignment;
+            // Re-fetch des devoirs après une opération réussie
+            await fetchAssignments();
+            return response.data;
         } catch (err) {
             setError(err.message || "Erreur lors de la sauvegarde du devoir.");
             throw err;
         }
-    }, [currentJournal]);
+    }, [currentJournal, fetchAssignments]);
 
     const deleteAssignment = useCallback(async (id) => {
         if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");
