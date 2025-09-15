@@ -18,4 +18,15 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const token = localStorage.getItem('authToken');
+        if ( error.response && error.response.status === 401 && token) {
+            window.dispatchEvent(new Event('auth-error'));
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default apiClient;

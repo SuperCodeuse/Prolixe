@@ -6,7 +6,7 @@ const JournalContext = createContext(null);
 
 export const JournalProvider = ({ children }) => {
     const [journals, setJournals] = useState([]);
-    const [currentJournal, setCurrentJournal] = useState(null);
+    const [currentJournal, setCurrentJournal] = useState(null); // Initialisé à null
     const [archivedJournals, setArchivedJournals] = useState([]);
     const [journalEntries, setJournalEntries] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -16,18 +16,16 @@ export const JournalProvider = ({ children }) => {
     const loadAllJournals = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await JournalService.getAllJournals();
-            const all = response.data;
-            const journalsArray = all.data || [];
-
+            let response = await JournalService.getAllJournals();
+            response = response.data;
+            const all = response.data || [];
             setJournals(all);
-
-            const current = journalsArray.find(j => j.is_current && !j.is_archived);
-            const archived = journalsArray.filter(j => j.is_archived);
+            const current = all.find(j => j.is_current && !j.is_archived);
+            const archived = all.filter(j => j.is_archived);
             const lastSelectedId = localStorage.getItem('prolixe_currentJournalId');
-            const lastSelected = journalsArray.find(j => j.id === parseInt(lastSelectedId));
+            const lastSelected = all.find(j => j.id === parseInt(lastSelectedId));
 
-            const journalToSet = lastSelected || current || journalsArray.find(j => !j.is_archived);
+            const journalToSet = lastSelected || current || all.find(j => !j.is_archived);
             setCurrentJournal(journalToSet);
             setArchivedJournals(archived);
         } catch (err) {
@@ -38,10 +36,14 @@ export const JournalProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        if (currentJournal === null) {
-            loadAllJournals();
+        loadAllJournals();
+    }, [loadAllJournals]);
+
+    useEffect(() => {
+        if (currentJournal) {
+
         }
-    }, [currentJournal]);
+    }, [currentJournal]); // Se déclenche à chaque fois que currentJournal change
 
     const selectJournal = (journal) => {
         if (journal && journal.id) {
@@ -49,6 +51,10 @@ export const JournalProvider = ({ children }) => {
             localStorage.setItem('prolixe_currentJournalId', journal.id);
         }
     };
+
+    // Les autres fonctions qui dépendent de currentJournal (comme fetchJournalEntries, fetchAssignments) sont déjà des `useCallback`
+    // avec `[currentJournal]` comme dépendance, ce qui est une bonne pratique.
+    // Elles seront donc recréées et pourront utiliser la nouvelle valeur de `currentJournal` au prochain rendu.
 
     const clearJournal = useCallback(async (journalId) => {
         try {
@@ -63,7 +69,8 @@ export const JournalProvider = ({ children }) => {
 
     const createJournal = useCallback(async (journalData) => {
         try {
-            const response = await JournalService.createJournal(journalData);
+            let response = await JournalService.createJournal(journalData);
+            response = response.data;
             await loadAllJournals();
             return response.data;
         } catch (err) {
@@ -131,7 +138,8 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             const dataWithJournalId = { ...entryData, journal_id: currentJournal.id };
-            const response = await JournalService.upsertJournalEntry(dataWithJournalId);
+            let response = await JournalService.upsertJournalEntry(dataWithJournalId);
+            response = response.data;
             const newEntry = response.data;
             setJournalEntries(prev => {
                 const index = prev.findIndex(e => e.id === newEntry.id);
@@ -167,15 +175,22 @@ export const JournalProvider = ({ children }) => {
         setError(null);
         try {
             const dataWithJournalId = { ...assignmentData, journal_id: currentJournal.id };
-            const response = await JournalService.upsertAssignment(dataWithJournalId);
-            // Re-fetch des devoirs après une opération réussie
-            await fetchAssignments();
-            return response.data;
+            let response = await JournalService.upsertAssignment(dataWithJournalId);
+            response = response.data;
+            const newAssignment = response.data;
+            setAssignments(prev => {
+                const existingIndex = prev.findIndex(a => a.id === newAssignment.id);
+                if (existingIndex > -1) {
+                    return prev.map((a, i) => (i === existingIndex ? newAssignment : a));
+                }
+                return [...prev, newAssignment].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+            });
+            return newAssignment;
         } catch (err) {
             setError(err.message || "Erreur lors de la sauvegarde du devoir.");
             throw err;
         }
-    }, [currentJournal, fetchAssignments]);
+    }, [currentJournal]);
 
     const deleteAssignment = useCallback(async (id) => {
         if (currentJournal && currentJournal.is_archived) throw new Error("Impossible de modifier un journal archivé.");

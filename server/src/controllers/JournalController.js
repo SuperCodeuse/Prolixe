@@ -35,7 +35,7 @@ class JournalController {
     }
 
     /**
-     * MODIFIÉ: Récupère tous les journaux avec les informations de l'année scolaire.
+     * MODIFIÉ: Récupère tous les journaux avec les informations de l'année scolaire pour l'utilisateur.
      */
     static async getAllJournals(req, res) {
         try {
@@ -56,14 +56,12 @@ class JournalController {
     }
 
     /**
-     * MODIFIÉ: Crée un journal en utilisant school_year_id.
+     * MODIFIÉ: Crée un journal en utilisant school_year_id pour l'utilisateur.
      */
     static async createJournal(req, res) {
         // Attend `school_year_id` au lieu de `school_year`
-        console.log('Received request to create journal:', req.body);
         const { name, school_year_id } = req.body;
-        const userId = req.user.id; // <--- AJOUTÉ : Récupération de l'ID de l'utilisateur
-
+        const userId = req.user.id;
         if (!name || !school_year_id || !userId) {
             return JournalController.handleError(res, new Error('Champs manquants'), "Le nom, l'ID de l'année scolaire et l'ID de l'utilisateur sont requis.", 400);
         }
@@ -71,16 +69,16 @@ class JournalController {
         try {
             connection = await pool.getConnection();
 
-            // Vérifie l'existence avec school_year_id
-            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year_id = ? AND user_id = ?', [school_year_id, userId]); // <--- AJOUTÉ : Vérification de l'utilisateur
+            // Vérifie l'existence avec school_year_id et user_id
+            const [existingJournal] = await connection.execute('SELECT id FROM JOURNAL WHERE school_year_id = ? AND user_id = ?', [school_year_id, userId]);
             if (existingJournal.length > 0) {
                 return JournalController.handleError(res, new Error('Conflit'), 'Un journal pour cette année scolaire existe déjà.', 409);
             }
 
             await connection.beginTransaction();
-            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1 AND user_id = ?', [userId]); // <--- AJOUTÉ : Mise à jour pour l'utilisateur
+            await connection.execute('UPDATE JOURNAL SET is_current = 0 WHERE is_current = 1 AND user_id = ?', [userId]);
             // Insère avec school_year_id et user_id
-            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year_id, user_id, is_current, is_archived) VALUES (?, ?, ?, 1, 0)', [name, school_year_id, userId]); // <--- AJOUTÉ : Insertion de l'ID de l'utilisateur
+            const [insertResult] = await connection.execute('INSERT INTO JOURNAL (name, school_year_id, user_id, is_current, is_archived) VALUES (?, ?, ?, 1, 0)', [name, school_year_id, userId]);
             const newJournalId = insertResult.insertId;
             await connection.commit();
 
@@ -89,8 +87,8 @@ class JournalController {
                 SELECT j.*
                 FROM JOURNAL j
                 JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
-                WHERE j.id = ?
-            `, [newJournalId]);
+                WHERE j.id = ? AND j.user_id = ?
+            `, [newJournalId, userId]);
 
             res.status(201).json({ success: true, message: 'Journal créé avec succès.', data: newJournal[0] });
         } catch (error) {
@@ -101,11 +99,14 @@ class JournalController {
         }
     }
 
-    //
+    /**
+     * MODIFIÉ: Archive un journal pour l'utilisateur.
+     */
     static async archiveJournal(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
         try {
-            const [result] = await JournalController.withConnection(async (connection) => await connection.execute('UPDATE JOURNAL SET is_archived = 1, is_current = 0 WHERE id = ?', [id]));
+            const [result] = await JournalController.withConnection(async (connection) => await connection.execute('UPDATE JOURNAL SET is_archived = 1, is_current = 0 WHERE id = ? AND user_id = ?', [id, userId]));
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Journal non trouvé'), 'Journal non trouvé.', 404);
             }
@@ -115,16 +116,27 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Supprime un journal et ses entrées pour l'utilisateur.
+     */
     static async deleteJournal(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
         let connection;
 
         try {
             connection = await pool.getConnection();
             await connection.beginTransaction();
-            await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?', [id]);
 
-            const [result] = await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1', [id]);
+            // Vérifie que le journal appartient à l'utilisateur avant de supprimer les entrées
+            const [journalCheck] = await connection.execute('SELECT user_id FROM JOURNAL WHERE id = ?', [id]);
+            if (journalCheck.length === 0 || journalCheck[0].user_id !== userId) {
+                await connection.rollback();
+                return JournalController.handleError(res, new Error('Journal non trouvé ou non autorisé'), 'Journal non trouvé ou non autorisé.', 404);
+            }
+
+            await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?', [id]);
+            const [result] = await connection.execute('DELETE FROM JOURNAL WHERE id = ? AND is_archived = 1 AND user_id = ?', [id, userId]);
 
             if (result.affectedRows === 0) {
                 await connection.rollback();
@@ -142,11 +154,14 @@ class JournalController {
         }
     }
 
-    // ... La méthode `importJournal` reste inchangée car elle opère sur `journal_id` ...
+    /**
+     * MODIFIÉ: Importe des entrées de journal pour un journal spécifique de l'utilisateur.
+     */
     static async importJournal(req, res) {
         if (!req.file) return JournalController.handleError(res, new Error('Aucun fichier fourni'), 'Veuillez fournir un fichier.', 400);
 
         const { journal_id } = req.body;
+        const userId = req.user.id;
         let connection;
 
         try {
@@ -155,6 +170,13 @@ class JournalController {
 
             connection = await pool.getConnection();
             await connection.beginTransaction();
+
+            // Vérifie que le journal appartient à l'utilisateur
+            const [journalCheck] = await connection.execute('SELECT id FROM JOURNAL WHERE id = ? AND user_id = ?', [journal_id, userId]);
+            if (journalCheck.length === 0) {
+                await connection.rollback();
+                return JournalController.handleError(res, new Error('Journal non trouvé ou non autorisé'), 'Journal non trouvé ou non autorisé.', 404);
+            }
 
             const [classes] = await connection.execute('SELECT id, name FROM CLASS');
             const [scheduleHours] = await connection.execute('SELECT id, libelle FROM SCHEDULE_HOURS');
@@ -205,17 +227,18 @@ class JournalController {
     }
 
     /**
-     * MODIFIÉ: Récupère le journal courant avec les informations de l'année scolaire.
+     * MODIFIÉ: Récupère le journal courant avec les informations de l'année scolaire pour l'utilisateur.
      */
     static async getCurrentJournal(req, res) {
         try {
+            const userId = req.user.id;
             const [journal] = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
                     SELECT j.*
                     FROM JOURNAL j
                     JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
-                    WHERE j.is_current = 1 LIMIT 1
-                `);
+                    WHERE j.is_current = 1 AND j.user_id = ? LIMIT 1
+                `, [userId]);
                 return rows;
             });
             res.json({ success: true, data: journal || null });
@@ -225,18 +248,19 @@ class JournalController {
     }
 
     /**
-     * MODIFIÉ: Récupère les journaux archivés avec les informations de l'année scolaire.
+     * MODIFIÉ: Récupère les journaux archivés avec les informations de l'année scolaire pour l'utilisateur.
      */
     static async getArchivedJournals(req, res) {
         try {
+            const userId = req.user.id;
             const journals = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
                     SELECT j.*
                     FROM JOURNAL j
                     JOIN SCHOOL_YEAR sy ON j.school_year_id = sy.id
-                    WHERE j.is_archived = 1 
+                    WHERE j.is_archived = 1 AND j.user_id = ?
                     ORDER BY start_date DESC
-                `);
+                `, [userId]);
                 return rows;
             });
             res.json({ success: true, data: journals });
@@ -245,14 +269,24 @@ class JournalController {
         }
     }
 
-    // ... Le reste des méthodes (getJournalEntries, upsertJournalEntry, etc.) reste inchangé ...
+    /**
+     * MODIFIÉ: Récupère les entrées de journal pour un journal donné de l'utilisateur.
+     */
     static async getJournalEntries(req, res) {
         const { startDate, endDate, journal_id } = req.query;
+        const userId = req.user.id;
         if (!startDate || !endDate || !journal_id) {
             return JournalController.handleError(res, new Error('Paramètres manquants'), 'Les dates de début, de fin et l\'ID du journal sont requis.', 400);
         }
+
         try {
             const entries = await JournalController.withConnection(async (connection) => {
+                // Vérifie que le journal appartient à l'utilisateur
+                const [journalCheck] = await connection.execute('SELECT id FROM JOURNAL WHERE id = ? AND user_id = ?', [journal_id, userId]);
+                if (journalCheck.length === 0) {
+                    return JournalController.handleError(res, new Error('Journal non trouvé ou non autorisé'), 'Journal non trouvé ou non autorisé.', 404);
+                }
+
                 const [rows] = await connection.execute(`
                     SELECT je.id, je.date, je.planned_work, je.actual_work, je.notes, je.journal_id, s.id AS schedule_id, s.day, s.time_slot_id, sh.libelle AS time_slot_libelle, s.subject AS course_subject, c.id AS class_id, c.name AS class_name, c.level AS class_level, s.room
                     FROM JOURNAL_ENTRY je
@@ -262,19 +296,33 @@ class JournalController {
                     WHERE je.journal_id = ? AND je.date BETWEEN ? AND ?`, [journal_id, startDate, endDate]);
                 return rows;
             });
-            res.json({ success: true, data: entries, count: entries.length, message: `${entries.length} entrées de journal récupérées.` });
+
+            if (!res.headersSent) {
+                res.json({ success: true, data: entries, count: entries.length, message: `${entries.length} entrées de journal récupérées.` });
+            }
         } catch (error) {
             JournalController.handleError(res, error, 'Erreur lors de la récupération des entrées de journal.');
         }
     }
 
+    /**
+     * MODIFIÉ: Crée ou met à jour une entrée de journal pour un journal spécifique de l'utilisateur.
+     */
     static async upsertJournalEntry(req, res) {
         const { id, schedule_id, date, planned_work, actual_work, notes, journal_id } = req.body;
+        const userId = req.user.id;
         if (!schedule_id || !date || !journal_id) {
             return JournalController.handleError(res, new Error("L'ID de l'horaire, la date et l'ID du journal sont requis."), 'Données invalides.', 400);
         }
+
         try {
             const result = await JournalController.withConnection(async (connection) => {
+                // Vérifie que le journal appartient à l'utilisateur
+                const [journalCheck] = await connection.execute('SELECT id FROM JOURNAL WHERE id = ? AND user_id = ?', [journal_id, userId]);
+                if (journalCheck.length === 0) {
+                    throw new Error('Journal non trouvé ou non autorisé');
+                }
+
                 if (id) {
                     await connection.execute('UPDATE JOURNAL_ENTRY SET planned_work = ?, actual_work = ?, notes = ?, date = ?, schedule_id = ?, journal_id = ? WHERE id = ?', [planned_work, actual_work, notes, date, schedule_id, journal_id, id]);
                     return { type: 'updated', id };
@@ -283,11 +331,12 @@ class JournalController {
                     return { type: 'created', id: insertResult.insertId };
                 }
             });
+
             const [entry] = await JournalController.withConnection(async (connection) => {
                 const [rows] = await connection.execute(`
                     SELECT je.id, je.date, je.planned_work, je.actual_work, je.notes, je.journal_id, s.id AS schedule_id, s.day, s.time_slot_id, sh.libelle AS time_slot_libelle, s.subject AS course_subject, c.id AS class_id, c.name AS class_name, c.level AS class_level, s.room
                     FROM JOURNAL_ENTRY je JOIN SCHEDULE s ON je.schedule_id = s.id JOIN SCHEDULE_HOURS sh ON s.time_slot_id = sh.id JOIN CLASS c ON s.class_id = c.id
-                    WHERE je.id = ?`, [result.id]);
+                    WHERE je.id = ? AND je.journal_id = ?`, [result.id, journal_id]); // S'assure que l'entrée est bien liée au journal
                 return rows;
             });
             if (!entry) {
@@ -300,13 +349,26 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Supprime une entrée de journal pour l'utilisateur.
+     */
     static async deleteJournalEntry(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
         if (!id || isNaN(parseInt(id))) {
             return JournalController.handleError(res, new Error('ID invalide'), "ID d'entrée de journal invalide.", 400);
         }
         try {
-            const result = await JournalController.withConnection(async (connection) => await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE id = ?', [parseInt(id)]));
+            const result = await JournalController.withConnection(async (connection) => {
+                // S'assure que l'entrée appartient bien à un journal de l'utilisateur
+                const [entryCheck] = await connection.execute('SELECT je.id FROM JOURNAL_ENTRY je JOIN JOURNAL j ON je.journal_id = j.id WHERE je.id = ? AND j.user_id = ?', [parseInt(id), userId]);
+                if (entryCheck.length === 0) {
+                    return { affectedRows: 0 };
+                }
+                const [deleteResult] = await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE id = ?', [parseInt(id)]);
+                return deleteResult;
+            });
+
             if (result.affectedRows === 0) {
                 return JournalController.handleError(res, new Error('Entrée non trouvée'), 'Entrée de journal non trouvée.', 404);
             }
@@ -316,13 +378,22 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Vide un journal pour l'utilisateur.
+     */
     static async clearJournal(req, res) {
         const { journal_id } = req.params;
+        const userId = req.user.id;
         if (!journal_id || isNaN(parseInt(journal_id))) {
             return JournalController.handleError(res, new Error('ID de journal invalide'), "ID de journal invalide.", 400);
         }
         try {
             const result = await JournalController.withConnection(async (connection) => {
+                // Vérifie que le journal appartient à l'utilisateur
+                const [journalCheck] = await connection.execute('SELECT id FROM JOURNAL WHERE id = ? AND user_id = ?', [parseInt(journal_id), userId]);
+                if (journalCheck.length === 0) {
+                    throw new Error('Journal non trouvé ou non autorisé');
+                }
                 const [deleteResult] = await connection.execute(
                     'DELETE FROM JOURNAL_ENTRY WHERE journal_id = ?',
                     [parseInt(journal_id)]
@@ -335,8 +406,12 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Récupère les assignations pour un journal spécifique de l'utilisateur.
+     */
     static async getAssignments(req, res) {
-        const { classId, startDate, endDate, journal_id } = req.query; // AJOUT: lecture de journal_id
+        const { classId, startDate, endDate, journal_id } = req.query;
+        const userId = req.user.id;
 
         if (!journal_id) {
             return JournalController.handleError(res, new Error('Paramètre manquant'), "L'ID du journal est requis.", 400);
@@ -344,21 +419,22 @@ class JournalController {
 
         let query = `
             SELECT a.id, a.type, a.description, a.due_date, a.is_completed, a.is_corrected, c.id AS class_id, c.name AS class_name, c.level AS class_level, a.subject, a.journal_id
-            FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id`;
+            FROM ASSIGNMENT a
+            JOIN CLASS c ON a.class_id = c.id
+            JOIN JOURNAL j ON a.journal_id = j.id
+            WHERE a.journal_id = ? AND j.user_id = ?`;
 
-        const conditions = ['a.journal_id = ?'];
-        const params = [parseInt(journal_id)];
+        const params = [parseInt(journal_id), userId];
 
         if (classId) {
-            conditions.push('a.class_id = ?');
+            query += ' AND a.class_id = ?';
             params.push(parseInt(classId));
         }
         if (startDate && endDate) {
-            conditions.push('a.due_date BETWEEN ? AND ?');
+            query += ' AND a.due_date BETWEEN ? AND ?';
             params.push(startDate, endDate);
         }
 
-        query += ' WHERE ' + conditions.join(' AND ');
         query += ' ORDER BY a.due_date ASC, a.type ASC';
 
         try {
@@ -372,8 +448,20 @@ class JournalController {
         }
     }
 
+    /**
+     * MODIFIÉ: Crée ou met à jour une assignation pour un journal de l'utilisateur.
+     */
     static async upsertAssignment(req, res) {
-        const {id} = req.body;
+        const { id } = req.body;
+        const userId = req.user.id;
+
+        // Vérifie si l'assignation est liée au journal de l'utilisateur avant de l'ajouter
+        const journalId = req.body.journal_id;
+        const [journalCheck] = await JournalController.withConnection(async (c) => c.execute('SELECT id FROM JOURNAL WHERE id = ? AND user_id = ?', [journalId, userId]));
+        if (journalCheck.length === 0) {
+            return JournalController.handleError(res, new Error('Journal non trouvé ou non autorisé'), 'Journal non trouvé ou non autorisé.', 404);
+        }
+
         if (id) { // Mise à jour
             try {
                 const validColumns = ['class_id', 'subject', 'type', 'description', 'due_date', 'is_completed', 'is_corrected', 'journal_id'];
@@ -388,7 +476,7 @@ class JournalController {
                     }
                 });
                 if (fieldsToUpdate.length === 0) {
-                    const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [id]));
+                    const [assignment] = await JournalController.withConnection(async (c) => c.execute(`SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?`, [id]));
                     return res.status(200).json({
                         success: true,
                         message: 'Aucun champ valide à mettre à jour.',
@@ -396,10 +484,8 @@ class JournalController {
                     });
                 }
                 values.push(id);
-                await JournalController.withConnection(async (c) => c.execute(`UPDATE ASSIGNMENT
-                                                                               SET ${fieldsToUpdate.join(', ')}
-                                                                               WHERE id = ?`, values));
-                const [assignment] = await JournalController.withConnection(async (c) => c.execute('SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?', [id]));
+                await JournalController.withConnection(async (c) => c.execute(`UPDATE ASSIGNMENT SET ${fieldsToUpdate.join(', ')} WHERE id = ?`, values));
+                const [assignment] = await JournalController.withConnection(async (c) => c.execute(`SELECT a.*, c.name as class_name, c.level as class_level FROM ASSIGNMENT a JOIN CLASS c ON a.class_id = c.id WHERE a.id = ?`, [id]));
                 res.status(200).json({
                     success: true,
                     message: 'Assignation mise à jour avec succès.',
@@ -441,11 +527,23 @@ class JournalController {
         return `${year}-${month}-${day}`;
     }
 
+    /**
+     * MODIFIÉ: Supprime une assignation pour un journal de l'utilisateur.
+     */
     static async deleteAssignment(req, res) {
         const { id } = req.params;
+        const userId = req.user.id;
         if (!id || isNaN(parseInt(id))) return JournalController.handleError(res, new Error('ID invalide'), "ID d'assignation invalide.", 400);
         try {
-            const result = await JournalController.withConnection(async (c) => c.execute('DELETE FROM ASSIGNMENT WHERE id = ?', [parseInt(id)]));
+            const result = await JournalController.withConnection(async (c) => {
+                // S'assure que l'assignation appartient au journal de l'utilisateur
+                const [assignmentCheck] = await c.execute('SELECT a.id FROM ASSIGNMENT a JOIN JOURNAL j ON a.journal_id = j.id WHERE a.id = ? AND j.user_id = ?', [parseInt(id), userId]);
+                if (assignmentCheck.length === 0) {
+                    return { affectedRows: 0 };
+                }
+                const [deleteResult] = await c.execute('DELETE FROM ASSIGNMENT WHERE id = ?', [parseInt(id)]);
+                return deleteResult;
+            });
             if (result.affectedRows === 0) return JournalController.handleError(res, new Error('Assignation non trouvée'), 'Assignation non trouvée.', 404);
             res.json({ success: true, message: 'Assignation supprimée avec succès.' });
         } catch (error) {

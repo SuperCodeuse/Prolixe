@@ -96,7 +96,13 @@ const JournalView = () => {
         return grouped;
     }, [schedule, hours]);
 
-    const getJournalEntry = useCallback((scheduleId, dateKey) => journalEntries.find(entry => entry.schedule_id === scheduleId && entry.date && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey), [journalEntries]);
+    const getJournalEntry = useCallback((scheduleId, dateKey) => {
+        if (!Array.isArray(journalEntries)) {
+            return null;
+        }
+        return journalEntries.find(entry => entry.schedule_id === scheduleId && entry.date && format(new Date(entry.date), 'yyyy-MM-dd') === dateKey);
+    }, [journalEntries]);
+
 
     const debouncedSave = (entryData) => {
         if (isArchived) return;
