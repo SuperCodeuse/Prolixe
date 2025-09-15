@@ -1,45 +1,36 @@
-import ApiService from './api';
+import ApiService from '../api/axiosConfig';
+
+const EVALUATION_API_URL = '/evaluations';
 
 export const getEvaluations = (journalId) => {
     if (!journalId) return Promise.resolve({ data: [] });
-    return ApiService.request(`/evaluations?journalId=${journalId}`);
+    return ApiService.get(`${EVALUATION_API_URL}`, { params: { journalId } });
 };
 
 export const getEvaluationById = (id) => {
-    return ApiService.request(`/evaluations/${id}`);
+    return ApiService.get(`${EVALUATION_API_URL}/${id}`);
 };
 
 export const createEvaluation = (evaluationData) => {
-    return ApiService.request(`/evaluations`, {
-        method: 'POST',
-        body: JSON.stringify(evaluationData),
-    });
+    return ApiService.post(`${EVALUATION_API_URL}`, evaluationData);
 };
 
 export const updateEvaluation = (id, evaluationData) => {
-    return ApiService.request(`/evaluations/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(evaluationData),
-    });
+    return ApiService.put(`${EVALUATION_API_URL}/${id}`, evaluationData);
 };
 
 export const deleteEvaluation = (id) => {
-    return ApiService.request(`/evaluations/${id}`, {
-        method: 'DELETE',
-    });
+    return ApiService.delete(`${EVALUATION_API_URL}/${id}`);
 };
 
 export const getEvaluationForGrading = (id) => {
-    return ApiService.request(`/evaluations/${id}/grading`);
+    return ApiService.get(`${EVALUATION_API_URL}/${id}/grading`);
 };
 
 export const saveGrades = (evaluationId, grades) => {
-    return ApiService.request(`/evaluations/${evaluationId}/grades`, {
-        method: 'POST',
-        body: JSON.stringify({ grades }),
-    });
+    return ApiService.post(`${EVALUATION_API_URL}/${evaluationId}/grades`, { grades });
 };
 
 export const getEvaluationTemplates = () => {
-    return ApiService.request(`/evaluations/templates`);
+    return ApiService.get(`${EVALUATION_API_URL}/templates`);
 };

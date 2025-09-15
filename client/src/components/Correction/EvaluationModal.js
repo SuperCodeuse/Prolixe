@@ -43,7 +43,8 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             if (evaluation) {
                 setIsLoading(true);
                 try {
-                    const response = await getEvaluationById(evaluation.id);
+                    let response = await getEvaluationById(evaluation.id);
+                    response = response.data;
                     const { name: evalName, class_id, evaluation_date, criteria: evalCriteria } = response.data;
                     setName(evalName);
                     setClassId(class_id);
@@ -55,7 +56,8 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             else if (evaluationToCopy) {
                 setIsLoading(true);
                 try {
-                    const response = await getEvaluationById(evaluationToCopy.id);
+                    let response = await getEvaluationById(evaluationToCopy.id);
+                    response = response.data;
                     const { name: evalName, class_id, criteria: evalCriteria } = response.data;
                     setName(`Copie de ${evalName}`);
                     setClassId(class_id);
@@ -66,7 +68,8 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             }
             else if (currentJournal?.id) {
                 try {
-                    const response = await getEvaluationTemplates();
+                    let response = await getEvaluationTemplates();
+                    response = response.data;
                     setTemplates(response.data || []);
                     setDate(new Date().toISOString().split('T')[0]);
                 } catch (err) { showError("Impossible de charger les modèles."); }
@@ -83,7 +86,8 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
         const loadTemplateDetails = async () => {
             setIsLoading(true);
             try {
-                const response = await getEvaluationById(selectedTemplateId);
+                let response = await getEvaluationById(selectedTemplateId);
+                response = response.data;
                 const { name: evalName, criteria: evalCriteria } = response.data;
                 setName(evalName);
                 setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);

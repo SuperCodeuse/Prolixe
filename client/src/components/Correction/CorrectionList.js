@@ -32,7 +32,8 @@ const CorrectionList = () => {
         setLoadingEvaluations(true);
         setError('');
         try {
-            const response = await getEvaluations(currentJournal.id);
+            let response = await getEvaluations(currentJournal.id);
+            response = response.data;
             setEvaluations(response.data || []);
         } catch (err) {
             const errorMessage = 'Impossible de charger les évaluations.';

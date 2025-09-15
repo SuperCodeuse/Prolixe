@@ -28,21 +28,18 @@ export const JournalProvider = ({ children }) => {
             const lastSelected = journalsArray.find(j => j.id === parseInt(lastSelectedId));
 
             const journalToSet = lastSelected || current || journalsArray.find(j => !j.is_archived);
-            console.log("Journal to set:", journalToSet);
             setCurrentJournal(journalToSet);
             setArchivedJournals(archived);
         } catch (err) {
-            console.error("Failed to load journals:", err);
             setError(err.message || "Erreur lors du chargement des journaux.");
         } finally {
-            console.log("loadAllJournals a terminé son exécution.");
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        if (currentJournal) {
-            // Logique qui pourrait dépendre de currentJournal ici
+        if (currentJournal === null) {
+            loadAllJournals();
         }
     }, [currentJournal]);
 
