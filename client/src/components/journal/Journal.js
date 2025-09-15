@@ -47,7 +47,9 @@ const JournalView = () => {
 
     // --- MEMOS & CALLBACKS ---
     const journalBounds = useMemo(() => {
-        if (!holidays || holidays.length === 0) return null;
+        if (!holidays || holidays.length === 0){
+            return null;
+        }
         try {
             // Filtrer les entrées de vacances qui n'ont pas de dates valides
             const validHolidayDates = holidays
