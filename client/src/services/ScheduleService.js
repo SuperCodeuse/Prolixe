@@ -16,8 +16,19 @@ class ScheduleService {
         });
     }
 
-    static async deleteCourse(day, time_slot_id, journalId) {
-        return ApiService.delete(`/schedule/${journalId}/${day}/${time_slot_id}`);
+    // NOUVEAU: Gère la mise à jour de l'emploi du temps avec une date effective
+    static async changeCourse(day, time_slot_id, courseData, journalId, effectiveDate) {
+        return ApiService.put('/schedule/change', {
+            day,
+            time_slot_id,
+            journal_id: journalId,
+            effectiveDate,
+            ...courseData
+        });
+    }
+
+    static async deleteCourse(day, time_slot_id, journalId, effectiveDate) {
+        return ApiService.delete(`/schedule/${journalId}/${day}/${time_slot_id}/${effectiveDate}`);
     }
 }
 

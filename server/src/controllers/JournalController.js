@@ -180,7 +180,8 @@ class JournalController {
 
             const [classes] = await connection.execute('SELECT id, name FROM CLASS');
             const [scheduleHours] = await connection.execute('SELECT id, libelle FROM SCHEDULE_HOURS');
-            const [schedule] = await connection.execute('SELECT id, day, time_slot_id, class_id FROM SCHEDULE WHERE journal_id = ?', [journal_id]);
+            // MODIFIÉ: Utilisation des dates de début/fin pour le SCHEDULE
+            const [schedule] = await connection.execute(`SELECT id, day, time_slot_id, class_id FROM SCHEDULE WHERE journal_id = ? AND (start_date <= CURDATE() AND (end_date IS NULL OR end_date >= CURDATE()))`, [journal_id]);
             const timeSlotMap = new Map(scheduleHours.map(h => [h.libelle, h.id]));
 
             let importedCount = 0;
@@ -548,6 +549,53 @@ class JournalController {
             res.json({ success: true, message: 'Assignation supprimée avec succès.' });
         } catch (error) {
             JournalController.handleError(res, error, "Erreur lors de la suppression de l'assignation.");
+        }
+    }
+
+    // NOUVELLE MÉTHODE : Réaffecte les entrées de journal lors d'un changement d'horaire.
+    /**
+     * Réaffecte les entrées de journal d'un ancien schedule_id vers le nouveau.
+     * @param {Object} connection - La connexion à la base de données.
+     * @param {number} journalId - L'ID du journal.
+     * @param {number} userId - L'ID de l'utilisateur.
+     * @param {Date} effectiveDate - La date à partir de laquelle les changements s'appliquent.
+     * @param {number} newScheduleId - Le nouvel ID de cours.
+     */
+    static async reassignJournalEntries(connection, journalId, userId, effectiveDate, newScheduleId) {
+        // Récupère les anciens cours et le nouveau cours pour la réaffectation
+        const [newCourseRows] = await connection.execute('SELECT day, time_slot_id, class_id FROM SCHEDULE WHERE id = ? AND journal_id = ? AND user_id = ?', [newScheduleId, journalId, userId]);
+        if (newCourseRows.length === 0) {
+            console.error("Impossible de trouver le nouveau cours pour la réaffectation.");
+            return;
+        }
+        const newCourse = newCourseRows[0];
+
+        // Récupère toutes les entrées de journal à partir de la date effective
+        const [entriesToReassign] = await connection.execute(
+            `SELECT je.id, s.day, s.time_slot_id, s.class_id, je.date
+             FROM JOURNAL_ENTRY je
+             JOIN SCHEDULE s ON je.schedule_id = s.id
+             WHERE je.journal_id = ? AND je.date >= ? AND s.class_id = ?`,
+            [journalId, effectiveDate, newCourse.class_id]
+        );
+
+        for (const entry of entriesToReassign) {
+            // Logique pour trouver le nouveau cours le plus proche
+            // Pour simplifier, on prendra simplement tous les cours du jour, même si le cours ne change que d'heure.
+            // Une logique plus robuste pourrait comparer les jours et les créneaux horaires.
+            const [newCourseForDay] = await connection.execute(
+                `SELECT id FROM SCHEDULE WHERE journal_id = ? AND user_id = ? AND day = ? AND time_slot_id = ? AND start_date <= ? AND (end_date IS NULL OR end_date >= ?) ORDER BY start_date DESC LIMIT 1`,
+                [journalId, userId, newCourse.day, newCourse.time_slot_id, entry.date, entry.date]
+            );
+
+            if (newCourseForDay.length > 0) {
+                // Met à jour l'entrée de journal avec le nouvel ID d'horaire
+                await connection.execute('UPDATE JOURNAL_ENTRY SET schedule_id = ? WHERE id = ?', [newCourseForDay[0].id, entry.id]);
+            } else {
+                // Si aucun nouveau cours n'est trouvé pour ce jour (ex: cours annulé), l'entrée peut être supprimée ou marquée.
+                console.log(`Aucun cours de remplacement trouvé pour l'entrée ID ${entry.id}. Elle sera archivée ou supprimée.`);
+                await connection.execute('DELETE FROM JOURNAL_ENTRY WHERE id = ?', [entry.id]);
+            }
         }
     }
 }
