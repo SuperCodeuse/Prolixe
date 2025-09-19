@@ -80,9 +80,37 @@ export const useSchedule = () => {
         }
     }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
 
+    // ✨ NOUVELLE FONCTION POUR LE DÉPLACEMENT (DRAG & DROP) ✨
+    const changeCourse = useCallback(async ({ source_day, source_time_slot_id, target_day, target_time_slot_id, subject, classId, room, notes, effective_date }) => {
+        if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
+        setError(null);
+        try {
+            const courseData = {
+                source_day,
+                source_time_slot_id,
+                target_day,
+                target_time_slot_id,
+                subject,
+                classId,
+                room,
+                notes,
+                effective_date
+            };
+            const response = await scheduleService.changeCourse(courseData, currentJournal.id);
+            if (response.data.success) {
+                await fetchSchedule();
+            }
+            return response.data;
+        } catch (err) {
+            setError(err.message || 'Erreur lors du déplacement du cours.');
+            throw err;
+        }
+    }, [currentJournal, fetchSchedule]);
+
+
     const getCourseBySlotKey = useCallback((slotKey) => {
         return schedule.data ? schedule.data[slotKey] : null;
     }, [schedule]);
 
-    return { schedule, loading, error, upsertCourse, deleteCourse, getCourseBySlotKey, fetchSchedule };
+    return { schedule, loading, error, upsertCourse, deleteCourse, getCourseBySlotKey, fetchSchedule, changeCourse };
 };

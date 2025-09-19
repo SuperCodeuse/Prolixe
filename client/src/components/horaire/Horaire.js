@@ -23,7 +23,8 @@ const Horaire = () => {
         error: errorSchedule,
         upsertCourse,
         deleteCourse: deleteCourseFromHook,
-        getCourseBySlotKey
+        getCourseBySlotKey,
+        changeCourse
     } = useSchedule();
 
     const [showModal, setShowModal] = useState(false);
@@ -43,6 +44,10 @@ const Horaire = () => {
     });
 
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [draggedCourse, setDraggedCourse] = useState(null);
+    const [dragOverSlot, setDragOverSlot] = useState(null);
+    const [resizeHandle, setResizeHandle] = useState(null); // 'top', 'bottom', ou null
+    const [resizingCourse, setResizingCourse] = useState(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -63,7 +68,247 @@ const Horaire = () => {
         { key: 'friday', label: 'Vendredi' }
     ];
 
+    // Fonctions pour le redimensionnement
+    const getSlotIndex = (time_libelle) => {
+        return timeSlots.findIndex(slot => slot === time_libelle);
+    };
+
+    const getAdjacentSlots = (day, time_libelle) => {
+        const currentIndex = getSlotIndex(time_libelle);
+        const prevSlot = currentIndex > 0 ? timeSlots[currentIndex - 1] : null;
+        const nextSlot = currentIndex < timeSlots.length - 1 ? timeSlots[currentIndex + 1] : null;
+
+        return {
+            prev: prevSlot,
+            next: nextSlot,
+            prevAvailable: prevSlot && !getCourseBySlotKey(`${day}-${prevSlot}`),
+            nextAvailable: nextSlot && !getCourseBySlotKey(`${day}-${nextSlot}`)
+        };
+    };
+
+    const handleResizeStart = (e, direction, day, time_libelle) => {
+        e.stopPropagation(); // Empêcher le drag normal
+        setResizeHandle(direction);
+        setResizingCourse({ day, time_libelle });
+
+        const handleMouseMove = (moveEvent) => {
+            // Logique de resize en temps réel si nécessaire
+        };
+
+        const handleMouseUp = () => {
+            setResizeHandle(null);
+            setResizingCourse(null);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleResizeDrop = async (targetDay, targetTime, direction) => {
+        if (!resizingCourse) return;
+
+        try {
+            const { day: sourceDay, time_libelle: sourceTime } = resizingCourse;
+            const sourceCourse = getCourseBySlotKey(`${sourceDay}-${sourceTime}`);
+
+            if (!sourceCourse) {
+                showError('Cours source introuvable.', 3000);
+                return;
+            }
+
+            // Vérifier que le slot de destination est libre
+            const targetSlotKey = `${targetDay}-${targetTime}`;
+            if (getCourseBySlotKey(targetSlotKey)) {
+                showError('Le créneau de destination est déjà occupé.', 3000);
+                return;
+            }
+
+            // Vérifier que c'est bien un slot adjacent
+            const adjacentSlots = getAdjacentSlots(sourceDay, sourceTime);
+            const isValidResize = (
+                (direction === 'up' && targetTime === adjacentSlots.prev) ||
+                (direction === 'down' && targetTime === adjacentSlots.next)
+            ) && targetDay === sourceDay;
+
+            if (!isValidResize) {
+                showError('Vous ne pouvez étendre le cours que sur les créneaux adjacents.', 3000);
+                return;
+            }
+
+            // Créer le cours étendu dans le nouveau slot
+            const targetTimeSlot = getSortedHours().find(h => h.libelle === targetTime);
+            if (!targetTimeSlot) {
+                showError('Créneau horaire invalide.', 3000);
+                return;
+            }
+
+            await upsertCourse(targetDay, targetTime, {
+                subject: sourceCourse.subject,
+                classId: sourceCourse.classId,
+                room: sourceCourse.room,
+                notes: sourceCourse.notes || ''
+            });
+
+            success(`Cours étendu avec succès sur ${targetTime} !`, 3000);
+
+        } catch (error) {
+            console.error('Erreur lors de l\'extension du cours:', error);
+            showError(`Erreur lors de l'extension: ${error?.message || 'Erreur inconnue'}`, 5000);
+        }
+    };
+    const handleDragStart = (e, day, time_libelle) => {
+        const slotKey = `${day}-${time_libelle}`;
+        const course = getCourseBySlotKey(slotKey);
+
+        if (course) {
+            const classInfo = getClassInfo(course.classId);
+            const dragData = {
+                sourceDay: day,
+                sourceTime: time_libelle,
+                course: course
+            };
+
+            setDraggedCourse(dragData);
+            e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+            e.dataTransfer.effectAllowed = 'move';
+
+            // Créer une image de drag personnalisée
+            const dragElement = e.currentTarget.cloneNode(true);
+            dragElement.style.position = 'absolute';
+            dragElement.style.top = '-1000px';
+            dragElement.style.left = '-1000px';
+            dragElement.style.width = e.currentTarget.offsetWidth + 'px';
+            dragElement.style.height = e.currentTarget.offsetHeight + 'px';
+            dragElement.style.opacity = '0.8';
+            dragElement.style.transform = 'rotate(2deg)';
+            dragElement.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+            dragElement.style.borderRadius = '6px';
+            dragElement.style.zIndex = '1000';
+
+            document.body.appendChild(dragElement);
+            e.dataTransfer.setDragImage(dragElement, e.currentTarget.offsetWidth / 2, 20);
+
+            // Nettoyer l'élément temporaire après un court délai
+            setTimeout(() => {
+                if (document.body.contains(dragElement)) {
+                    document.body.removeChild(dragElement);
+                }
+            }, 0);
+
+            // Style visuel pour l'élément source pendant le drag
+            e.currentTarget.classList.add('dragging');
+        }
+    };
+
+    const handleDragEnd = (e) => {
+        // Restaurer le style
+        e.currentTarget.classList.remove('dragging');
+        setDraggedCourse(null);
+        setDragOverSlot(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        if (resizeHandle) {
+            e.dataTransfer.dropEffect = 'copy'; // Icône différente pour resize
+        } else {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    };
+
+    const handleDragEnter = (e, day, time_libelle) => {
+        e.preventDefault();
+        const slotKey = `${day}-${time_libelle}`;
+
+        // Ne pas mettre en évidence le slot source pour un drag normal
+        if (draggedCourse && draggedCourse.sourceDay === day && draggedCourse.sourceTime === time_libelle) {
+            return;
+        }
+
+        setDragOverSlot(slotKey);
+    };
+
+    const handleDragLeave = (e) => {
+        // Vérifier si on sort vraiment du slot (et pas juste d'un enfant)
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX;
+        const y = e.clientY;
+
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            setDragOverSlot(null);
+        }
+    };
+
+    const handleDrop = async (e, targetDay, targetTime) => {
+        e.preventDefault();
+        setDragOverSlot(null);
+
+        // Si on est en mode resize
+        if (resizeHandle && resizingCourse) {
+            await handleResizeDrop(targetDay, targetTime, resizeHandle);
+            setResizeHandle(null);
+            setResizingCourse(null);
+            return;
+        }
+
+        // Sinon, drag & drop normal
+        try {
+            const dragDataStr = e.dataTransfer.getData('application/json');
+            if (!dragDataStr) return;
+
+            const dragData = JSON.parse(dragDataStr);
+            const { sourceDay, sourceTime, course } = dragData;
+
+            // Vérifier qu'on ne dépose pas sur le même slot
+            if (sourceDay === targetDay && sourceTime === targetTime) {
+                return;
+            }
+
+            // Vérifier si le slot de destination est libre
+            const targetSlotKey = `${targetDay}-${targetTime}`;
+            const existingCourse = getCourseBySlotKey(targetSlotKey);
+
+            if (existingCourse) {
+                showError('Le créneau de destination est déjà occupé.', 3000);
+                return;
+            }
+
+            // Trouver les IDs des time slots
+            const sourceTimeSlot = getSortedHours().find(h => h.libelle === sourceTime);
+            const targetTimeSlot = getSortedHours().find(h => h.libelle === targetTime);
+
+            if (!sourceTimeSlot || !targetTimeSlot) {
+                showError('Erreur: créneaux horaires invalides.', 3000);
+                return;
+            }
+
+            // Effectuer le changement via le hook
+            await changeCourse({
+                source_day: sourceDay,
+                source_time_slot_id: sourceTimeSlot.id,
+                target_day: targetDay,
+                target_time_slot_id: targetTimeSlot.id,
+                subject: course.subject,
+                classId: course.classId,
+                room: course.room,
+                notes: course.notes || '',
+                effective_date: new Date().toISOString().split('T')[0]
+            });
+
+            success('Cours déplacé avec succès !', 3000);
+
+        } catch (error) {
+            console.error('Erreur lors du déplacement:', error);
+            showError(`Erreur lors du déplacement: ${error?.message || 'Erreur inconnue'}`, 5000);
+        }
+    };
+
     const handleSlotClick = (day, time_libelle) => {
+        // Ne pas ouvrir le modal si on est en train de faire un drag
+        if (draggedCourse) return;
+
         const slotKey = `${day}-${time_libelle}`;
         setSelectedSlot({ day, time_libelle, key: slotKey });
 
@@ -147,7 +392,6 @@ const Horaire = () => {
         }
     };
 
-
     const getClassInfo = (classId) => {
         return classes.find(cls => cls.id == classId);
     };
@@ -186,7 +430,7 @@ const Horaire = () => {
         <div className="horaire">
             <div className="horaire-header">
                 <h1>📅 Emploi du temps</h1>
-                <p>Cliquez sur un créneau pour ajouter ou modifier un cours</p>
+                <p>Cliquez sur un créneau pour ajouter/modifier - Glissez-déposez pour déplacer un cours</p>
             </div>
 
             <div className="schedule-container">
@@ -207,26 +451,67 @@ const Horaire = () => {
                                     const slotKey = `${day.key}-${time_libelle}`;
                                     const course = getCourseBySlotKey(slotKey);
                                     const classInfo = course ? getClassInfo(course.classId) : null;
+                                    const isDragOver = dragOverSlot === slotKey;
+                                    const adjacentSlots = course ? getAdjacentSlots(day.key, time_libelle) : null;
+
                                     return (
                                         <div
                                             key={slotKey}
-                                            className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
+                                            className={`schedule-slot ${course ? 'has-course' : 'empty'} ${isDragOver ? 'drag-over' : ''}`}
                                             onClick={() => handleSlotClick(day.key, time_libelle)}
+                                            draggable={!!course}
+                                            onDragStart={(e) => course && handleDragStart(e, day.key, time_libelle)}
+                                            onDragEnd={handleDragEnd}
+                                            onDragOver={handleDragOver}
+                                            onDragEnter={(e) => handleDragEnter(e, day.key, time_libelle)}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, day.key, time_libelle)}
                                             style={{
                                                 backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
-                                                borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
+                                                borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155',
+                                                cursor: course ? 'grab' : 'pointer'
                                             }}
                                         >
                                             {course && (
                                                 <div className="course-info">
+                                                    {/* Poignée de redimensionnement vers le haut */}
+                                                    {adjacentSlots?.prevAvailable && (
+                                                        <div
+                                                            className="resize-handle resize-handle-top"
+                                                            onMouseDown={(e) => handleResizeStart(e, 'up', day.key, time_libelle)}
+                                                            title="Étendre vers le créneau précédent"
+                                                        >
+                                                            <div className="resize-indicator">⇈</div>
+                                                        </div>
+                                                    )}
+
                                                     <div className="course-subject">{course.subject}</div>
                                                     <div className="course-class">{classInfo?.name}</div>
                                                     <div className="course-room">{course.room}</div>
+
+                                                    {/* Poignée de redimensionnement vers le bas */}
+                                                    {adjacentSlots?.nextAvailable && (
+                                                        <div
+                                                            className="resize-handle resize-handle-bottom"
+                                                            onMouseDown={(e) => handleResizeStart(e, 'down', day.key, time_libelle)}
+                                                            title="Étendre vers le créneau suivant"
+                                                        >
+                                                            <div className="resize-indicator">⇊</div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
-                                            {!course && (
+                                            {!course && isDragOver && (
+                                                <div className="drop-zone-indicator">
+                                                    <div className="drop-zone-content">
+                                                        <span className="drop-icon">📅</span>
+                                                        <span>Déposer ici</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {!course && !isDragOver && (
                                                 <div className="empty-slot">
-                                                    <span>+ Ajouter un cours </span>
+                                                    <span>+ Ajouter un cours</span>
                                                 </div>
                                             )}
                                         </div>
@@ -244,18 +529,29 @@ const Horaire = () => {
                             const course = getCourseBySlotKey(slot.slotKey);
                             const classInfo = course ? getClassInfo(course.classId) : null;
                             const slotHasCourse = !!course;
+                            const isDragOver = dragOverSlot === slot.slotKey;
+
                             return (
                                 <div
                                     key={slot.slotKey}
-                                    className={`schedule-list-item ${slotHasCourse ? 'has-course' : 'empty'}`}
+                                    className={`schedule-list-item ${slotHasCourse ? 'has-course' : 'empty'} ${isDragOver ? 'drag-over' : ''}`}
                                     onClick={() => handleSlotClick(slot.day, slot.time)}
+                                    draggable={slotHasCourse}
+                                    onDragStart={(e) => slotHasCourse && handleDragStart(e, slot.day, slot.time)}
+                                    onDragEnd={handleDragEnd}
+                                    onDragOver={handleDragOver}
+                                    onDragEnter={(e) => handleDragEnter(e, slot.day, slot.time)}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={(e) => handleDrop(e, slot.day, slot.time)}
                                     style={{
-                                        borderLeftColor: slotHasCourse ? getClassColor(course.subject, classInfo?.level) : 'var(--accent-blue)'
+                                        borderLeftColor: slotHasCourse ? getClassColor(course.subject, classInfo?.level) : 'var(--accent-blue)',
+                                        cursor: slotHasCourse ? 'grab' : 'pointer'
                                     }}
                                 >
                                     <div className="slot-header">
                                         <span className="slot-day">{slot.dayLabel}</span>
                                         <span className="slot-time">{slot.time}</span>
+                                        {slotHasCourse && <span className="drag-indicator-mobile">⋮⋮</span>}
                                     </div>
                                     {slotHasCourse ? (
                                         <div className="course-info-mobile">
@@ -279,7 +575,7 @@ const Horaire = () => {
                 )}
             </div>
 
-            {/* Le reste du code (modals, toasts) est inchangé */}
+            {/* Le reste du code (modals, toasts) reste inchangé */}
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal">

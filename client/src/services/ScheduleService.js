@@ -19,6 +19,10 @@ class ScheduleService {
     static async deleteCourse(day, time_slot_id, journalId) {
         return ApiService.delete(`/schedule/${journalId}/${day}/${time_slot_id}`);
     }
+
+    static async changeCourse(courseData) {
+        return ApiService.post('/schedule/change-course', courseData);
+    }
 }
 
 export default ScheduleService;
