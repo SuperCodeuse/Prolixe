@@ -10,7 +10,11 @@ const ConfirmModal = ({
                           message,
                           confirmText = "Confirmer",
                           cancelText = "Annuler",
-                          type = "danger"
+                          type = "danger",
+                          showCheckbox = false,
+                          checkboxLabel = '',
+                          checkboxState = false,
+                          onCheckboxChange
                       }) => {
     if (!isOpen) return null;
 
@@ -32,6 +36,17 @@ const ConfirmModal = ({
                         {type === 'danger' ? '⚠️' : 'ℹ️'}
                     </div>
                     <p className="confirm-message">{message}</p>
+                    {showCheckbox && (
+                        <div className="confirm-checkbox-container">
+                            <input
+                                type="checkbox"
+                                id="confirmCheckbox"
+                                checked={checkboxState}
+                                onChange={onCheckboxChange}
+                            />
+                            <label htmlFor="confirmCheckbox">{checkboxLabel}</label>
+                        </div>
+                    )}
                 </div>
 
                 <div className="confirm-modal-actions">
@@ -43,7 +58,7 @@ const ConfirmModal = ({
                     </button>
                     <button
                         className={`btn btn-${type}`}
-                        onClick={onConfirm}
+                        onClick={() => onConfirm(checkboxState)}
                     >
                         {confirmText}
                     </button>

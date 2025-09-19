@@ -79,17 +79,18 @@ class ScheduleController {
         }
     }
 
-    // NOUVELLE MÉTHODE: Gère le changement d'emploi du temps avec une date effective
     static async changeCourse(req, res) {
-        const { day, time_slot_id, subject, classId, room, notes, journal_id, effectiveDate } = req.body;
+        const { source_day, source_time_slot_id, target_day, target_time_slot_id, subject, classId, room, notes, journal_id, effective_date } = req.body;
         const userId = req.user.id;
 
         if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
 
-        const validationErrors = ScheduleController.validateCourseData({ day, time_slot_id, subject, class_id: classId, room, journal_id });
+        const validationErrors = ScheduleController.validateCourseData({ day: target_day, time_slot_id: target_time_slot_id, subject, class_id: classId, room, journal_id });
         if (Object.keys(validationErrors).length > 0) return ScheduleController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
 
-        const effectiveDateObj = new Date(effectiveDate);
+        const effectiveDateObj = effective_date ? new Date(effective_date) : new Date();
+        effectiveDateObj.setHours(0, 0, 0, 0);
+
         const dayBeforeEffective = new Date(effectiveDateObj);
         dayBeforeEffective.setDate(effectiveDateObj.getDate() - 1);
 
@@ -98,25 +99,52 @@ class ScheduleController {
             connection = await pool.getConnection();
             await connection.beginTransaction();
 
-            // 1. Terminer l'ancien cours (s'il existe)
-            // Nous recherchons un cours ACTUELLEMENT actif pour ce créneau qui n'a pas de date de fin ou dont la date de fin est postérieure à la date de début du nouveau cours
+            // 1. Fermer le cours source à partir de la date effective
             await connection.execute(`
-                UPDATE SCHEDULE
-                SET end_date = ?
-                WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date < ?
-            `, [dayBeforeEffective, day, parseInt(time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj]);
+            UPDATE SCHEDULE
+            SET end_date = ?
+            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date < ?
+        `, [dayBeforeEffective, source_day, parseInt(source_time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj]);
 
-            // 2. Insérer le nouveau cours
-            const [insertResult] = await connection.execute(
-                'INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, user_id, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [day, parseInt(time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id), userId, effectiveDateObj]
-            );
+            // 2. Fermer TOUS les cours existants sur le créneau cible à partir de la date effective
+            await connection.execute(`
+            UPDATE SCHEDULE
+            SET end_date = ?
+            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date < ?
+        `, [dayBeforeEffective, target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj]);
 
-            // 3. Réaffecter les entrées de journal futures
+            // 3. Vérifier s'il existe encore un cours actif sur le créneau cible à partir de la date effective
+            const [existingTargetCourse] = await connection.execute(`
+            SELECT id FROM SCHEDULE
+            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND start_date = ? AND (end_date IS NULL OR end_date >= ?)
+        `, [target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj]);
+
+            let insertResult;
+
+            if (existingTargetCourse.length > 0) {
+                // 3a. Si un cours existe déjà exactement à la date effective, le mettre à jour
+                const targetCourseId = existingTargetCourse[0].id;
+                await connection.execute(`
+                UPDATE SCHEDULE 
+                SET subject = ?, class_id = ?, room = ?, notes = ?
+                WHERE id = ? AND user_id = ?
+            `, [subject.trim(), parseInt(classId), room.trim(), notes || null, targetCourseId, userId]);
+
+                insertResult = { insertId: targetCourseId };
+            } else {
+                // 3b. Créer un nouveau cours à partir de la date effective
+                const [result] = await connection.execute(
+                    'INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, user_id, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [target_day, parseInt(target_time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id), userId, effectiveDateObj]
+                );
+                insertResult = result;
+            }
+
+            // 4. Réassigner les entrées du journal
             await JournalController.reassignJournalEntries(connection, parseInt(journal_id), userId, effectiveDateObj, insertResult.insertId);
 
             await connection.commit();
-            res.status(200).json({ success: true, message: `Emploi du temps mis à jour à partir du ${effectiveDate}.` });
+            res.status(200).json({ success: true, message: `Emploi du temps mis à jour à partir du ${effective_date}.` });
         } catch (error) {
             if (connection) await connection.rollback();
             ScheduleController.handleError(res, error, "Erreur lors de la mise à jour de l'emploi du temps.");
@@ -125,10 +153,8 @@ class ScheduleController {
         }
     }
 
-    // MODIFIÉ: Remplacement de la méthode upsertCourse par une version qui prend en compte la nouvelle logique de changement de date
-    // La méthode changeCourse est utilisée pour les mises à jour.
     static async upsertCourse(req, res) {
-        const { day, time_slot_id, subject, classId, room, notes, journal_id } = req.body;
+        const { day, time_slot_id, subject, classId, room, notes, journal_id, effective_date } = req.body;
         const userId = req.user.id;
 
         if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
@@ -139,8 +165,8 @@ class ScheduleController {
         let connection;
         try {
             connection = await pool.getConnection();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Pour que la date soit à 00:00:00
+            const today = effective_date ? new Date(effective_date) : new Date();
+            today.setHours(0, 0, 0, 0);
 
             const [existing] = await connection.execute('SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?)', [day, parseInt(time_slot_id), parseInt(journal_id), userId, today]);
 
@@ -167,23 +193,42 @@ class ScheduleController {
 
     // MODIFIÉ: Remplacement de la méthode deleteCourse
     static async deleteCourse(req, res) {
-        const { journal_id, day, time_slot_id, effectiveDate } = req.params;
+        const { journal_id, day, time_slot_id } = req.params;
+        const { effective_date, delete_all } = req.query;
         const userId = req.user.id;
 
         if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
         if (!day || !time_slot_id || isNaN(parseInt(time_slot_id)) || !journal_id || isNaN(parseInt(journal_id))) return ScheduleController.handleError(res, new Error('Paramètres de suppression invalides'), 'Paramètres de suppression invalides.', 400);
 
-        const effectiveDateObj = effectiveDate ? new Date(effectiveDate) : new Date();
-        const dayBeforeEffective = new Date(effectiveDateObj);
-        dayBeforeEffective.setDate(effectiveDateObj.getDate() - 1);
+        const effectiveDateObj = effective_date ? new Date(effective_date) : new Date();
+        effectiveDateObj.setHours(0, 0, 0, 0);
 
         try {
             const result = await ScheduleController.withConnection(async (connection) => {
-                const [updateResult] = await connection.execute(`
-                    UPDATE SCHEDULE
-                    SET end_date = ?
-                    WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date <= ?
-                `, [dayBeforeEffective, day, parseInt(time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj]);
+                let sql;
+                let params;
+
+                if (delete_all === 'true') {
+                    // Suppression totale du cours
+                    sql = `
+                        DELETE FROM SCHEDULE
+                        WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ?
+                    `;
+                    params = [day, parseInt(time_slot_id), parseInt(journal_id), userId];
+                } else {
+                    // Mise à jour de la date de fin
+                    const dayBeforeEffective = new Date(effectiveDateObj);
+                    dayBeforeEffective.setDate(effectiveDateObj.getDate() - 1);
+
+                    sql = `
+                        UPDATE SCHEDULE
+                        SET end_date = ?
+                        WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date <= ?
+                    `;
+                    params = [dayBeforeEffective, day, parseInt(time_slot_id), parseInt(journal_id), userId, effectiveDateObj, effectiveDateObj];
+                }
+
+                const [updateResult] = await connection.execute(sql, params);
 
                 if (updateResult.affectedRows === 0) return { deleted: false, schedule: null };
 

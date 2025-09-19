@@ -7,7 +7,9 @@ import { useToast } from '../../hooks/useToast';
 import Toast from "../Toast";
 import ConfirmModal from '../ConfirmModal';
 import { useSchedule } from '../../hooks/useSchedule';
-import {useJournal} from "../../hooks/useJournal";
+import { useJournal } from "../../hooks/useJournal";
+import moment from 'moment';
+import ScheduleService from '../../services/ScheduleService';
 
 const Horaire = () => {
     const { currentJournal } = useJournal();
@@ -39,10 +41,14 @@ const Horaire = () => {
         isOpen: false,
         title: '',
         message: '',
-        onConfirm: null
+        onConfirm: null,
+        showCheckbox: false,
+        checkboxLabel: '',
+        checkboxState: false
     });
 
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [draggedCourse, setDraggedCourse] = useState(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -65,7 +71,14 @@ const Horaire = () => {
 
     const handleSlotClick = (day, time_libelle) => {
         const slotKey = `${day}-${time_libelle}`;
-        setSelectedSlot({ day, time_libelle, key: slotKey });
+        const selectedHour = hours.find(h => h.libelle === time_libelle);
+
+        setSelectedSlot({
+            day,
+            time_libelle,
+            key: slotKey,
+            time_slot_id: selectedHour?.id // Stocker l'ID du créneau
+        });
 
         const existingCourse = getCourseBySlotKey(slotKey);
         if (existingCourse) {
@@ -93,7 +106,8 @@ const Horaire = () => {
         }
 
         try {
-            await upsertCourse(selectedSlot.day, selectedSlot.time_libelle, courseForm);
+            const effectiveDate = moment().format('YYYY-MM-DD');
+            await upsertCourse(selectedSlot.day, selectedSlot.time_slot_id, courseForm);
             success('Cours enregistré avec succès !', 3000);
             setShowModal(false);
             setCourseForm({ subject: '', classId: '', room: '', notes: '' });
@@ -103,12 +117,15 @@ const Horaire = () => {
         }
     };
 
-    const showConfirmModal = (title, message, onConfirm) => {
+    const showConfirmModal = (title, message, onConfirm, showCheckbox = false, checkboxLabel = '', checkboxState = false) => {
         setConfirmModal({
             isOpen: true,
             title,
             message,
-            onConfirm
+            onConfirm,
+            showCheckbox,
+            checkboxLabel,
+            checkboxState
         });
     };
 
@@ -117,7 +134,10 @@ const Horaire = () => {
             isOpen: false,
             title: '',
             message: '',
-            onConfirm: null
+            onConfirm: null,
+            showCheckbox: false,
+            checkboxLabel: '',
+            checkboxState: false
         });
     };
 
@@ -130,13 +150,17 @@ const Horaire = () => {
         showConfirmModal(
             'Supprimer ce cours',
             `Êtes-vous sûr de vouloir supprimer le cours de "${courseSubject}" pour la classe "${className}" (${selectedSlot?.time_libelle}) ?\n\nCette action est irréversible.`,
-            () => performDeleteCourse()
+            (deleteAll) => performDeleteCourse(deleteAll),
+            true,
+            'Supprimer tout le cours (y compris dans le passé)',
+            false
         );
     };
 
-    const performDeleteCourse = async () => {
+    const performDeleteCourse = async (deleteAll) => {
         try {
-            await deleteCourseFromHook(selectedSlot.day, selectedSlot.time_libelle);
+            const today = moment().format('YYYY-MM-DD');
+            await deleteCourseFromHook(selectedSlot.day, selectedSlot.time_libelle, today, deleteAll);
             success('Cours supprimé avec succès !', 3000);
             setShowModal(false);
             closeConfirmModal();
@@ -147,9 +171,62 @@ const Horaire = () => {
         }
     };
 
-
     const getClassInfo = (classId) => {
         return classes.find(cls => cls.id == classId);
+    };
+
+    // Drag and Drop Handlers
+    const handleDragStart = (e, day, time_libelle) => {
+        const slotKey = `${day}-${time_libelle}`;
+        const course = getCourseBySlotKey(slotKey);
+        if (course) {
+            setDraggedCourse({ ...course, day, time_libelle, slotKey });
+            e.dataTransfer.setData("text/plain", slotKey);
+        } else {
+            e.preventDefault();
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    };
+
+    const handleDragLeave = (e) => {
+        e.currentTarget.classList.remove('drag-over');
+    };
+
+    const handleDrop = async (e, targetDay, targetTime) => {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+
+        if (!draggedCourse || draggedCourse.day === targetDay && draggedCourse.time_libelle === targetTime) {
+            setDraggedCourse(null);
+            return;
+        }
+
+        const effectiveDate = moment().format('YYYY-MM-DD');
+
+        try {
+            // Utilise la nouvelle fonction changeCourse pour gérer le déplacement
+            await ScheduleService.changeCourse(
+                draggedCourse.day,
+                draggedCourse.time_libelle,
+                targetDay,
+                targetTime,
+                draggedCourse,
+                journalId,
+                effectiveDate
+            );
+
+            success('Cours déplacé avec succès !', 3000);
+            // Recharger les données après le déplacement
+            // Si useSchedule a une fonction de rechargement, l'appeler ici
+        } catch (err) {
+            console.error("Erreur lors du déplacement du cours:", err);
+            showError(`Erreur lors du déplacement: ${(err && err.message) || String(err)}`, 5000);
+        }
+        setDraggedCourse(null);
     };
 
     if (loadingHours || loadingSchedule) {
@@ -186,7 +263,7 @@ const Horaire = () => {
         <div className="horaire">
             <div className="horaire-header">
                 <h1>📅 Emploi du temps</h1>
-                <p>Cliquez sur un créneau pour ajouter ou modifier un cours</p>
+                <p>Cliquez sur un créneau pour ajouter ou modifier un cours, ou glissez-déposez un cours pour le déplacer.</p>
             </div>
 
             <div className="schedule-container">
@@ -212,13 +289,20 @@ const Horaire = () => {
                                             key={slotKey}
                                             className={`schedule-slot ${course ? 'has-course' : 'empty'}`}
                                             onClick={() => handleSlotClick(day.key, time_libelle)}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, day.key, time_libelle)}
                                             style={{
                                                 backgroundColor: course ? `${getClassColor(course.subject, classInfo?.level)}20` : 'transparent',
                                                 borderColor: course ? getClassColor(course.subject, classInfo?.level) : '#334155'
                                             }}
                                         >
                                             {course && (
-                                                <div className="course-info">
+                                                <div
+                                                    className="course-info"
+                                                    draggable
+                                                    onDragStart={(e) => handleDragStart(e, day.key, time_libelle)}
+                                                >
                                                     <div className="course-subject">{course.subject}</div>
                                                     <div className="course-class">{classInfo?.name}</div>
                                                     <div className="course-room">{course.room}</div>
@@ -405,6 +489,10 @@ const Horaire = () => {
                 confirmText="Supprimer"
                 cancelText="Annuler"
                 type="danger"
+                showCheckbox={confirmModal.showCheckbox}
+                checkboxLabel={confirmModal.checkboxLabel}
+                checkboxState={confirmModal.checkboxState}
+                onCheckboxChange={(e) => setConfirmModal({...confirmModal, checkboxState: e.target.checked})}
             />
         </div>
     );
