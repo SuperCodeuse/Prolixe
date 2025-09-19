@@ -116,7 +116,7 @@ exports.getEvaluationForGrading = async (req, res) => {
         }
 
         const [criteria] = await db.query('SELECT * FROM EVALUATION_CRITERIA WHERE evaluation_id = ? ORDER BY id', [id]);
-        const [students] = await db.query('SELECT * FROM STUDENTS WHERE class_id = ? AND user_id = ? ORDER BY lastname, firstname', [evaluation.class_id, user_id]);
+        const [students] = await db.query('SELECT * FROM STUDENTS WHERE class_id = ? ORDER BY lastname, firstname', [evaluation.class_id]);
 
 
         const [grades] = await db.query(

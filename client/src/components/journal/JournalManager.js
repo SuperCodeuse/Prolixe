@@ -163,7 +163,7 @@ const JournalManager = () => {
         setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: null });
     };
 
-    const activeJournals = journals.data.filter(j => !j.is_archived);
+    const activeJournals = journals.filter(j => !j.is_archived);
 
     if (journalLoading && !journals.length) return <p>Chargement des journaux...</p>;
 

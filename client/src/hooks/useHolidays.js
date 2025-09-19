@@ -12,7 +12,7 @@ export const useHolidays = () => {
         if (currentJournal?.id) {
             try {
                 // Utilisation de l'id du journal pour la clé du localStorage
-                const storedData = localStorage.getItem(`${currentJournal.id}-schoolHolidays`);
+                const storedData = localStorage.getItem(`prolixeHolidays`);
                 if (storedData) {
                     setHolidays(JSON.parse(storedData));
                 }

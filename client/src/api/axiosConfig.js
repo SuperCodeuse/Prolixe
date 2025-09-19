@@ -22,7 +22,7 @@ apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
         const token = localStorage.getItem('authToken');
-        if ( error.response && error.response.status === 401 && token) {
+        if ( error.response && error.response.status === 403 && token) {
             window.dispatchEvent(new Event('auth-error'));
         }
         return Promise.reject(error);

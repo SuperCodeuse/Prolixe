@@ -54,7 +54,9 @@ const CorrectionView = () => {
         if (!evaluationId) return;
         try {
             setIsLoading(true);
-            const { data } = await getEvaluationForGrading(evaluationId);
+            let { data } = await getEvaluationForGrading(evaluationId);
+            data = data.data;
+
             setEvaluation(data.evaluation);
             setCriteria(data.criteria);
             setStudents(data.students);
