@@ -1,4 +1,5 @@
 // client/src/services/ScheduleService.js
+
 import ApiService from '../api/axiosConfig';
 
 class ScheduleService {
@@ -21,6 +22,7 @@ class ScheduleService {
     }
 
     static async changeCourse(courseData) {
+        // Cette fonction est correcte et envoie l'objet entier (incluant journal_id)
         return ApiService.post('/schedule/change-course', courseData);
     }
 }

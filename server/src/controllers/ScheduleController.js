@@ -132,6 +132,66 @@ class ScheduleController {
             ScheduleController.handleError(res, error, 'Erreur lors de la suppression du cours.');
         }
     }
+
+    static async changeCourse(req, res) {
+        const { source_day, source_time_slot_id, target_day, target_time_slot_id, journal_id } = req.body;
+        const userId = req.user.id;
+
+        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+        if (!source_day || !source_time_slot_id || !target_day || !target_time_slot_id || !journal_id) {
+            console.log("source_day: ", source_day, "source_time_slot_id: ", source_time_slot_id, "target_day: ", target_day, "target_time_slot_id: ", target_time_slot_id, "journal_id: ", journal_id);
+            return ScheduleController.handleError(res, new Error('Paramètres de déplacement manquants'), 'Tous les paramètres de déplacement (source et cible) sont requis.', 400);
+        }
+
+        try {
+            const result = await ScheduleController.withConnection(async (connection) => {
+                // 1. Vérifier si un cours existe déjà dans le créneau de destination
+                const [targetExisting] = await connection.execute(
+                    'SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ?',
+                    [target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId]
+                );
+
+                if (targetExisting.length > 0) {
+                    throw new Error('Le créneau de destination est déjà occupé.', { cause: 'OCCUPIED' });
+                }
+
+                // 2. Trouver l'ID du cours source à déplacer
+                const [sourceExisting] = await connection.execute(
+                    'SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ?',
+                    [source_day, parseInt(source_time_slot_id), parseInt(journal_id), userId]
+                );
+
+                if (sourceExisting.length === 0) {
+                    throw new Error('Cours source introuvable.', { cause: 'NOT_FOUND' });
+                }
+                const courseId = sourceExisting[0].id;
+
+                // 3. Mettre à jour les informations du cours source pour le déplacer vers le nouveau créneau
+                const [updateResult] = await connection.execute(
+                    'UPDATE SCHEDULE SET day = ?, time_slot_id = ? WHERE id = ? AND user_id = ? AND journal_id = ?',
+                    [target_day, parseInt(target_time_slot_id), courseId, userId, parseInt(journal_id)]
+                );
+
+                if (updateResult.affectedRows === 0) {
+                    throw new Error('Aucun cours mis à jour. Le déplacement a échoué.', { cause: 'NO_UPDATE' });
+                }
+
+                // 4. Récupérer et retourner le nouvel emploi du temps
+                const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, connection);
+                return { success: true, schedule: updatedSchedule };
+            });
+
+            res.json({ success: true, message: 'Cours déplacé avec succès.', data: result.schedule, count: Object.keys(result.schedule).length });
+        } catch (error) {
+            // Gestion des erreurs spécifiques
+            if (error.message.includes('OCCUPIED')) return ScheduleController.handleError(res, error, 'Le créneau de destination est déjà occupé.', 409);
+            if (error.message.includes('NOT_FOUND')) return ScheduleController.handleError(res, error, 'Cours source introuvable.', 404);
+            if (error.message.includes('NO_UPDATE')) return ScheduleController.handleError(res, error, 'Le déplacement du cours a échoué.', 500);
+
+            // Gestion des erreurs générales
+            ScheduleController.handleError(res, error, 'Erreur lors du déplacement du cours.');
+        }
+    }
 }
 
 module.exports = ScheduleController;

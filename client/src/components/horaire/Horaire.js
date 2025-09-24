@@ -290,11 +290,6 @@ const Horaire = () => {
                 source_time_slot_id: sourceTimeSlot.id,
                 target_day: targetDay,
                 target_time_slot_id: targetTimeSlot.id,
-                subject: course.subject,
-                classId: course.classId,
-                room: course.room,
-                notes: course.notes || '',
-                effective_date: new Date().toISOString().split('T')[0]
             });
 
             success('Cours déplacé avec succès !', 3000);

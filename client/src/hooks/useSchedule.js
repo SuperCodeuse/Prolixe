@@ -1,4 +1,5 @@
-// frontend/src/hooks/useSchedule.js
+// C:/Temp/Prolixe/client/src/hooks/useSchedule.js
+
 import { useState, useEffect, useCallback } from 'react';
 import scheduleService from '../services/ScheduleService';
 import { useScheduleHours } from './useScheduleHours';
@@ -81,7 +82,7 @@ export const useSchedule = () => {
     }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
 
     // ✨ NOUVELLE FONCTION POUR LE DÉPLACEMENT (DRAG & DROP) ✨
-    const changeCourse = useCallback(async ({ source_day, source_time_slot_id, target_day, target_time_slot_id, subject, classId, room, notes, effective_date }) => {
+    const changeCourse = useCallback(async ({ source_day, source_time_slot_id, target_day, target_time_slot_id }) => {
         if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
         setError(null);
         try {
@@ -90,13 +91,10 @@ export const useSchedule = () => {
                 source_time_slot_id,
                 target_day,
                 target_time_slot_id,
-                subject,
-                classId,
-                room,
-                notes,
-                effective_date
+                journal_id: currentJournal.id // <-- Ajout de l'ID du journal ici
             };
-            const response = await scheduleService.changeCourse(courseData, currentJournal.id);
+
+            const response = await scheduleService.changeCourse(courseData);
             if (response.data.success) {
                 await fetchSchedule();
             }
@@ -106,7 +104,6 @@ export const useSchedule = () => {
             throw err;
         }
     }, [currentJournal, fetchSchedule]);
-
 
     const getCourseBySlotKey = useCallback((slotKey) => {
         return schedule.data ? schedule.data[slotKey] : null;
