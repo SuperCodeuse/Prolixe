@@ -192,7 +192,7 @@
         max-width: 500px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         animation: fadeIn 0.3s ease-out;
-        overflow: hidden;
+        overflow: overlay;
         border: 1px solid var(--border-color);
     }
 

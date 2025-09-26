@@ -40,7 +40,6 @@ class ScheduleController {
         if (!data.journal_id || isNaN(parseInt(data.journal_id)) || parseInt(data.journal_id) <= 0) errors.journal_id = 'ID de journal invalide.';
         if (!data.schedule_set_id || isNaN(parseInt(data.schedule_set_id)) || parseInt(data.schedule_set_id) <= 0) errors.schedule_set_id = 'ID de l\'ensemble d\'horaires invalide.';
 
-        console.log('Validation errors:', errors);
         return errors;
     }
 
@@ -233,51 +232,51 @@ class ScheduleController {
 
     static async deleteCourse(req, res) {
         const { journal_id, day, time_slot_id } = req.params;
-        const { effective_date, delete_all, schedule_set_id } = req.query;
+        const { schedule_set_id } = req.query; // effective_date et delete_all ne sont plus nécessaires
         const userId = req.user.id;
 
-        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
-        if (!day || !time_slot_id || isNaN(parseInt(time_slot_id)) || !journal_id || isNaN(parseInt(journal_id)) || !schedule_set_id || isNaN(parseInt(schedule_set_id))) return ScheduleController.handleError(res, new Error('Paramètres de suppression invalides'), 'Paramètres de suppression invalides.', 400);
+        // Validation des paramètres
+        if (!userId) {
+            return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+        }
+        if (!day || !time_slot_id || isNaN(parseInt(time_slot_id)) || !journal_id || isNaN(parseInt(journal_id)) || !schedule_set_id || isNaN(parseInt(schedule_set_id))) {
+            return ScheduleController.handleError(res, new Error('Paramètres de suppression invalides'), 'Paramètres de suppression invalides.', 400);
+        }
 
-        const effectiveDateObj = effective_date ? new Date(effective_date) : new Date();
-        effectiveDateObj.setHours(0, 0, 0, 0);
-
+        let connection;
         try {
-            const result = await ScheduleController.withConnection(async (connection) => {
-                let sql;
-                let params;
+            connection = await pool.getConnection();
 
-                if (delete_all === 'true') {
-                    sql = `
-                        DELETE FROM SCHEDULE
-                        WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ?
-                    `;
-                    params = [day, parseInt(time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)];
-                } else {
-                    const dayBeforeEffective = new Date(effectiveDateObj);
-                    dayBeforeEffective.setDate(effectiveDateObj.getDate() - 1);
+            // Requête de suppression simplifiée
+            const [deleteResult] = await connection.execute(
+                `DELETE FROM SCHEDULE
+             WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ?`,
+                [day, parseInt(time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)]
+            );
 
-                    sql = `
-                        UPDATE SCHEDULE
-                        SET end_date = ?
-                        WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date <= ?
-                    `;
-                    params = [dayBeforeEffective, day, parseInt(time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id), effectiveDateObj, effectiveDateObj];
-                }
+            // Si aucune ligne n'a été affectée, le cours n'a pas été trouvé ou l'utilisateur n'a pas les droits.
+            if (deleteResult.affectedRows === 0) {
+                return ScheduleController.handleError(res, new Error('Cours non trouvé'), 'Cours non trouvé pour suppression (ou vous n\'avez pas les droits).', 404);
+            }
 
-                const [updateResult] = await connection.execute(sql, params);
+            // Récupérer le nouvel emploi du temps pour le renvoyer au client
+            const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, parseInt(schedule_set_id), connection);
 
-                if (updateResult.affectedRows === 0) return { deleted: false, schedule: null };
-
-                const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, parseInt(schedule_set_id), connection);
-                return { deleted: true, affectedRows: updateResult.affectedRows, schedule: updatedSchedule };
+            res.json({
+                success: true,
+                message: 'Cours supprimé avec succès.',
+                data: {
+                    schedule: updatedSchedule,
+                    deletedCourse: { day, time_slot_id }
+                },
+                count: Object.keys(updatedSchedule).length
             });
-
-            if (!result.deleted) return ScheduleController.handleError(res, new Error('Cours non trouvé'), 'Cours non trouvé pour suppression (ou vous n\'avez pas les droits).', 404);
-
-            res.json({ success: true, message: 'Cours supprimé avec succès.', data: { schedule: result.schedule, deletedCourse: { day, time_slot_id } }, count: Object.keys(result.schedule).length });
         } catch (error) {
             ScheduleController.handleError(res, error, 'Erreur lors de la suppression du cours.');
+        } finally {
+            if (connection) {
+                connection.release();
+            }
         }
     }
 }

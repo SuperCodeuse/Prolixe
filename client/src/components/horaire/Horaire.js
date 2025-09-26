@@ -434,11 +434,12 @@ const Horaire = () => {
                 {/* Sélecteur d'emplois du temps */}
                 
                 <div className="schedule-selector-container">
-                    <label htmlFor="schedule-select">Sélectionner un emploi du temps :</label>
+                    <label htmlFor="schedule-select form-group">Sélectionner un emploi du temps :</label>
                     <select
-                        id="schedule-select"
+                        id="schedule-select "
                         value={selectedScheduleId || ''}
                         onChange={(e) => setSelectedScheduleId(e.target.value)}
+                        className="form-control btn-select"
                     >
                         {schedules.length > 0 ? (
                             schedules.map(scheduleModel => (
