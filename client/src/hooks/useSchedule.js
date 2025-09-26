@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import scheduleService from '../services/ScheduleService';
 import { useScheduleHours } from './useScheduleHours';
 import { useJournal } from './useJournal';
+import moment from 'moment';
 
-export const useSchedule = () => {
+export const useSchedule = (scheduleSetId) => {
     const [schedule, setSchedule] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,7 +15,7 @@ export const useSchedule = () => {
     const { currentJournal } = useJournal();
 
     const fetchSchedule = useCallback(async () => {
-        if (!currentJournal) {
+        if (!currentJournal || !scheduleSetId) {
             setSchedule({});
             setLoading(false);
             return;
@@ -22,7 +23,7 @@ export const useSchedule = () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await scheduleService.getSchedule(currentJournal.id);
+            const data = await scheduleService.getSchedule(currentJournal.id, scheduleSetId);
             let dataObject = data.data;
             setSchedule(dataObject);
         } catch (err) {
@@ -30,25 +31,31 @@ export const useSchedule = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentJournal]);
+    }, [currentJournal, scheduleSetId]);
 
     useEffect(() => {
-        if (!loadingHours && !errorHours) {
+        if (!loadingHours && !errorHours && scheduleSetId) {
             fetchSchedule();
         } else if (errorHours) {
             setError(errorHours.message || 'Erreur lors du chargement des créneaux horaires.');
             setLoading(false);
         }
-    }, [hours, loadingHours, errorHours, fetchSchedule, currentJournal]);
+    }, [hours, loadingHours, errorHours, fetchSchedule, currentJournal, scheduleSetId]);
 
     const upsertCourse = useCallback(async (day, time_libelle, courseDetails) => {
-        if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
+        if (!currentJournal || !scheduleSetId) throw new Error("Aucun journal ou emploi du temps actif sélectionné.");
         setError(null);
         try {
             const time_slot_id = getHourIdByLibelle(time_libelle);
             if (!time_slot_id) throw new Error(`ID de créneau horaire introuvable pour : ${time_libelle}`);
 
-            let response = await scheduleService.upsertCourse(day, time_slot_id, courseDetails, currentJournal.id);
+            let response = await scheduleService.upsertCourse({
+                day,
+                time_slot_id,
+                ...courseDetails,
+                journal_id: currentJournal.id,
+                schedule_set_id: scheduleSetId
+            });
             response = response.data;
 
             if (response.success) {
@@ -59,16 +66,16 @@ export const useSchedule = () => {
             setError(err.message || 'Erreur lors de la sauvegarde du cours.');
             throw err;
         }
-    }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
+    }, [getHourIdByLibelle, currentJournal, fetchSchedule, scheduleSetId]);
 
     const deleteCourse = useCallback(async (day, time_libelle) => {
-        if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
+        if (!currentJournal || !scheduleSetId) throw new Error("Aucun journal ou emploi du temps actif sélectionné.");
         setError(null);
         try {
             const time_slot_id = getHourIdByLibelle(time_libelle);
             if (!time_slot_id) throw new Error(`ID de créneau horaire introuvable pour : ${time_libelle}`);
 
-            let response = await scheduleService.deleteCourse(day, time_slot_id, currentJournal.id);
+            let response = await scheduleService.deleteCourse(day, time_slot_id, currentJournal.id, scheduleSetId);
             response = response.data;
 
             if (response.success) {
@@ -79,11 +86,10 @@ export const useSchedule = () => {
             setError(err.message || 'Erreur lors de la suppression du cours.');
             throw err;
         }
-    }, [getHourIdByLibelle, currentJournal, fetchSchedule]);
+    }, [getHourIdByLibelle, currentJournal, fetchSchedule, scheduleSetId]);
 
-    // ✨ NOUVELLE FONCTION POUR LE DÉPLACEMENT (DRAG & DROP) ✨
     const changeCourse = useCallback(async ({ source_day, source_time_slot_id, target_day, target_time_slot_id }) => {
-        if (!currentJournal) throw new Error("Aucun journal actif sélectionné.");
+        if (!currentJournal || !scheduleSetId) throw new Error("Aucun journal ou emploi du temps actif sélectionné.");
         setError(null);
         try {
             const courseData = {
@@ -91,7 +97,8 @@ export const useSchedule = () => {
                 source_time_slot_id,
                 target_day,
                 target_time_slot_id,
-                journal_id: currentJournal.id // <-- Ajout de l'ID du journal ici
+                journal_id: currentJournal.id,
+                schedule_set_id: scheduleSetId
             };
 
             const response = await scheduleService.changeCourse(courseData);
@@ -103,7 +110,7 @@ export const useSchedule = () => {
             setError(err.message || 'Erreur lors du déplacement du cours.');
             throw err;
         }
-    }, [currentJournal, fetchSchedule]);
+    }, [currentJournal, fetchSchedule, scheduleSetId]);
 
     const getCourseBySlotKey = useCallback((slotKey) => {
         return schedule.data ? schedule.data[slotKey] : null;
