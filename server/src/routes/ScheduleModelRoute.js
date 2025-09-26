@@ -6,4 +6,7 @@ const ScheduleModelController = require('../controllers/ScheduleModelController'
 // Route pour créer un nouvel emploi du temps
 router.post('/', ScheduleModelController.createSchedule);
 
+// Route pour récupérer tous les emplois du temps
+router.get('/', ScheduleModelController.getSchedules);
+
 module.exports = router;

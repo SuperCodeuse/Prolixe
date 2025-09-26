@@ -11,6 +11,14 @@ const ScheduleModelService = {
      */
     createSchedule: (name, startDate, endDate) => {
         return apiClient.post('/schedules/models', { name, startDate, endDate });
+    },
+
+    /**
+     * Récupère tous les modèles d'emplois du temps.
+     * @returns {Promise<object>} - L'objet de réponse de l'API contenant la liste des emplois du temps.
+     */
+    getSchedules: () => {
+        return apiClient.get('/schedules/models');
     }
 };
 
