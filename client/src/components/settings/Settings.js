@@ -1,4 +1,3 @@
-// Settings.jsx
 import React, { useState } from 'react';
 import ClassesManager from "./Class/ClassManager";
 import ScheduleManager from "./Schedule/ScheduleManager";
@@ -7,6 +6,8 @@ import './Settings.scss';
 import JournalManager from "../journal/JournalManager";
 import AttributionManager from "./Attribution/AttributionManager";
 import StudentManager from "./Student/StudentManager";
+import Horaire from "../horaire/Horaire";
+import ScheduleCreator from "./Schedule/ScheduleCreator"; // Importez le nouveau composant
 import {useAuth} from "../../hooks/useAuth";
 
 const Settings = () => {
@@ -22,8 +23,9 @@ const Settings = () => {
 
     if(user?.role === "ADMIN"){
         settingsTabs = settingsTabs.concat([
-            { id: 'schedule', label: 'Horaire', icon: '⏰' },
-            { id: 'holidays', label: 'Calendrier', icon: '📅' }
+            { id: 'schedule', label: 'Heures de cours', icon: '⏰' },
+            { id: 'holidays', label: 'Calendrier', icon: '📅' },
+            { id: 'horaire', label: 'Horaire', icon: '🗓️' }
         ]);
     }
 
@@ -36,6 +38,7 @@ const Settings = () => {
             case 'holidays': return <HolidaysManager />;
             case 'journals': return <JournalManager />;
             case 'attributions': return <AttributionManager />;
+            case 'horaire': return <ScheduleCreator />; // Affiche le composant ScheduleCreator
             default: return <ClassesManager />;
         }
     };

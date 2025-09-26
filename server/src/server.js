@@ -90,6 +90,7 @@ protectedRouter.use(verifyToken); // Le middleware s'applique à toutes les rout
 protectedRouter.use('/classes', require('./routes/ClassRoutes'));
 protectedRouter.use('/hours', require('./routes/ScheduleHours'));
 protectedRouter.use('/schedule', require('./routes/ScheduleRoute'));
+protectedRouter.use('/schedules/models', require('./routes/ScheduleModelRoutes'));
 protectedRouter.use('/journal', require('./routes/JournalRoute'));
 protectedRouter.use('/attributions', require('./routes/AttributionRoute'));
 protectedRouter.use('/evaluations', require('./routes/EvaluationRoute'));
