@@ -39,6 +39,8 @@ class ScheduleController {
         if (!data.room || typeof data.room !== 'string' || !data.room.trim()) errors.room = 'Le local est requis.';
         if (!data.journal_id || isNaN(parseInt(data.journal_id)) || parseInt(data.journal_id) <= 0) errors.journal_id = 'ID de journal invalide.';
         if (!data.schedule_set_id || isNaN(parseInt(data.schedule_set_id)) || parseInt(data.schedule_set_id) <= 0) errors.schedule_set_id = 'ID de l\'ensemble d\'horaires invalide.';
+
+        console.log('Validation errors:', errors);
         return errors;
     }
 
@@ -78,73 +80,68 @@ class ScheduleController {
     }
 
     static async changeCourse(req, res) {
-        const { source_day, source_time_slot_id, target_day, target_time_slot_id, subject, classId, room, notes, journal_id, effective_date, schedule_set_id } = req.body;
+        const { source_day, source_time_slot_id, target_day, target_time_slot_id, subject, classId, room, notes, journal_id, schedule_set_id } = req.body;
         const userId = req.user.id;
 
-        if (!userId) return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+        if (!userId) {
+            return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+        }
 
-        const validationErrors = ScheduleController.validateCourseData({ day: target_day, time_slot_id: target_time_slot_id, subject, class_id: classId, room, journal_id, schedule_set_id });
-        if (Object.keys(validationErrors).length > 0) return ScheduleController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
+        // Validation des données pour s'assurer que tout est présent
+        // Note: On réutilise la même validation en se basant sur la destination
+        const validationErrors = ScheduleController.validateCourseData({
+            day: target_day,
+            time_slot_id: target_time_slot_id,
+            subject,
+            class_id: classId,
+            room,
+            journal_id,
+            schedule_set_id
+        });
 
-        const effectiveDateObj = effective_date ? new Date(effective_date) : new Date();
-        effectiveDateObj.setHours(0, 0, 0, 0);
-
-        const dayBeforeEffective = new Date(effectiveDateObj);
-        dayBeforeEffective.setDate(effectiveDateObj.getDate() - 1);
+        if (Object.keys(validationErrors).length > 0) {
+            return ScheduleController.handleError(res, new Error('Données de validation invalides'), 'Données invalides.', 400, validationErrors);
+        }
 
         let connection;
         try {
             connection = await pool.getConnection();
             await connection.beginTransaction();
 
-            await connection.execute(`
-            UPDATE SCHEDULE
-            SET end_date = ?
-            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date < ?
-        `, [dayBeforeEffective, source_day, parseInt(source_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id), effectiveDateObj, effectiveDateObj]);
-
-            await connection.execute(`
-            UPDATE SCHEDULE
-            SET end_date = ?
-            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ? AND (end_date IS NULL OR end_date >= ?) AND start_date < ?
-        `, [dayBeforeEffective, target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id), effectiveDateObj, effectiveDateObj]);
-
-            const [existingTargetCourse] = await connection.execute(`
-            SELECT id FROM SCHEDULE
-            WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ? AND start_date = ? AND (end_date IS NULL OR end_date >= ?)
-        `, [target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id), effectiveDateObj, effectiveDateObj]);
-
-            let insertResult;
+            // 1. On vérifie si un cours existe déjà à l'emplacement de destination.
+            const [existingTargetCourse] = await connection.execute(
+                `SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ?`,
+                [target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)]
+            );
 
             if (existingTargetCourse.length > 0) {
-                const targetCourseId = existingTargetCourse[0].id;
-                await connection.execute(`
-                UPDATE SCHEDULE
-                SET subject = ?, class_id = ?, room = ?, notes = ?
-                WHERE id = ? AND user_id = ? AND schedule_set_id = ?
-            `, [subject.trim(), parseInt(classId), room.trim(), notes || null, targetCourseId, userId, parseInt(schedule_set_id)]);
-
-                insertResult = { insertId: targetCourseId };
-            } else {
-                const [result] = await connection.execute(
-                    'INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, user_id, start_date, schedule_set_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [target_day, parseInt(target_time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id), userId, effectiveDateObj, parseInt(schedule_set_id)]
-                );
-                insertResult = result;
+                await connection.rollback();
+                return ScheduleController.handleError(res, new Error('Le créneau de destination est déjà occupé.'), 'Impossible de déplacer le cours : le créneau de destination est déjà pris.', 409);
             }
 
-            await JournalController.reassignJournalEntries(connection, parseInt(journal_id), userId, effectiveDateObj, insertResult.insertId);
+            // 2. On met à jour le cours source avec les nouvelles informations de jour et d'heure.
+            // On ne touche pas aux champs 'start_date' ou 'end_date'
+            const [updateResult] = await connection.execute(
+                `UPDATE SCHEDULE SET day = ?, time_slot_id = ?, subject = ?, class_id = ?, room = ?, notes = ?
+             WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ?`,
+                [target_day, parseInt(target_time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, source_day, parseInt(source_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)]
+            );
+
+            if (updateResult.affectedRows === 0) {
+                await connection.rollback();
+                return ScheduleController.handleError(res, new Error('Cours source non trouvé.'), 'Le cours à déplacer n\'a pas été trouvé.', 404);
+            }
 
             await connection.commit();
-            res.status(200).json({ success: true, message: `Emploi du temps mis à jour à partir du ${effective_date}.` });
+            res.status(200).json({ success: true, message: 'Cours déplacé avec succès.' });
         } catch (error) {
             if (connection) await connection.rollback();
-            ScheduleController.handleError(res, error, "Erreur lors de la mise à jour de l'emploi du temps.");
+            ScheduleController.handleError(res, error, "Erreur lors du déplacement de l'emploi du temps.");
         } finally {
             if (connection) connection.release();
         }
     }
-
+    
     static async upsertCourse(req, res) {
         const { day, time_slot_id, subject, classId, room, notes, journal_id, effective_date, schedule_set_id } = req.body;
         const userId = req.user.id;

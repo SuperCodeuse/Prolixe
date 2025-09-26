@@ -88,20 +88,17 @@ export const useSchedule = (scheduleSetId) => {
         }
     }, [getHourIdByLibelle, currentJournal, fetchSchedule, scheduleSetId]);
 
-    const changeCourse = useCallback(async ({ source_day, source_time_slot_id, target_day, target_time_slot_id }) => {
+    const changeCourse = useCallback(async ( dataToSend ) => {
         if (!currentJournal || !scheduleSetId) throw new Error("Aucun journal ou emploi du temps actif sélectionné.");
         setError(null);
         try {
-            const courseData = {
-                source_day,
-                source_time_slot_id,
-                target_day,
-                target_time_slot_id,
+            const fullCourseData = {
+                ...dataToSend,
                 journal_id: currentJournal.id,
                 schedule_set_id: scheduleSetId
             };
 
-            const response = await scheduleService.changeCourse(courseData);
+            const response = await scheduleService.changeCourse(fullCourseData);
             if (response.data.success) {
                 await fetchSchedule();
             }

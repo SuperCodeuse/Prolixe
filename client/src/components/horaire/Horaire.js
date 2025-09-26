@@ -282,13 +282,23 @@ const Horaire = () => {
                 return;
             }
 
-            await changeCourse({
+            const dataToSend = {
                 source_day: sourceDay,
                 source_time_slot_id: sourceTimeSlot.id,
                 target_day: targetDay,
                 target_time_slot_id: targetTimeSlot.id,
-            });
 
+                // On ajoute les informations manquantes directement depuis l'objet 'course'
+                subject: course.subject,
+                classId: course.classId,
+                room: course.room,
+                notes: course.notes,
+                journal_id: course.journal_id,
+                schedule_set_id: course.schedule_set_id,
+                effective_date: moment().format('YYYY-MM-DD')
+            };
+
+            await changeCourse(dataToSend);
             success('Cours déplacé avec succès !', 3000);
 
         } catch (error) {

@@ -49,6 +49,7 @@ const ScheduleService = {
      * @returns {Promise<object>}
      */
     changeCourse: (data) => {
+        console.log("data : ", data);
         return apiClient.put('/schedule/change', data);
     },
 };

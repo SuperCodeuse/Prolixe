@@ -9,7 +9,7 @@ router.use(verifyToken);
 
 router.get('/', ScheduleController.getSchedule);
 router.put('/', ScheduleController.upsertCourse);
-router.post('/change-course', ScheduleController.changeCourse);
+router.put('/change', ScheduleController.changeCourse);
 router.delete('/:journal_id/:day/:time_slot_id', ScheduleController.deleteCourse);
 
 module.exports = router;
