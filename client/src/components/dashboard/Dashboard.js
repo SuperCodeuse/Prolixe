@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useClasses } from '../../hooks/useClasses';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useJournal } from '../../hooks/useJournal';
-import HolidaysManagerService from '../../services/HolidaysManagerService'; // Importez le service
-import { format, parseISO } from 'date-fns';
-import { fr, enGB } from 'date-fns/locale';
+import { useScheduleHours } from '../../hooks/useScheduleHours';
+import useScheduleModel from '../../hooks/useScheduleModel';
+import HolidaysManagerService from '../../services/HolidaysManagerService';
+import { format, parseISO, isWithinInterval } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import './dashboard.scss';
 import './dashboard_mobile.scss';
 import NoteSection from './NoteSection';
-import ScheduleSection from './ScheduleSection';
+import TodayScheduleSection from './TodayScheduleSection';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -18,7 +20,6 @@ const Dashboard = () => {
 
     const {
         currentJournal,
-        lastSelected,
         assignments,
         fetchAssignments,
         journalEntries,
@@ -29,30 +30,48 @@ const Dashboard = () => {
 
     const journalId = currentJournal?.id;
 
-    const { classes, loading: loadingClasses, error: errorClasses, getClassColor } = useClasses(journalId);
-    const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
+    const { classes, loading: loadingClasses, getClassColor } = useClasses(journalId);
+    const { schedules, loading: loadingSchedules } = useScheduleModel();
+    const { hours, loading: loadingHours } = useScheduleHours();
 
-    // Fonction pour récupérer les vacances
+    const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday'}[dayName]||dayName),[]);
+
+    const getScheduleSetForDate = useCallback((date) => {
+        if (!schedules || schedules.length === 0) return null;
+        const scheduleSet = schedules.find(schedule => {
+            try {
+                const startDate = parseISO(schedule.start_date);
+                const endDate = parseISO(schedule.end_date);
+                return isWithinInterval(date, { start: startDate, end: endDate });
+            } catch (e) {
+                console.error('Erreur de parsing des dates du schedule:', schedule, e);
+                return false;
+            }
+        });
+        return scheduleSet || null;
+    }, [schedules]);
+
+    const currentScheduleSet = useMemo(() => {
+        return getScheduleSetForDate(new Date());
+    }, [getScheduleSetForDate]);
+
+    const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule(currentScheduleSet?.id);
+
     const fetchHolidays = async () => {
         setLoadingHolidays(true);
         try {
-            // Vérifier le cache du localStorage
             const cachedHolidays = localStorage.getItem('prolixeHolidays');
             if (cachedHolidays) {
                 setHolidays(JSON.parse(cachedHolidays));
                 setLoadingHolidays(false);
                 return;
             }
-
-            // Si non présent, appeler l'API
             const response = await HolidaysManagerService.getHolidays();
             const fetchedHolidays = response.data;
             setHolidays(fetchedHolidays);
-            // Stocker dans le localStorage
             localStorage.setItem('prolixeHolidays', JSON.stringify(fetchedHolidays));
         } catch (error) {
             console.error('Erreur lors de la récupération des jours fériés:', error);
-            // En cas d'erreur (fichier non trouvé par exemple), on réinitialise les vacances
             setHolidays([]);
             localStorage.removeItem('prolixeHolidays');
         } finally {
@@ -61,7 +80,6 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        // Appeler la fonction de chargement des vacances au montage du composant
         fetchHolidays();
     }, []);
 
@@ -70,53 +88,70 @@ const Dashboard = () => {
     }, [loadAllJournals]);
 
     useEffect(() => {
-        if (journalId) {
+        if (journalId && currentScheduleSet) {
             fetchAssignments();
             const todayStr = format(new Date(), 'yyyy-MM-dd');
             fetchJournalEntries(todayStr, todayStr);
         }
-    }, [journalId, fetchAssignments, fetchJournalEntries, currentJournal]);
+    }, [journalId, fetchAssignments, fetchJournalEntries, currentJournal, currentScheduleSet]);
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const getHolidayForDate = (date) => {
+    const getHolidayForDate = useCallback((date) => {
         if (!holidays || holidays.length === 0) return null;
         const formattedDate = format(date, 'yyyy-MM-dd');
         return holidays.find(h => h.date === formattedDate) || null;
-    };
+    }, [holidays]);
+
     const holidayInfo = getHolidayForDate(new Date());
 
-
     const todaySchedule = useMemo(() => {
-        if (!schedule || !schedule.data || !classes) return [];
-        if (holidayInfo) return [];
+        if (!schedule || !schedule.data || !classes || !hours || holidayInfo) return [];
 
-        const todayKey = format(new Date(), 'eeee', { locale: enGB }).toLowerCase();
+        const todayKey = getDayKeyFromDateFnsString(format(new Date(), 'EEEE', { locale: fr }).toLowerCase());
         const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
 
-        return courses.map(course => {
+        const sortedCourses = courses.map(course => {
             const journalEntry = journalEntries.find(entry =>
                 entry.schedule_id === course.id &&
-                format(parseISO(entry.date), 'yyyy-MM-dd') === todayStr
+                entry.date && format(parseISO(entry.date), 'yyyy-MM-dd') === todayStr
             );
             const isCancelled = journalEntry?.actual_work === '[CANCELLED]';
+            const isExam = journalEntry?.actual_work === '[EXAM]';
+            const isHoliday = journalEntry?.actual_work === '[HOLIDAY]';
+            const isInterro = journalEntry?.actual_work?.startsWith('[INTERRO]');
 
             return {
                 ...course,
                 key: `${course.day}-${course.time_slot_libelle}`,
-                isCancelled: isCancelled,
-                cancellationNotes: isCancelled ? journalEntry.notes : null
+                journalEntry,
+                isCancelled,
+                isExam,
+                isHoliday,
+                isInterro,
             };
         }).sort((a, b) => {
-            const timeA = a.time_slot_libelle.split('-')[0];
-            const timeB = b.time_slot_libelle.split('-')[0];
-            return timeA.localeCompare(timeB);
+            const orderA = hours.find(h => h.libelle === a.time_slot_libelle)?.order || 0;
+            const orderB = hours.find(h => h.libelle === b.time_slot_libelle)?.order || 0;
+            return orderA - orderB;
         });
-    }, [schedule, journalEntries, todayStr, classes, holidayInfo]); // Ajout de `holidays` comme dépendance
+
+        return sortedCourses;
+    }, [schedule, journalEntries, todayStr, classes, hours, holidayInfo, getDayKeyFromDateFnsString]);
+
+    const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
+        const safeAssignments = Array.isArray(assignments) ? assignments : [];
+        if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
+
+        const toCorrect = safeAssignments.filter(a => a.is_completed && !a.is_corrected);
+        const upcoming = safeAssignments
+            .filter(a => !a.is_completed)
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+            .slice(0, 5);
+        return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
+    }, [assignments]);
 
     const stats = useMemo(() => {
-        // Correction : S'assurer que `assignments` est un tableau avant de l'utiliser
         const safeAssignments = Array.isArray(assignments) ? assignments : [];
-
         if (!classes || !safeAssignments || !todaySchedule) {
             return [];
         }
@@ -132,21 +167,14 @@ const Dashboard = () => {
         ];
     }, [classes, todaySchedule, assignments]);
 
-    const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
-        // Correction : S'assurer que `assignments` est un tableau avant de l'utiliser
-        const safeAssignments = Array.isArray(assignments) ? assignments : [];
-        if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
 
-        const toCorrect = safeAssignments.filter(a => a.is_completed && !a.is_corrected);
-        const upcoming = safeAssignments
-            .filter(a => !a.is_completed)
-            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
-            .slice(0, 5);
-        return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
-    }, [assignments]);
-
+    const isLoading = loadingClasses || loadingJournal || loadingSchedule || loadingHolidays || loadingHours || loadingSchedules;
     if (!user) {
         return <div>Chargement...</div>;
+    }
+
+    if (isLoading) {
+        return <div className="dashboard-page"><div className="loading-message">Chargement...</div></div>;
     }
 
     return (
@@ -159,7 +187,13 @@ const Dashboard = () => {
             <div className="dashboard-content">
                 <div className="dashboard-columns">
                     <div className="column main-column margin-bottom-lg">
-                        <ScheduleSection />
+                        <TodayScheduleSection
+                            todaySchedule={todaySchedule}
+                            holidayInfo={holidayInfo}
+                            getClassColor={getClassColor}
+                            classes={classes}
+                            loading={loadingSchedule || loadingHours}
+                        />
                     </div>
                     <div className="column side-column">
                         <NoteSection />

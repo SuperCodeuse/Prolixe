@@ -4,11 +4,12 @@ import { useJournal } from '../../hooks/useJournal';
 import { useClasses } from '../../hooks/useClasses';
 import { useScheduleHours } from '../../hooks/useScheduleHours';
 import { useSchedule } from '../../hooks/useSchedule';
+import useScheduleModel from '../../hooks/useScheduleModel';
 import { useToast } from '../../hooks/useToast';
 import { useHolidays } from '../../hooks/useHolidays';
 import JournalPicker from './JournalPicker';
 import ConfirmModal from '../ConfirmModal';
-import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay, isAfter, isBefore, min, max } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek, parseISO, getDay, isAfter, isBefore, min, max, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Journal = () => {
@@ -21,12 +22,39 @@ const JournalView = () => {
     const journalId = currentJournal?.id;
     const { classes, getClassColor } = useClasses(journalId);
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
-    const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule();
+    const { schedules, loading: loadingSchedules } = useScheduleModel();
     const { success, error: showError } = useToast();
     const { getHolidayForDate, holidays, loading: loadingHolidays } = useHolidays();
 
     // --- STATES ---
     const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1, locale: fr }));
+
+    // Fonction pour déterminer le schedule_set actif pour la semaine courante
+    const getScheduleSetForWeek = useCallback((weekStartDate) => {
+        if (!schedules || schedules.length === 0) return null;
+
+        const scheduleSet = schedules.find(schedule => {
+            try {
+                const startDate = parseISO(schedule.start_date);
+                const endDate = parseISO(schedule.end_date);
+                return isWithinInterval(weekStartDate, { start: startDate, end: endDate });
+            } catch (e) {
+                console.error('Erreur de parsing des dates du schedule:', schedule, e);
+                return false;
+            }
+        });
+
+        return scheduleSet || null;
+    }, [schedules]);
+
+    // Déterminer le schedule_set actif pour la semaine courante
+    const currentScheduleSet = useMemo(() => {
+        return getScheduleSetForWeek(currentWeekStart);
+    }, [getScheduleSetForWeek, currentWeekStart]);
+
+    // Utiliser le hook useSchedule avec le scheduleSetId approprié
+    const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule(currentScheduleSet?.id);
+
     const [showAssignmentModal, setShowAssignmentModal] = useState(false);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [assignmentForm, setAssignmentForm] = useState({ id: null, class_id: '', subject: '', type: 'Devoir', description: '', due_date: '', is_completed: false, is_corrected: false });
@@ -341,14 +369,14 @@ const JournalView = () => {
     }, [assignmentForm.class_id, currentWeekStart, isCourseDayForClass, getHolidayForDate]);
 
     useEffect(() => {
-        if (loadingSchedule || loadingHolidays || !currentJournal) return;
-        if (!errorSchedule && schedule) {
+        if (loadingSchedule || loadingHolidays || !currentJournal || loadingSchedules) return;
+        if (!errorSchedule && schedule && currentScheduleSet) {
             const startDate = format(currentWeekStart, 'yyyy-MM-dd');
             const endDate = format(endOfWeek(currentWeekStart, { weekStartsOn: 1, locale: fr }), 'yyyy-MM-dd');
             fetchJournalEntries(startDate, endDate);
             fetchAssignments(null, startDate, endDate);
         }
-    }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, fetchJournalEntries, fetchAssignments, currentJournal]);
+    }, [currentWeekStart, schedule, loadingSchedule, errorSchedule, loadingHolidays, loadingSchedules, fetchJournalEntries, fetchAssignments, currentJournal, currentScheduleSet]);
 
     const handleDeleteJournalEntry = useCallback(async () => {
         if (!currentJournalEntryId || isArchived) return;
@@ -401,15 +429,28 @@ const JournalView = () => {
         setConfirmModal({ isOpen: true, title: 'Supprimer l\'assignation', message: 'Êtes-vous sûr de vouloir supprimer cette assignation ?', onConfirm: handleDeleteAssignment });
     }, [handleDeleteAssignment, isArchived]);
 
-    const isLoading = loadingHours || loadingSchedule || loadingHolidays;
+    const isLoading = loadingHours || loadingSchedule || loadingHolidays || loadingSchedules;
     if (isLoading) return <div className="journal-page"><div className="loading-message">Chargement...</div></div>;
     if (errorHours || errorSchedule) return <div className="journal-page"><div className="error-message">Erreur de chargement des données.</div></div>;
 
     const hasSchedule = schedule?.data && Object.keys(schedule.data).length > 0;
+    const hasValidScheduleSet = !!currentScheduleSet;
+
     return (
         <div className="journal-page">
             <div className="journal-header">
-                <div className="journal-header-left"><h1>{currentJournal?.name}</h1></div>
+                <div className="journal-header-left">
+                    <h1>{currentJournal?.name}</h1>
+                    {currentScheduleSet ? (
+                        <div className="week-navigation schedule-set-indicator">
+                            <span>{currentScheduleSet.name.toUpperCase()}</span>
+                        </div>
+                    ) : (
+                        <div className="schedule-set-indicator warning">
+                            <small>⚠️ Aucun emploi du temps configuré pour cette période</small>
+                        </div>
+                    )}
+                </div>
                 <div className="week-navigation">
                     <button className="btn-secondary" onClick={goToStart} disabled={isPrevDisabled} title="Aller au début">&lt;&lt;</button>
                     <button className="btn-secondary" onClick={() => navigateWeek(-1)} disabled={isPrevDisabled} title="Semaine précédente">&lt; Précédent</button>
@@ -423,7 +464,7 @@ const JournalView = () => {
                 <div className="weekly-agenda-section">
                     <h2>Journal des cours</h2>
                     <div className="journal-days-container">
-                        {hasSchedule ? (
+                        {hasValidScheduleSet && hasSchedule ? (
                             weekDays.map(day => {
                                 const dayKeyForSchedule = day.dayOfWeekKey;
                                 const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
@@ -483,9 +524,14 @@ const JournalView = () => {
                                     </div>
                                 );
                             })
+                        ) : !hasValidScheduleSet ? (
+                            <div className="no-schedule-set-message">
+                                <p>Aucun emploi du temps n'est configuré pour cette période.</p>
+                                <p>Veuillez configurer un emploi du temps qui couvre les dates du {format(currentWeekStart, 'dd/MM/yyyy', { locale: fr })} au {format(addDays(currentWeekStart, 4), 'dd/MM/yyyy', { locale: fr })}.</p>
+                            </div>
                         ) : (
                             <div className="no-courses-message">
-                                <p>Votre emploi du temps semble vide.</p>
+                                <p>L'emploi du temps "{currentScheduleSet?.name}" semble vide.</p>
                                 <p>Veuillez le configurer pour pouvoir utiliser le journal de classe.</p>
                             </div>
                         )}
