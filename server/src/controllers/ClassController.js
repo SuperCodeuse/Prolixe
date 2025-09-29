@@ -185,13 +185,20 @@ class ClassController {
                     throw err;
                 }
 
+                console.log('name', name.trim());
+                console.log('journal_id', journal_id);
+                console.log('userId', userId);
+                console.log('subject', subject);
+                console.log('students', students);
+                console.log('level', level);
+
                 const [result] = await connection.execute(
-                    'INSERT INTO CLASS (name, students, level, journal_id, user_id, subject) VALUES (?, ?, ?, ?, ?, ?)',
-                    [name.trim(), parseInt(students), parseInt(level), parseInt(journal_id), userId, subject]
+                    'INSERT INTO CLASS (name, students, level, journal_id, user_id) VALUES (?, ?, ?, ?, ?)',
+                    [name.trim(), parseInt(students), parseInt(level), parseInt(journal_id), userId]
                 );
 
                 const [newClassData] = await connection.execute(
-                    'SELECT id, name, students, level, subject FROM CLASS WHERE id = ?',
+                    'SELECT id, name, students, level FROM CLASS WHERE id = ?',
                     [result.insertId]
                 );
 
