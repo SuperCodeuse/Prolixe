@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const apiClient = axios.create({
     //baseURL: 'http://localhost:5000/api',
-    baseURL: process.env.REACT_APP_API_URL,
+    baseURL: '/api',
 });
 
 // Intercepteur pour ajouter le token JWT à chaque requête
