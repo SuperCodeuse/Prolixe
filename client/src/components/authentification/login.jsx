@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth'; // Assurez-vous du chemin
 import { useToast } from '../../hooks/useToast'; // Pour les notifications
-import './login.scss'; // Votre fichier CSS pour le formulaire de connexion
+import './login.scss';
+import {Link} from "react-router-dom"; // Votre fichier CSS pour le formulaire de connexion
 
 const Login = () => {
     const { login } = useAuth();
@@ -69,6 +70,9 @@ const Login = () => {
                         {isSubmitting ? 'Connexion en cours...' : 'Se connecter'}
                     </button>
                 </form>
+                <p>
+                    Créer un compte? <Link to="/register">S'inscrire</Link>
+                </p>
             </div>
         </div>
     );
