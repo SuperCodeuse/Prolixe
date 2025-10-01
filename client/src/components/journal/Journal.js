@@ -34,10 +34,16 @@ const JournalView = () => {
         if (!schedules || schedules.length === 0) return null;
 
         const scheduleSet = schedules.find(schedule => {
+            console.log("start ");
             try {
                 const startDate = parseISO(schedule.start_date);
                 const endDate = parseISO(schedule.end_date);
-                return isWithinInterval(weekStartDate, { start: startDate, end: endDate });
+                console.log("start ", startDate);
+                console.log("end ", endDate);
+                console.log("weekStartDate ", weekStartDate);
+                let interval = isWithinInterval(weekStartDate, { start: startDate, end: endDate });
+                console.log("interval ", interval);
+                return interval;
             } catch (e) {
                 console.error('Erreur de parsing des dates du schedule:', schedule, e);
                 return false;
