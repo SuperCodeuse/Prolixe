@@ -430,6 +430,13 @@ const JournalView = () => {
     }, [handleDeleteAssignment, isArchived]);
 
     const isLoading = loadingHours || loadingSchedule || loadingHolidays || loadingSchedules;
+    console.log('isLoading', isLoading);
+
+    console.log("loading hours : ", loadingHours);
+    console.log("loading scheduole : ", loadingSchedule);
+    console.log("loading ollidays : ", loadingHolidays);
+    console.log("loading scheduolessss : ", loadingSchedules);
+    
     if (isLoading) return <div className="journal-page"><div className="loading-message">Chargement...</div></div>;
     if (errorHours || errorSchedule) return <div className="journal-page"><div className="error-message">Erreur de chargement des données.</div></div>;
 
