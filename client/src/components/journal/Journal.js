@@ -50,6 +50,8 @@ const JournalView = () => {
             }
         });
 
+        console.log("scheduleSet ; ", scheduleSet);
+
         return scheduleSet || null;
     }, [schedules]);
 
