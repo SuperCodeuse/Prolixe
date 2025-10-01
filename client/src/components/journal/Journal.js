@@ -33,6 +33,7 @@ const JournalView = () => {
     const getScheduleSetForWeek = useCallback((weekStartDate) => {
         if (!schedules || schedules.length === 0) return null;
 
+        console.log("schedules : ", schedules);
         const scheduleSet = schedules.find(schedule => {
             try {
                 console.log("schedule.start_date ; ", schedule.start_date);
