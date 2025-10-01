@@ -24,7 +24,6 @@ export const useSchedule = (scheduleSetId) => {
         setError(null);
         try {
             const data = await scheduleService.getSchedule(currentJournal.id, scheduleSetId);
-            console.log("data : ", data);
             let dataObject = data.data;
             setSchedule(dataObject);
         } catch (err) {

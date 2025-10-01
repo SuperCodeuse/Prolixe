@@ -35,6 +35,11 @@ const JournalView = () => {
 
         const scheduleSet = schedules.find(schedule => {
             try {
+                console.log("schedule.start_date ; ", schedule.start_date);
+                console.log("schedule.start_date ; ", schedule.end_date);
+
+                console.log("schedule ; ", schedule);
+
                 const startDate = parseISO(schedule.start_date);
                 const endDate = parseISO(schedule.end_date);
                 let interval = isWithinInterval(weekStartDate, { start: startDate, end: endDate });
