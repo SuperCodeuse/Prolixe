@@ -23,7 +23,7 @@ const ScheduleSection = () => {
         const todayKey = format(new Date(), 'eeee', { locale: enGB }).toLowerCase();
         const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
 
-        // MODIFICATION ICI: Tri des cours par time_slot_id
+        // MODIFICATION ICI: Tri des cours par time_slot_id en tant que nombre
         return courses.map(course => {
             const journalEntry = journalEntries.find(entry =>
                 entry.schedule_id === course.id &&
@@ -37,7 +37,7 @@ const ScheduleSection = () => {
                 isCancelled: isCancelled,
                 cancellationNotes: isCancelled ? journalEntry.notes : null
             };
-        }).sort((a, b) => a.time_slot_id - b.time_slot_id); // Tri par ID numérique
+        }).sort((a, b) => parseInt(a.time_slot_id) - parseInt(b.time_slot_id)); // Utilisation de parseInt() pour un tri numérique
     }, [schedule, journalEntries, todayStr, classes, holidayInfo]);
 
     const isLoading = loadingJournal || loadingClasses || loadingSchedule || loadingHolidays;
