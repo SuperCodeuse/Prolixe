@@ -33,14 +33,8 @@ const JournalView = () => {
     const getScheduleSetForWeek = useCallback((weekStartDate) => {
         if (!schedules || schedules.length === 0) return null;
 
-        console.log("schedules : ", schedules);
         const scheduleSet = schedules.find(schedule => {
             try {
-                console.log("schedule.start_date ; ", schedule.start_date);
-                console.log("schedule.start_date ; ", schedule.end_date);
-
-                console.log("schedule ; ", schedule);
-
                 const startDate = parseISO(schedule.start_date);
                 const endDate = parseISO(schedule.end_date);
                 let interval = isWithinInterval(weekStartDate, { start: startDate, end: endDate });
@@ -56,15 +50,9 @@ const JournalView = () => {
 
     // Déterminer le schedule_set actif pour la semaine courante
     const currentScheduleSet = useMemo(() => {
-        console.log("currentWeekStart ; ", currentWeekStart);
         let getschedule = getScheduleSetForWeek(currentWeekStart);
-        console.log("getschedule ; ", getschedule);
         return getschedule;
     }, [getScheduleSetForWeek, currentWeekStart]);
-
-    // Utiliser le hook useSchedule avec le scheduleSetId approprié
-    console.log("currentScheduleSet ; ", currentScheduleSet);
-    console.log("currentScheduleSet ; ", currentScheduleSet?.id);
 
     const { schedule, loading: loadingSchedule, error: errorSchedule } = useSchedule(currentScheduleSet?.id);
 
@@ -125,17 +113,21 @@ const JournalView = () => {
         });
     }, [currentWeekStart, getDayKeyFromDateFnsString, getHolidayForDate]);
 
+    // MODIFICATION ICI: Tri des cours par time_slot_id
     const getCoursesGroupedByDay = useMemo(() => {
         const grouped = {};
         Object.values(schedule.data || {}).forEach(course => {
             if (!grouped[course.day]) grouped[course.day] = [];
             grouped[course.day].push(course);
         });
+
         for (const dayKey in grouped) {
-            grouped[dayKey].sort((a, b) => (hours.find(h => h.libelle === a.time_slot_libelle)?.order || 0) - (hours.find(h => h.libelle === b.time_slot_libelle)?.order || 0));
+            // Tri par time_slot_id
+            grouped[dayKey].sort((a, b) => a.time_slot_id - b.time_slot_id);
         }
         return grouped;
-    }, [schedule, hours]);
+    }, [schedule]); // hours n'est plus nécessaire dans la dépendance
+
 
     const getJournalEntry = useCallback((scheduleId, dateKey) => {
         if (!Array.isArray(journalEntries)) {

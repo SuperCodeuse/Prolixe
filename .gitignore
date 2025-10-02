@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 /.idea/*
 /server/.env
 /client/build
+/client/src/api/axiosConfig.js
+/server/.env

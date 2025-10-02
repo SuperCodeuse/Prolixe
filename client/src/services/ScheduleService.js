@@ -9,7 +9,6 @@ const ScheduleService = {
      * @returns {Promise<object>}
      */
     getSchedule: (journalId, scheduleSetId) => {
-        console.log("scheduleSetid : ", scheduleSetId);
         return apiClient.get('/schedule', {
             params: {
                 journal_id: journalId,
@@ -49,7 +48,6 @@ const ScheduleService = {
      * @returns {Promise<object>}
      */
     changeCourse: (data) => {
-        console.log("data : ", data);
         return apiClient.put('/schedule/change', data);
     },
 };
