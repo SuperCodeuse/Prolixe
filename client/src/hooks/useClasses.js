@@ -81,15 +81,28 @@ export const useClasses = (journalId) => {
     // Les fonctions utilitaires restent identiques
     const getClassColor = (subject, level) => {
         const extendedColors = {
-            'Informatique_3': '#93C5FD', 'Informatique_4': '#1D4ED8', 'Informatique_5': '#1E3A8A', 'Informatique_6': '#0F172A',
+            'TIC_3': '#93C5FD', 'TIC_4': '#1D4ED8', 'TIC_5': '#1E3A8A', 'TIC_6': '#0F172A',
+            'Labo Ch._3': '#93C5FD', 'Labo Ch._4': '#1D4ED8', 'Labo Ch._5': '#1E3A8A', 'Labo Ch._6': '#0F172A',
             'Exp.logiciels_3': '#FDBA74', 'Exp.logiciels_4': '#D97706', 'Exp.logiciels_5': '#B45309', 'Exp.logiciels_6': '#78350F',
-            'Programmation_3': '#C4B5FD', 'Programmation_4': '#7C3AED', 'Programmation_5': '#5B21B6', 'Programmation_6': '#3C1363',
-            'Database_3': '#86EFAC', 'Database_4': '#059669', 'Database_5': '#047857', 'Database_6': '#064E3B',
+            'Chimie_3': '#FDBA74', 'Chimie_4': '#D97706', 'Chimie_5': '#B45309', 'Chimie_6': '#78350F',
+            'Info_3': '#C4B5FD', 'Info_4': '#7C3AED', 'Info_5': '#5B21B6', 'Info_6': '#3C1363',
+            'Sciences 3H_3': '#C4B5FD', 'Sciences 3H_4': '#7C3AED', 'Sciences 3H_5': '#5B21B6', 'Sciences 3H_6': '#3C1363',
+            'Sciences_3': '#F3B0E9', 'Sciences_4': '#b9109d', 'Sciences_5': '#6B0B5A', 'Sciences_6': '#3C0530',
+            'Txt_3': '#F3B0E9', 'Txt_4': '#b9109d', 'Txt_5': '#6B0B5A', 'Txt_6': '#3C0530',
+            'Labo Phys._3': '#86EFAC', 'Labo Phys._4': '#059669', 'Labo Phys._5': '#047857', 'Labo Phys._6': '#064E3B',
+            'Physique_3': '#047857', 'Physique_4': '#03695C', 'Physique_5': '#05504E', 'Physique_6': '#06363F',
+
             'default': '#475569'
         };
         const combinationKey = `${subject}_${level}`;
         if (extendedColors[combinationKey]) return extendedColors[combinationKey];
-        const baseSubjectColorsFallback = { 'Informatique': '#3B82F6', 'Exp.logiciels': '#F59E0B', 'Programmation': '#8B5CF6', 'Database': '#10B981' };
+        const baseSubjectColorsFallback = {
+            'TIC': '#3B82F6',
+            'Txt' : '#b9109d',
+            'Exp.logiciels': '#F59E0B',
+            'Info': '#8B5CF6',
+            'Labo Phys.': '#10B981'
+        };
         return baseSubjectColorsFallback[subject] || extendedColors.default;
     };
 

@@ -71,7 +71,7 @@ const Horaire = () => {
     }, [schedules, selectedScheduleId]);
 
 
-    const subjects = ['Programmation', 'Informatique', 'Exp.logiciels', 'Database'];
+    const subjects = ['TIC', 'Info', 'Exp.logiciels', 'Txt', 'Labo Phys.', 'Labo Ch.', 'Chimie', 'Physique', 'Sciences 3H', 'Sciences'];
     const timeSlots = getSortedHours().map(hour => hour.libelle);
 
     const daysOfWeek = [

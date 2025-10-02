@@ -136,7 +136,7 @@ const Dashboard = () => {
 
         return sortedCourses;
     }, [schedule, journalEntries, todayStr, classes, holidayInfo, getDayKeyFromDateFnsString]);
-    
+
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
         const safeAssignments = Array.isArray(assignments) ? assignments : [];
         if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
