@@ -23,7 +23,6 @@ const ScheduleSection = () => {
         const todayKey = format(new Date(), 'eeee', { locale: enGB }).toLowerCase();
         const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
 
-        // MODIFICATION ICI: Tri des cours par time_slot_id en tant que nombre
         return courses.map(course => {
             const journalEntry = journalEntries.find(entry =>
                 entry.schedule_id === course.id &&
@@ -45,6 +44,8 @@ const ScheduleSection = () => {
     if (isLoading) {
         return <div className="loading"><div className="spinner"></div><p>Chargement de l'horaire...</p></div>;
     }
+
+    console.log("course : ", todaySchedule);
 
     return (
         <div className="dashboard-section">
