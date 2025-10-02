@@ -45,8 +45,6 @@ const ScheduleSection = () => {
         return <div className="loading"><div className="spinner"></div><p>Chargement de l'horaire...</p></div>;
     }
 
-    console.log("course : ", todaySchedule);
-
     return (
         <div className="dashboard-section">
             <div className="section-header">

@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 
 const TodayScheduleSection = ({ todaySchedule, holidayInfo, getClassColor, classes, loading }) => {
     if (loading) {
+        todaySchedule.sort((a,b) => parseInt(a.time_slot_id) - parseInt(b.time_slot_id));
         return <div className="loading-message">Chargement de l'emploi du temps...</div>;
     }
 
@@ -29,6 +30,7 @@ const TodayScheduleSection = ({ todaySchedule, holidayInfo, getClassColor, class
         );
     }
 
+    console.log(todaySchedule);
     return (
         <div className="daily-schedule-section">
             <h2>Votre journée d'aujourd'hui</h2>
