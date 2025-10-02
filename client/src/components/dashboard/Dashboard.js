@@ -105,7 +105,7 @@ const Dashboard = () => {
     const holidayInfo = getHolidayForDate(new Date());
 
     const todaySchedule = useMemo(() => {
-        if (!schedule || !schedule.data || !classes || !hours || holidayInfo) return [];
+        if (!schedule || !schedule.data || !classes || holidayInfo) return [];
 
         const todayKey = getDayKeyFromDateFnsString(format(new Date(), 'EEEE', { locale: fr }).toLowerCase());
         const courses = Object.values(schedule.data).filter(course => course.day === todayKey);
@@ -130,14 +130,13 @@ const Dashboard = () => {
                 isInterro,
             };
         }).sort((a, b) => {
-            const orderA = hours.find(h => h.libelle === a.time_slot_libelle)?.order || 0;
-            const orderB = hours.find(h => h.libelle === b.time_slot_libelle)?.order || 0;
-            return orderA - orderB;
+            // Utilisation de parseInt() pour garantir un tri numérique fiable
+            return parseInt(a.time_slot_id) - parseInt(b.time_slot_id);
         });
 
         return sortedCourses;
-    }, [schedule, journalEntries, todayStr, classes, hours, holidayInfo, getDayKeyFromDateFnsString]);
-
+    }, [schedule, journalEntries, todayStr, classes, holidayInfo, getDayKeyFromDateFnsString]);
+    
     const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
         const safeAssignments = Array.isArray(assignments) ? assignments : [];
         if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
