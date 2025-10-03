@@ -470,7 +470,7 @@ const JournalView = () => {
                 <div className="weekly-agenda-section">
                     <h2>Journal des cours</h2>
                     <div className="journal-days-container">
-                        {hasValidScheduleSet && hasSchedule ? (
+                        {weekDays.some(day => day.isHoliday) || (hasValidScheduleSet && hasSchedule) ? (
                             weekDays.map(day => {
                                 const dayKeyForSchedule = day.dayOfWeekKey;
                                 const coursesForThisDay = getCoursesGroupedByDay[dayKeyForSchedule] || [];
