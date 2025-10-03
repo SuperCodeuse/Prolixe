@@ -1,5 +1,37 @@
 /* _journal-mobile.scss - Styles mobiles spécifiques au Journal */
 
+@media (max-width: 1024px) {
+  .journal-page .journal-days-container {
+    flex-direction: column;
+    min-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .journal-page .day-column {
+    min-width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .journal-page .day-column:last-child {
+    border-bottom: none;
+  }
+
+  .journal-page .day-header-journal {
+    border-radius: 0.5rem 0.5rem 0 0;
+  }
+
+  .journal-page .day-column.is-holiday .day-header-journal {
+    border-bottom: none;
+  }
+
+  .journal-page .holiday-card {
+    border-radius: 0 0 0.5rem 0.5rem;
+  }
+}
+
+
 @media (max-width: 768px) {
   .journal-header {
     h1 {
@@ -20,9 +52,5 @@
     span {
       font-size: 0.9rem;
     }
-  }
-
-  .journal-page .journal-days-container{
-    flex-direction: column;
   }
 }

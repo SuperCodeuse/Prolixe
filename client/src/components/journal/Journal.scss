@@ -67,13 +67,9 @@
   }
 
   .journal-content {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex; /* Utilisation de flexbox pour une meilleure adaptabilité */
+    flex-direction: column;
     gap: 2rem;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr;
-    }
   }
 
   /* Section des assignations / devoirs */
@@ -174,16 +170,15 @@
 
   /* NOUVEAU CONTENEUR POUR LES JOURS */
   .journal-days-container {
-    display: flex; /* Utilise flexbox pour aligner les jours horizontalement */
-    gap: 1rem; /* Espace entre chaque colonne de jour */
-    overflow-x: auto; /* Permet le défilement horizontal si trop de jours */
-    padding-bottom: 0.5rem; /* Espace pour la scrollbar */
-    // background: var(--bg-dark-secondary); /* Un fond pour le conteneur global des jours si besoin */
+    display: flex;
+    flex-wrap: wrap; /* Permet aux éléments de passer à la ligne */
+    gap: 1rem;
     border-radius: 0.5rem;
-    border: 1px solid var(--border-color); /* Bordure autour de l'ensemble des jours */
+    border: 1px solid var(--border-color);
     min-height: 12.5rem;
+    background: var(--bg-dark-secondary); /* Fond pour le conteneur global des jours */
 
-    /* Styles de la scrollbar */
+    /* Styles de la scrollbar (si nécessaire) */
     &::-webkit-scrollbar {
       height: 8px;
     }
@@ -202,18 +197,15 @@
 
   /* Styles pour chaque colonne de jour */
   .day-column {
-    flex: 1;
-    min-width: 250px;
+    flex: 1 1; /* Utilise 'flex-grow', 'flex-shrink' et 'flex-basis' */
     min-height: 12rem;
     display: flex;
     flex-direction: column;
-    background: var(--bg-dark-secondary); /* Fond pour la colonne du jour */
-    border-right: 1px solid var(--border-color); /* Séparateur entre les jours */
+    border-right: 1px solid var(--border-color);
     &:last-child {
-      border-right: none; /* Pas de bordure sur la dernière colonne */
+      border-right: none;
     }
 
-    // Arrondir les coins de la première et dernière colonne si elles sont les seules
     &:first-child {
       border-top-left-radius: 0.5rem;
       border-bottom-left-radius: 0.5rem;
@@ -232,16 +224,16 @@
     font-weight: 600;
     text-align: center;
     font-size: 1rem;
-    border-bottom: 1px solid var(--border-color); /* Séparateur sous l'en-tête */
+    border-bottom: 1px solid var(--border-color);
   }
 
   /* Liste des cours pour un jour donné */
   .day-courses-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* Espace entre les cours dans une même colonne de jour */
-    padding: 0.75rem; /* Padding interne pour les cours */
-    flex-grow: 1; /* Permet à la liste de prendre l'espace restant verticalement */
+    gap: 0.75rem;
+    padding: 0.75rem;
+    flex-grow: 1;
   }
 
   /* Message si aucun cours pour un jour spécifique */
@@ -260,12 +252,12 @@
   .journal-slot {
     background: var(--white-transparent-sm);
     border: 1px solid var(--border-color);
-    border-left: 5px solid; /* Bordure gauche colorée par JS */
+    border-left: 5px solid;
     border-radius: 0.5rem;
     padding: 0.75rem;
-    min-height: 80px; /* Hauteur minimale pour les slots */
+    min-height: 80px;
     position: relative;
-    cursor: pointer; /* Indique qu'il est cliquable */
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -409,7 +401,6 @@
     text-align: center;
     color: var(--text-muted);
     font-size: 1.1rem;
-    //grid-column: 1 / -1; /* Permet au message de prendre toute la largeur de la grille */
   }
 }
 
@@ -420,14 +411,12 @@
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 
-  // Style de base pour le paragraphe
   .preview-text {
     margin: 0;
     font-size: 0.8rem;
     white-space: pre-wrap;
     word-break: break-word;
 
-    // --- Logique pour tronquer le texte après 3 lignes ---
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -435,13 +424,11 @@
     text-overflow: ellipsis;
   }
 
-  // Style spécifique pour le travail PRÉVU
   &.planned-work .preview-text {
-    color: var(--text-gray); // Texte plus discret
+    color: var(--text-gray);
     font-style: italic;
   }
 
-  // Style spécifique pour le travail EFFECTUÉ
   &.actual-work .preview-text {
     color: var(--accent-green);
     accent-color: var(--accent-green);
@@ -551,25 +538,11 @@ textarea {
   }
 }
 
-// client/src/components/journal/Journal.scss
-
-// ... (tous les styles existants)
-
-/* Styles des cellules de cours individuelles */
-.journal-slot {
-  // ...
-  &.is-cancelled {
-    // ...
-  }
-
-  // AJOUT : Styles pour un créneau d'examen
-  &.is-exam {
-    background-color: rgba(var(--accent-orange-rgb), 0.1);
-    .course-summary { display: none; } // Masquer les détails du cours
-  }
+.journal-slot.is-exam {
+  background-color: rgba(var(--accent-orange-rgb), 0.1);
 }
 
-.cancellation-display { // Style générique pour les statuts spéciaux
+.cancellation-display {
   width: 100%;
   height: 100%;
   display: flex;
@@ -596,29 +569,13 @@ textarea {
 }
 
 .journal-slot.is-interro {
-  background-color: rgba(139, 92, 246, 0.15); // Un fond violet très léger
-  border-left-color: #8B5CF6; // Une bordure violette plus prononcée
-
-  .course-summary .course-details .course-title-display::after {
-    content: " (Interro)";
-    font-weight: 500;
-    font-style: italic;
-    color: #a78bfa; // Texte violet clair
-    font-size: 0.8rem;
-    margin-left: 6px;
-  }
-}
-
-// Dans Journal.scss, à la fin du fichier
-
-.journal-slot.is-interro {
   background-color: rgba(139, 92, 246, 0.15);
   border-left-color: #8B5CF6;
+}
 
-  .interro-prefix {
-    font-weight: 500;
-    color: #a78bfa;
-    font-size: 0.9rem; // Légèrement plus petit que le titre
-    margin-right: 6px;
-  }
+.interro-prefix {
+  font-weight: 500;
+  color: #a78bfa;
+  font-size: 0.9rem;
+  margin-right: 6px;
 }
