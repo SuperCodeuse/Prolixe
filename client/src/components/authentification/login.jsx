@@ -12,6 +12,7 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false); // Ajout du nouvel état pour la case à cocher
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -65,6 +66,15 @@ const Login = () => {
                             disabled={isSubmitting}
                             required
                         />
+                    </div>
+                    <div className="form-group remember-me-group">
+                        <input
+                            type="checkbox"
+                            id="rememberMe"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        <label htmlFor="rememberMe">Rester connecté</label>
                     </div>
                     <button type="submit" className="btn btn-primary login-btn" disabled={isSubmitting}>
                         {isSubmitting ? 'Connexion en cours...' : 'Se connecter'}

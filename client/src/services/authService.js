@@ -2,11 +2,12 @@
 import ApiService from './api'; // Votre service API centralisé
 
 class AuthService {
-    static async login(username, password) {
+    static async login(username, password, rememberMe) { // Ajout du paramètre rememberMe
         try {
             const response = await ApiService.request('/auth/login', {
                 method: 'POST',
-                body: JSON.stringify({ username, password })
+                // Inclure la valeur de rememberMe dans le corps de la requête
+                body: JSON.stringify({ username, password, rememberMe })
             }, false);
             // Stocker le token et les infos utilisateur si la connexion est réussie
             if (response.success) {
