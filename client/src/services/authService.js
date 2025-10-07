@@ -6,10 +6,8 @@ class AuthService {
         try {
             const response = await ApiService.request('/auth/login', {
                 method: 'POST',
-                // Inclure la valeur de rememberMe dans le corps de la requête
                 body: JSON.stringify({ username, password, rememberMe })
             }, false);
-            // Stocker le token et les infos utilisateur si la connexion est réussie
             if (response.success) {
                 localStorage.setItem('authToken', response.token);
                 localStorage.setItem('user', JSON.stringify(response.user));

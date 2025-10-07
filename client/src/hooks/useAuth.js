@@ -36,9 +36,9 @@ export const AuthProvider = ({ children }) => {
         };
     }, [logout]);
 
-    const login = useCallback(async (username, password) => {
+    const login = useCallback(async (username, password, rememberMe) => {
         try {
-            const response = await AuthService.login(username, password);
+            const response = await AuthService.login(username, password, rememberMe);
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);

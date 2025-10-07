@@ -2,6 +2,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
+// Définir les durées d'expiration pour les tokens
+const SHORT_LIVED_TOKEN_EXPIRATION = '1h'; // 1 heure par défaut
+const LONG_LIVED_TOKEN_EXPIRATION = '30d'; // 30 jours pour "Rester connecté"
 
 class AuthController {
 
@@ -17,7 +20,10 @@ class AuthController {
     }
 
     static async login(req, res) {
-        const { username, password } = req.body;
+        // Ajout de 'rememberMe' au destructuring du corps de la requête
+        const { username, password, rememberMe } = req.body;
+        console.log(rememberMe);
+
         const pool = req.pool;
 
         if (!username || !password) {
@@ -49,7 +55,10 @@ class AuthController {
                 name: user.name
             };
 
-            const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '1h' });
+            // Déterminer la durée d'expiration du token en fonction de 'rememberMe'
+            const expiresIn = rememberMe ? LONG_LIVED_TOKEN_EXPIRATION : SHORT_LIVED_TOKEN_EXPIRATION;
+
+            const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: expiresIn });
 
             res.json({
                 success: true,

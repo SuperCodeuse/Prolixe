@@ -12,7 +12,7 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false); // Ajout du nouvel état pour la case à cocher
+    const [rememberMe, setRememberMe] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -25,7 +25,7 @@ const Login = () => {
         }
 
         try {
-            const result = await login(email, password);
+            const result = await login(email, password, rememberMe);
             if (!result.success) {
                 showError(result.message || 'Échec de la connexion. Veuillez réessayer.', 'error');
             }
