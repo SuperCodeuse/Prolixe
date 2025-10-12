@@ -1,5 +1,5 @@
 // client/src/components/Correction/CorrectionList.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getEvaluations, createEvaluation, updateEvaluation, deleteEvaluation, getEvaluationForGrading } from '../../services/EvaluationService';
 import EvaluationModal from './EvaluationModal';
@@ -48,6 +48,33 @@ const CorrectionList = () => {
         fetchEvaluations();
     }, [fetchEvaluations]);
 
+    const groupedEvaluations = useMemo(() => {
+        const groups = {};
+        evaluations.forEach(evalu => {
+            const className = evalu.class_name || 'Sans classe';
+            const folderName = evalu.folder || 'Sans dossier';
+            if (!groups[className]) {
+                groups[className] = {};
+            }
+            if (!groups[className][folderName]) {
+                groups[className][folderName] = [];
+            }
+            groups[className][folderName].push(evalu);
+        });
+
+        // Tri pour un affichage stable
+        const sortedClasses = Object.keys(groups).sort();
+        const sortedGroups = {};
+        sortedClasses.forEach(className => {
+            const folders = Object.keys(groups[className]).sort();
+            sortedGroups[className] = {};
+            folders.forEach(folderName => {
+                sortedGroups[className][folderName] = groups[className][folderName].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
+            });
+        });
+
+        return sortedGroups;
+    }, [evaluations]);
 
     const handleOpenCreateModal = () => {
         setEditingEvaluation(null);
@@ -524,58 +551,50 @@ const CorrectionList = () => {
                 </div>
             ) : null}
 
-            {evaluations.length > 0 ? (
+            {Object.keys(groupedEvaluations).length > 0 ? (
                 <div className="evaluations-container">
-                    {evaluations.map(ev => (
-                        <div key={ev.id} className="evaluation-card">
-                            <div className="card-header">
-                                <h2>{ev.name}</h2>
-                                <div className="card-actions">
-                                    {!isArchivedYear && <button onClick={() => handleOpenEditModal(ev)} className="btn-edit" title="Modifier">✏️</button>}
-                                    <button onClick={() => handleOpenCopyModal(ev)} className="btn-copy" title="Copier">📄</button>
-                                    <button onClick={() => handleExportPDF(ev.id, ev.name)} className="btn-export" title="Exporter en PDF">
-                                        <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
-                                             width="512.000000pt" height="512.000000pt" viewBox="0 0 512.000000 512.000000"
-                                             preserveAspectRatio="xMidYMid meet">
-
-                                            <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)"
-                                               fill="#F5383F" stroke="none">
-                                                <path d="M518 4926 c-87 -24 -156 -85 -197 -176 -20 -45 -21 -57 -21 -2191 0
-                                                -2396 -6 -2195 72 -2284 22 -25 64 -58 92 -73 l51 -27 1600 0 1600 0 51 27
-                                                c60 32 118 93 148 157 l21 46 0 1325 c0 1097 -2 1334 -14 1380 -16 62 -52 140
-                                                -88 187 -31 40 -114 97 -183 125 -53 22 -68 23 -520 28 l-465 5 -55 26 c-70
-                                                33 -123 79 -156 135 -56 96 -57 106 -64 564 -6 410 -7 427 -29 488 -55 151
-                                                -173 239 -355 262 -114 15 -1431 11 -1488 -4z m955 -2402 c65 -11 138 -63 166
-                                                -117 34 -67 35 -182 2 -250 -49 -101 -128 -137 -298 -137 l-113 0 0 -150 0
-                                                -150 -130 0 -130 0 0 405 0 405 233 0 c127 0 249 -3 270 -6z m796 -4 c29 -5
-                                                69 -18 89 -27 59 -28 126 -102 153 -169 21 -52 23 -75 24 -204 0 -144 0 -146
-                                                -33 -212 -38 -78 -101 -138 -170 -164 -39 -14 -91 -18 -289 -22 l-243 -4 0
-                                                406 0 406 209 0 c114 0 232 -4 260 -10z m1021 -80 l0 -90 -180 0 -180 0 0 -70
-                                                0 -70 155 0 156 0 -3 -82 -3 -83 -152 -3 -153 -3 0 -159 0 -160 -130 0 -130 0
-                                                0 405 0 405 310 0 310 0 0 -90z"/>
-                                                <path d="M1230 2270 l0 -93 58 6 c31 2 69 10 84 17 51 24 60 97 16 136 -13 13
-                                                    -40 20 -89 22 l-69 4 0 -92z"/>
-                                                <path d="M2050 2119 l0 -222 70 6 c138 12 165 46 165 212 -1 138 -15 177 -77
-                                                    205 -26 12 -65 20 -100 20 l-58 0 0 -221z"/>
-                                                <path d="M2398 4830 c17 -25 46 -88 64 -140 l33 -95 5 -390 c7 -442 7 -447 86
-                                                    -534 25 -27 66 -60 92 -73 46 -23 53 -23 472 -29 477 -7 502 -10 621 -84 33
-                                                    -20 62 -35 64 -34 2 2 -267 265 -597 584 -881 852 -875 845 -840 795z"/>
-                                                    </g>
-                                        </svg>
-
-                                    </button>
-                                    {!isArchivedYear && <button onClick={() => handleDeleteClick(ev)} className="btn-delete" title="Supprimer">🗑️</button>}
+                    {Object.entries(groupedEvaluations).map(([className, classFolders]) => (
+                        <div key={className} className="class-group">
+                            <h2>Classe : {className}</h2>
+                            {Object.entries(classFolders).map(([folderName, folderEvaluations]) => (
+                                <div key={folderName} className="folder-group">
+                                    <h3><i className="fa-regular fa-folder"></i> {folderName}</h3>
+                                    <div className="evaluations-grid">
+                                        {folderEvaluations.map(ev => (
+                                            <div key={ev.id} className="evaluation-card">
+                                                <div className="card-header">
+                                                    <h2>{ev.name}</h2>
+                                                    <div className="card-actions">
+                                                        {!isArchivedYear && <button onClick={() => handleOpenEditModal(ev)} className="btn-edit" title="Modifier">✏️</button>}
+                                                        <button onClick={() => handleOpenCopyModal(ev)} className="btn-copy" title="Copier">📄</button>
+                                                        <button onClick={() => handleExportPDF(ev.id, ev.name)} className="btn-export" title="Exporter en PDF">
+                                                            <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="512.000000pt" height="512.000000pt" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet">
+                                                                <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#F5383F" stroke="none">
+                                                                    <path d="M518 4926 c-87 -24 -156 -85 -197 -176 -20 -45 -21 -57 -21 -2191 0 -2396 -6 -2195 72 -2284 22 -25 64 -58 92 -73 l51 -27 1600 0 1600 0 51 27 c60 32 118 93 148 157 l21 46 0 1325 c0 1097 -2 1334 -14 1380 -16 62 -52 140 -88 187 -31 40 -114 97 -183 125 -53 22 -68 23 -520 28 l-465 5 -55 26 c-70 33 -123 79 -156 135 -56 96 -57 106 -64 564 -6 410 -7 427 -29 488 -55 151 -173 239 -355 262 -114 15 -1431 11 -1488 -4z m955 -2402 c65 -11 138 -63 166 -117 34 -67 35 -182 2 -250 -49 -101 -128 -137 -298 -137 l-113 0 0 -150 0 -150 -130 0 -130 0 0 405 0 405 233 0 c127 0 249 -3 270 -6z m796 -4 c29 -5 69 -18 89 -27 59 -28 126 -102 153 -169 21 -52 23 -75 24 -204 0 -144 0 -146 -33 -212 -38 -78 -101 -138 -170 -164 -39 -14 -91 -18 -289 -22 l-243 -4 0 406 0 406 209 0 c114 0 232 -4 260 -10z m1021 -80 l0 -90 -180 0 -180 0 0 -70 0 -70 155 0 156 0 -3 -82 -3 -83 -152 -3 -153 -3 0 -159 0 -160 -130 0 -130 0 0 405 0 405 310 0 310 0 0 -90z"/>
+                                                                    <path d="M1230 2270 l0 -93 58 6 c31 2 69 10 84 17 51 24 60 97 16 136 -13 13 -40 20 -89 22 l-69 4 0 -92z"/>
+                                                                    <path d="M2050 2119 l0 -222 70 6 c138 12 165 46 165 212 -1 138 -15 177 -77 205 -26 12 -65 20 -100 20 l-58 0 0 -221z"/>
+                                                                    <path d="M2398 4830 c17 -25 46 -88 64 -140 l33 -95 5 -390 c7 -442 7 -447 86 -534 25 -27 66 -60 92 -73 46 -23 53 -23 472 -29 477 -7 502 -10 621 -84 33 -20 62 -35 64 -34 2 2 -267 265 -597 584 -881 852 -875 845 -840 795z"/>
+                                                                </g>
+                                                            </svg>
+                                                        </button>
+                                                        {!isArchivedYear && <button onClick={() => handleDeleteClick(ev)} className="btn-delete" title="Supprimer">🗑️</button>}
+                                                    </div>
+                                                </div>
+                                                <Link to={`/correction/${ev.id}`} className="card-link-area">
+                                                    <div className="card-body">
+                                                        <p><strong>Classe:</strong> {ev.class_name}</p>
+                                                        <p><strong>Dossier:</strong> {ev.folder || 'Sans dossier'}</p>
+                                                        <span className="card-date">{new Date(ev.evaluation_date).toLocaleDateString('fr-FR')}</span>
+                                                    </div>
+                                                    <div className="card-footer">
+                                                        <span>{isArchivedYear ? 'Visualiser' : 'Corriger'}</span>
+                                                    </div>
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <Link to={`/correction/${ev.id}`} className="card-link-area">
-                                <div className="card-body">
-                                    <p><strong>Classe:</strong> {ev.class_name}</p>
-                                    <span className="card-date">{new Date(ev.evaluation_date).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                                <div className="card-footer">
-                                    <span>{isArchivedYear ? 'Visualiser' : 'Corriger'}</span>
-                                </div>
-                            </Link>
+                            ))}
                         </div>
                     ))}
                 </div>

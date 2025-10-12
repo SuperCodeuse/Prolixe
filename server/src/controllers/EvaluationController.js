@@ -11,11 +11,11 @@ exports.getEvaluations = async (req, res) => {
 
     try {
         const [evaluations] = await db.query(`
-            SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name, c.id as class_id
+            SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name, c.id as class_id, e.folder
             FROM EVALUATIONS e
-            JOIN CLASS c ON e.class_id = c.id
+                     JOIN CLASS c ON e.class_id = c.id
             WHERE e.journal_id = ? AND e.user_id = ?
-            ORDER BY e.evaluation_date DESC
+            ORDER BY c.name, e.folder, e.evaluation_date DESC
         `, [journalId, user_id]);
         res.json({ success: true, data: evaluations });
     } catch (error) {
@@ -46,7 +46,7 @@ exports.getEvaluationById = async (req, res) => {
 };
 
 exports.createEvaluation = async (req, res) => {
-    const { name, class_id, journal_id, date, criteria } = req.body;
+    const { name, class_id, journal_id, date, criteria, folder } = req.body;
     const user_id = req.user.id;
 
     if (!name || !class_id || !date || !journal_id || !Array.isArray(criteria) || criteria.length === 0) {
@@ -71,8 +71,8 @@ exports.createEvaluation = async (req, res) => {
 
 
         const [evalResult] = await connection.query(
-            'INSERT INTO EVALUATIONS (name, class_id, journal_id, evaluation_date, user_id) VALUES (?, ?, ?, ?, ?)',
-            [name, class_id, journal_id, date, user_id]
+            'INSERT INTO EVALUATIONS (name, class_id, journal_id, evaluation_date, user_id, folder) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, class_id, journal_id, date, user_id, folder]
         );
         const evaluationId = evalResult.insertId;
 
@@ -89,7 +89,7 @@ exports.createEvaluation = async (req, res) => {
         await connection.commit();
 
         const [newEvaluation] = await connection.query(
-            'SELECT e.id, e.name, e.evaluation_date, c.name as class_name FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ? AND e.user_id = ?',
+            'SELECT e.id, e.name, e.evaluation_date, c.name as class_name, e.folder FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ? AND e.user_id = ?',
             [evaluationId, user_id]
         );
 
@@ -178,7 +178,7 @@ exports.saveGrades = async (req, res) => {
 
 exports.updateEvaluation = async (req, res) => {
     const { id } = req.params;
-    const { name, date, criteria } = req.body;
+    const { name, date, criteria, folder } = req.body;
     const user_id = req.user.id;
 
     if (!name || !date || !Array.isArray(criteria)) {
@@ -197,8 +197,8 @@ exports.updateEvaluation = async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE EVALUATIONS SET name = ?, evaluation_date = ? WHERE id = ? AND user_id = ?',
-            [name, date, id, user_id]
+            'UPDATE EVALUATIONS SET name = ?, evaluation_date = ?, folder = ? WHERE id = ? AND user_id = ?',
+            [name, date, folder, id, user_id]
         );
 
         await connection.query('DELETE FROM EVALUATION_CRITERIA WHERE evaluation_id = ?', [id]);
@@ -216,7 +216,7 @@ exports.updateEvaluation = async (req, res) => {
         await connection.commit();
 
         const [updatedEvaluation] = await connection.query(
-            'SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ? AND e.user_id = ?',
+            'SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name, e.folder FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ? AND e.user_id = ?',
             [id, user_id]
         );
 

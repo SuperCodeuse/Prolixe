@@ -21,6 +21,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
     const [isLoading, setIsLoading] = useState(false);
     const [templates, setTemplates] = useState([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
+    const [folder, setFolder] = useState('');
 
     // Effet pour réinitialiser l'état quand la modale est fermée
     useEffect(() => {
@@ -32,6 +33,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             setSelectedTemplateId('');
             setTemplates([]);
             setIsLoading(false);
+            setFolder('');
         }
     }, [isOpen]);
 
@@ -45,11 +47,12 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                 try {
                     let response = await getEvaluationById(evaluation.id);
                     response = response.data;
-                    const { name: evalName, class_id, evaluation_date, criteria: evalCriteria } = response.data;
+                    const { name: evalName, class_id, evaluation_date, criteria: evalCriteria, folder: evalFolder } = response.data;
                     setName(evalName);
                     setClassId(class_id);
                     setDate(new Date(evaluation_date).toISOString().split('T')[0]);
                     setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
+                    setFolder(evalFolder || '');
                 } catch (err) { showError("Erreur au chargement de l'évaluation."); }
                 finally { setIsLoading(false); }
             }
@@ -58,11 +61,12 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                 try {
                     let response = await getEvaluationById(evaluationToCopy.id);
                     response = response.data;
-                    const { name: evalName, class_id, criteria: evalCriteria } = response.data;
+                    const { name: evalName, class_id, criteria: evalCriteria, folder: evalFolder } = response.data;
                     setName(`Copie de ${evalName}`);
                     setClassId(class_id);
                     setDate(new Date().toISOString().split('T')[0]);
                     setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
+                    setFolder(evalFolder || '');
                 } catch (err) { showError("Erreur au chargement du modèle à copier."); }
                 finally { setIsLoading(false); }
             }
@@ -88,9 +92,10 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             try {
                 let response = await getEvaluationById(selectedTemplateId);
                 response = response.data;
-                const { name: evalName, criteria: evalCriteria } = response.data;
+                const { name: evalName, criteria: evalCriteria, folder: evalFolder } = response.data;
                 setName(evalName);
                 setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
+                setFolder(evalFolder || '');
             } catch (err) { showError("Erreur au chargement des détails du modèle."); }
             finally { setIsLoading(false); }
         };
@@ -104,6 +109,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
         if (!id) { // Si l'utilisateur choisit "Partir de zéro"
             setName('');
             setCriteria([{ label: '', max_score: '' }]);
+            setFolder('');
         }
     };
 
@@ -127,6 +133,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
             date,
             journal_id: journalId,
             criteria: criteria.filter(c => c.label && c.max_score),
+            folder,
         });
         setIsSaving(false);
     };
@@ -159,6 +166,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                             </div>
                         )}
                         <div className="form-group"><label>Nom</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+                        <div className="form-group"><label>Dossier (optionnel)</label><input type="text" value={folder} onChange={(e) => setFolder(e.target.value)} /></div>
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Classe</label>
