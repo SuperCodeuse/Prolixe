@@ -17,9 +17,10 @@ const Horaire = () => {
 
     const { hours, getSortedHours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { success, error: showError, toasts, removeToast } = useToast();
-    const { schedules, loading: loadingScheduleModels, error: errorScheduleModels } = useScheduleModel();
+    const { schedules, loading: loadingScheduleModels, error: errorScheduleModels, fetchSchedules } = useScheduleModel();
 
-    const [selectedScheduleId, setSelectedScheduleId] = useState(1);
+    const [selectedScheduleId, setSelectedScheduleId] = useState(null);
+    const [newScheduleName, setNewScheduleName] = useState('');
 
     const {
         schedule,
@@ -65,10 +66,14 @@ const Horaire = () => {
 
     // Gérer la sélection du premier emploi du temps par défaut
     useEffect(() => {
-        if (schedules && schedules.length > 0 && !selectedScheduleId) {
-            setSelectedScheduleId(schedules[0].id);
+        if (schedules && schedules.length > 0) {
+            // Tri les emplois du temps par ID pour s'assurer que le plus récent est en tête
+            const sortedSchedules = [...schedules].sort((a, b) => b.id - a.id);
+            if (!selectedScheduleId || !schedules.some(s => s.id === selectedScheduleId)) {
+                setSelectedScheduleId(sortedSchedules[0].id);
+            }
         }
-    }, [schedules, selectedScheduleId]);
+    }, [schedules, selectedScheduleId, fetchSchedule]);
 
 
     const subjects = ['TIC', 'Info', 'Exp.logiciels', 'Txt', 'Labo Phys.', 'Labo Ch.', 'Chimie', 'Physique', 'Sciences 3H', 'Sciences'];
@@ -393,6 +398,89 @@ const Horaire = () => {
         }
     };
 
+    const handleDuplicateSchedule = async () => {
+        if (!newScheduleName.trim()) {
+            showError('Veuillez donner un nom au nouvel emploi du temps.', 3000);
+            return;
+        }
+
+        // 🔑 AJOUT DE LA LOGIQUE DE TOKEN
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            showError("Erreur d'authentification: Jeton manquant. Veuillez vous reconnecter.", 5000);
+            return;
+        }
+
+        try {
+            // Définir des dates par défaut pour la création du modèle
+            const currentDate = moment().format('YYYY-MM-DD');
+            const defaultEndDate = moment().add(1, 'years').format('YYYY-MM-DD');
+
+            // Créer un nouvel horaire vide
+            const createResponse = await fetch('/api/schedules/models', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 🔑 ENVOI DU TOKEN DANS L'EN-TÊTE
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: newScheduleName,
+                    startDate: currentDate, // REQUIS PAR LE BACKEND
+                    endDate: defaultEndDate  // REQUIS PAR LE BACKEND
+                }),
+            });
+
+            if (!createResponse.ok) {
+                let errorMessage = `Échec de la création (Statut ${createResponse.status}).`;
+                try {
+                    const errorBody = await createResponse.json();
+                    errorMessage = errorBody.message || errorMessage;
+                } catch (e) { /* Non-JSON response */ }
+                showError(errorMessage, 5000);
+                return;
+            }
+
+            const newSchedule = await createResponse.json();
+
+            // CORRECTION: Accéder à l'ID via la clé 'scheduleId' renvoyée par le contrôleur
+            const newScheduleId = newSchedule.scheduleId;
+
+            if (!newScheduleId) {
+                console.error("Réponse de création d'horaire inattendue:", newSchedule);
+                showError('ID du nouvel emploi du temps non trouvé dans la réponse (clé attendue: "scheduleId").', 5000);
+                return;
+            }
+
+            // Dupliquer l'horaire sélectionné dans le nouveau
+            const duplicateResponse = await fetch('/api/schedule/duplicate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // ENVOI DU TOKEN
+                },
+                body: JSON.stringify({
+                    source_schedule_set_id: selectedScheduleId,
+                    target_schedule_set_id: newScheduleId, // Utilisation de l'ID corrigé
+                    journal_id: journalId,
+                }),
+            });
+            if (duplicateResponse.ok) {
+                success('Emploi du temps dupliqué avec succès !', 3000);
+                setNewScheduleName('');
+                await fetchSchedules(); // Actualiser la liste des emplois du temps
+                setSelectedScheduleId(newScheduleId); // Sélectionner le nouvel horaire
+            } else {
+                const errorBody = await duplicateResponse.json();
+                showError(`Erreur lors de la duplication: ${errorBody?.message || duplicateResponse.statusText}`, 5000);
+            }
+
+        } catch (error) {
+            console.error("Erreur lors de la duplication de l'emploi du temps:", error);
+            showError(`Erreur lors de la duplication: ${error?.message || 'Erreur inconnue'}`, 5000);
+        }
+    };
+
     const getClassInfo = (classId) => {
         return classes.find(cls => cls.id == classId);
     };
@@ -432,25 +520,46 @@ const Horaire = () => {
                 <h1>📅 Emploi du temps</h1>
                 <p>Cliquez sur un créneau pour ajouter/modifier - Glissez-déposez pour déplacer un cours</p>
                 {/* Sélecteur d'emplois du temps */}
-                
+
                 <div className="schedule-selector-container">
-                    <label htmlFor="schedule-select form-group">Sélectionner un emploi du temps :</label>
-                    <select
-                        id="schedule-select "
-                        value={selectedScheduleId || ''}
-                        onChange={(e) => setSelectedScheduleId(e.target.value)}
-                        className="form-control btn-select"
-                    >
-                        {schedules.length > 0 ? (
-                            schedules.map(scheduleModel => (
-                                <option key={scheduleModel.id} value={scheduleModel.id}>
-                                    {scheduleModel.name}
-                                </option>
-                            ))
-                        ) : (
-                            <option value="" disabled>Aucun emploi du temps trouvé</option>
-                        )}
-                    </select>
+                    <div className="form-group">
+                        <label htmlFor="schedule-select">Sélectionner un emploi du temps :</label>
+                        <select
+                            id="schedule-select"
+                            value={selectedScheduleId || ''}
+                            onChange={(e) => setSelectedScheduleId(parseInt(e.target.value))}
+                            className="form-control btn-select"
+                        >
+                            {schedules.length > 0 ? (
+                                schedules.map(scheduleModel => (
+                                    <option key={scheduleModel.id} value={scheduleModel.id}>
+                                        {scheduleModel.name}
+                                    </option>
+                                ))
+                            ) : (
+                                <option value="" disabled>Aucun emploi du temps trouvé</option>
+                            )}
+                        </select>
+                    </div>
+                    {/* Duplication de l'horaire */}
+                    {selectedScheduleId && (
+                        <div className="duplicate-schedule-container form-group">
+                            <input
+                                type="text"
+                                className="form-control input-group-sm"
+                                placeholder="Nom du nouvel horaire"
+                                value={newScheduleName}
+                                onChange={(e) => setNewScheduleName(e.target.value)}
+                            />
+                            <button
+                                className="btn-secondary btn-select"
+                                onClick={handleDuplicateSchedule}
+                                disabled={!newScheduleName.trim()}
+                            >
+                                Dupliquer
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

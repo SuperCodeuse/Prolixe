@@ -10,6 +10,7 @@ router.use(verifyToken);
 router.get('/', ScheduleController.getSchedule);
 router.put('/', ScheduleController.upsertCourse);
 router.put('/change', ScheduleController.changeCourse);
+router.post('/duplicate', ScheduleController.duplicateSchedule); // Nouvelle route pour la duplication
 router.delete('/:journal_id/:day/:time_slot_id', ScheduleController.deleteCourse);
 
 module.exports = router;

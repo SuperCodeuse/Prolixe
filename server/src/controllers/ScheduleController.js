@@ -140,7 +140,7 @@ class ScheduleController {
             if (connection) connection.release();
         }
     }
-    
+
     static async upsertCourse(req, res) {
         const { day, time_slot_id, subject, classId, room, notes, journal_id, effective_date, schedule_set_id } = req.body;
         const userId = req.user.id;
@@ -277,6 +277,51 @@ class ScheduleController {
             if (connection) {
                 connection.release();
             }
+        }
+    }
+
+    static async duplicateSchedule(req, res) {
+        const { source_schedule_set_id, target_schedule_set_id, journal_id } = req.body;
+        const userId = req.user.id;
+
+        if (!userId) {
+            return ScheduleController.handleError(res, new Error('ID utilisateur manquant'), "L'authentification est requise.", 401);
+        }
+
+        if (!source_schedule_set_id || !target_schedule_set_id || !journal_id) {
+            return ScheduleController.handleError(res, new Error('ID d\'ensemble d\'horaires source, cible ou journal manquant'), "L'ID de l'ensemble d'horaires source, cible et du journal sont requis.", 400);
+        }
+
+        let connection;
+        try {
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            // 1. Récupérer tous les cours de l'horaire source
+            const sourceSchedule = await ScheduleController.getScheduleData(parseInt(journal_id), userId, parseInt(source_schedule_set_id), connection);
+
+            if (Object.keys(sourceSchedule).length === 0) {
+                await connection.rollback();
+                return res.status(200).json({ success: true, message: 'Aucun cours à dupliquer.' });
+            }
+
+            // 2. Insérer chaque cours dans le nouvel horaire (target)
+            const insertPromises = Object.values(sourceSchedule).map(course => {
+                return connection.execute(`
+                    INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, user_id, start_date, schedule_set_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [course.day, course.time_slot_id, course.subject, course.classId, course.room, course.notes, parseInt(journal_id), userId, new Date(), parseInt(target_schedule_set_id)]);
+            });
+
+            await Promise.all(insertPromises);
+            await connection.commit();
+
+            res.status(201).json({ success: true, message: `${insertPromises.length} cours dupliqué(s) avec succès.` });
+        } catch (error) {
+            if (connection) await connection.rollback();
+            ScheduleController.handleError(res, error, "Erreur lors de la duplication de l'emploi du temps.");
+        } finally {
+            if (connection) connection.release();
         }
     }
 }

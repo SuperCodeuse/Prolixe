@@ -2,6 +2,10 @@
 @import '../../App';
 @import './horaire_mobile.scss'; // Importation de la feuille de style mobile
 
+.input-group-sm{
+  width: 50% !important;
+}
+
 .horaire {
     @include page-container-base;
 

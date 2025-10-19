@@ -8,10 +8,12 @@ class ScheduleModelController {
      * @param {object} res - L'objet de réponse Express.
      */
     static async createSchedule(req, res) {
+        // Le frontend envoie maintenant name, startDate, et endDate
         const { name, startDate, endDate } = req.body;
         const userId = req.user.id; // L'ID de l'utilisateur est extrait du token JWT
 
         if (!name || !startDate || !endDate) {
+            // Cette erreur sera interceptée par la vérification createResponse.ok du frontend
             return res.status(400).json({
                 success: false,
                 message: "Le nom, la date de début et la date de fin sont requis."
@@ -24,10 +26,11 @@ class ScheduleModelController {
 
             // Création de l'emploi du temps dans la table SCHEDULE_SETS
             const [result] = await connection.execute(
-                'INSERT INTO SCHEDULE_SETS (name, start_date, end_date, user_id) VALUES (?, ?, ?, ?)',
+                'INSERT INTO SCHEDULE_SETS (name, start_date, end_date, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
                 [name, startDate, endDate, userId]
             );
 
+            // La réponse est ici, renvoyant scheduleId (correctement géré par le frontend corrigé)
             res.status(201).json({
                 success: true,
                 message: "Emploi du temps créé avec succès.",
@@ -55,6 +58,7 @@ class ScheduleModelController {
         try {
             connection = await pool.getConnection();
             const [rows] = await connection.execute(
+                // Note: La requête SQL devrait probablement filtrer par user_id
                 'SELECT id, name, start_date, end_date FROM SCHEDULE_SETS',
             );
 
