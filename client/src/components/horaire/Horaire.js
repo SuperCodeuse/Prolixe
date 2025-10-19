@@ -427,7 +427,8 @@ const Horaire = () => {
                 body: JSON.stringify({
                     name: newScheduleName,
                     startDate: currentDate, // REQUIS PAR LE BACKEND
-                    endDate: defaultEndDate  // REQUIS PAR LE BACKEND
+                    endDate: defaultEndDate,  // REQUIS PAR LE BACKEND
+                    typeBody: "PERSONNAL",
                 }),
             });
 
@@ -442,8 +443,6 @@ const Horaire = () => {
             }
 
             const newSchedule = await createResponse.json();
-
-            // CORRECTION: Accéder à l'ID via la clé 'scheduleId' renvoyée par le contrôleur
             const newScheduleId = newSchedule.scheduleId;
 
             if (!newScheduleId) {

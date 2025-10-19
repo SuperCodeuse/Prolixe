@@ -9,8 +9,13 @@ class ScheduleModelController {
      */
     static async createSchedule(req, res) {
         // Le frontend envoie maintenant name, startDate, et endDate
-        const { name, startDate, endDate } = req.body;
+        const { name, startDate, endDate, typeBody } = req.body;
         const userId = req.user.id; // L'ID de l'utilisateur est extrait du token JWT
+        // Ajout : Définir le type par défaut à 'COMMON' pour la création via le formulaire settings
+
+        const type = typeBody || 'COMMON';
+        console.log("type : ", type);
+
 
         if (!name || !startDate || !endDate) {
             // Cette erreur sera interceptée par la vérification createResponse.ok du frontend
@@ -24,10 +29,11 @@ class ScheduleModelController {
         try {
             connection = await pool.getConnection();
 
+            // Modification: Ajout de 'type' à la requête SQL
             // Création de l'emploi du temps dans la table SCHEDULE_SETS
             const [result] = await connection.execute(
-                'INSERT INTO SCHEDULE_SETS (name, start_date, end_date, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-                [name, startDate, endDate, userId]
+                'INSERT INTO SCHEDULE_SETS (name, start_date, end_date, user_id, type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+                [name, startDate, endDate, userId, type] // Ajout de la variable type
             );
 
             // La réponse est ici, renvoyant scheduleId (correctement géré par le frontend corrigé)
@@ -49,6 +55,7 @@ class ScheduleModelController {
 
     /**
      * Récupère tous les emplois du temps créés par l'utilisateur.
+     * Applique la logique de filtrage: seulement les COMMON ou les PERSONNAL de l'utilisateur.
      * @param {object} req - L'objet de requête Express.
      * @param {object} res - L'objet de réponse Express.
      */
@@ -57,9 +64,14 @@ class ScheduleModelController {
         let connection;
         try {
             connection = await pool.getConnection();
+
+            // Modification: Sélectionne aussi le champ 'type'.
+            // La clause WHERE filtre pour n'inclure que les plannings 'COMMON' ou les plannings 'PERSONNAL' appartenant à l'utilisateur actuel (user_id = ?)
             const [rows] = await connection.execute(
-                // Note: La requête SQL devrait probablement filtrer par user_id
-                'SELECT id, name, start_date, end_date FROM SCHEDULE_SETS',
+                `SELECT id, name, start_date, end_date, type 
+                 FROM SCHEDULE_SETS
+                 WHERE type = 'COMMON' OR (type = 'PERSONNAL' AND user_id = ?)`,
+                [userId] // Le userId est utilisé pour la condition PERSONNAL
             );
 
             res.status(200).json({

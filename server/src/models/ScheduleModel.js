@@ -19,6 +19,13 @@ const scheduleModelSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    // Modification: Ajout de la colonne 'type'
+    type: {
+        type: String,
+        enum: ['COMMON', 'PERSONNAL'], // Définit les valeurs autorisées
+        required: true,
+        default: 'COMMON' // Par défaut à COMMON pour la création par l'admin
     }
 }, { timestamps: true });
 
