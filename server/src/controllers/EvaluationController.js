@@ -203,6 +203,7 @@ exports.updateEvaluation = async (req, res) => {
 
         await connection.query('DELETE FROM EVALUATION_CRITERIA WHERE evaluation_id = ?', [id]);
 
+
         for (const criterion of criteria) {
             if (!criterion.label || criterion.max_score == null) {
                 throw new Error("Chaque critère doit avoir un label et un score maximum.");

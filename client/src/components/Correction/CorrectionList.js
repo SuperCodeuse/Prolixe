@@ -135,7 +135,8 @@ const CorrectionList = () => {
 
     const handleExportPDF = async (evaluationId, evaluationName) => {
         try {
-            const { data } = await getEvaluationForGrading(evaluationId);
+            let { data }= await getEvaluationForGrading(evaluationId);
+            data = data.data;
             const evaluationData = data.evaluation;
             const students = data.students;
             const criteria = data.criteria;
@@ -179,9 +180,12 @@ const CorrectionList = () => {
                 return html;
             };
 
+            console.log(students);
+
             const studentGrades = students.map(student => {
                 const studentId = student.id;
                 const isAbsent = grades.some(g => g.student_id === studentId && g.is_absent);
+                console.log(criteria);
                 const scores = criteria.map(criterion => {
                     const grade = grades.find(g => g.student_id === studentId && g.criterion_id === criterion.id);
                     let scoreValue;
@@ -365,7 +369,6 @@ const CorrectionList = () => {
                 const LINE_HEIGHT = 18;
 
                 let totalLines = 1; // Au moins 1 ligne pour le label
-
                 if (criterion.comment) {
                     // Calculer approximativement le nombre de lignes nécessaires
                     const commentLength = criterion.comment.length;
@@ -421,7 +424,6 @@ const CorrectionList = () => {
                     totalPagesForStudent++;
                     isFirstPageOfStudent = false;
                 }
-
                 // Deuxième passe : générer les pages
                 currentCriteriaIndex = 0;
                 isFirstPageOfStudent = true;
@@ -453,7 +455,6 @@ const CorrectionList = () => {
                             break;
                         }
                     }
-
                     // Créer le conteneur pour cette page
                     const pdfContainer = document.createElement('div');
                     pdfContainer.style.cssText = `
@@ -510,7 +511,6 @@ const CorrectionList = () => {
                     isFirstPageOfStudent = false;
                 }
             }
-
             // Sauvegarder le PDF
             const fileName = `Evaluation-${evaluationName.replace(/[^a-zA-Z0-9\s]/g, '_').replace(/\s+/g, '_')}.pdf`;
             pdf.save(fileName);

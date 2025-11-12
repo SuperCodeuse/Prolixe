@@ -30,7 +30,6 @@ const TodayScheduleSection = ({ todaySchedule, holidayInfo, getClassColor, class
         );
     }
 
-    console.log(todaySchedule);
     return (
         <div className="daily-schedule-section">
             <h2>Votre journée d'aujourd'hui</h2>

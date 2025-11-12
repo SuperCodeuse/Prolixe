@@ -113,6 +113,7 @@ class ScheduleController {
                 [target_day, parseInt(target_time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)]
             );
 
+
             if (existingTargetCourse.length > 0) {
                 await connection.rollback();
                 return ScheduleController.handleError(res, new Error('Le créneau de destination est déjà occupé.'), 'Impossible de déplacer le cours : le créneau de destination est déjà pris.', 409);
@@ -142,6 +143,7 @@ class ScheduleController {
     }
 
     static async upsertCourse(req, res) {
+
         const { day, time_slot_id, subject, classId, room, notes, journal_id, effective_date, schedule_set_id } = req.body;
         const userId = req.user.id;
 
@@ -152,6 +154,7 @@ class ScheduleController {
 
         let connection;
         try {
+
             connection = await pool.getConnection();
             await connection.beginTransaction();
 
@@ -197,12 +200,17 @@ class ScheduleController {
                     count: Object.keys(updatedSchedule).length
                 });
             } else {
+
+                const [courseId] = await connection.execute(`SELECT id FROM SCHEDULE WHERE day = ? AND time_slot_id = ? AND journal_id = ? AND user_id = ? AND schedule_set_id = ?`, [day, parseInt(time_slot_id), parseInt(journal_id), userId, parseInt(schedule_set_id)]);
+
+                console.log(courseId[0].id);
                 const [insertResult] = await connection.execute(`
-                    INSERT INTO SCHEDULE (day, time_slot_id, subject, class_id, room, notes, journal_id, user_id, start_date, schedule_set_id) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [day, parseInt(time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, parseInt(journal_id), userId, today, parseInt(schedule_set_id)]);
+                    UPDATE SCHEDULE SET day = ?, time_slot_id=?, subject=?, class_id=?, room=?, notes=?
+                    WHERE id = ?
+                `, [day, parseInt(time_slot_id), subject.trim(), parseInt(classId), room.trim(), notes || null, courseId[0].id]);
 
                 await connection.commit();
+
                 const updatedSchedule = await ScheduleController.getScheduleData(journal_id, userId, parseInt(schedule_set_id));
                 return res.status(201).json({
                     success: true,

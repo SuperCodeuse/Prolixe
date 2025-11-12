@@ -185,12 +185,7 @@ class ClassController {
                     throw err;
                 }
 
-                console.log('name', name.trim());
-                console.log('journal_id', journal_id);
-                console.log('userId', userId);
-                console.log('subject', subject);
-                console.log('students', students);
-                console.log('level', level);
+
 
                 const [result] = await connection.execute(
                     'INSERT INTO CLASS (name, students, level, journal_id, user_id) VALUES (?, ?, ?, ?, ?)',
