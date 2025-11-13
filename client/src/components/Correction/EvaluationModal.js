@@ -51,8 +51,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                     setName(evalName);
                     setClassId(class_id);
                     setDate(new Date(evaluation_date).toISOString().split('T')[0]);
-                    setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
-                    setFolder(evalFolder || '');
+                    setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ id: c.id, label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);                    setFolder(evalFolder || '');
                 } catch (err) { showError("Erreur au chargement de l'évaluation."); }
                 finally { setIsLoading(false); }
             }
@@ -65,8 +64,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                     setName(`Copie de ${evalName}`);
                     setClassId(class_id);
                     setDate(new Date().toISOString().split('T')[0]);
-                    setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
-                    setFolder(evalFolder || '');
+                    setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);                    setFolder(evalFolder || '');
                 } catch (err) { showError("Erreur au chargement du modèle à copier."); }
                 finally { setIsLoading(false); }
             }
@@ -94,8 +92,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                 response = response.data;
                 const { name: evalName, criteria: evalCriteria, folder: evalFolder } = response.data;
                 setName(evalName);
-                setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);
-                setFolder(evalFolder || '');
+                setCriteria(evalCriteria.length ? evalCriteria.map(c => ({ label: c.label, max_score: c.max_score })) : [{ label: '', max_score: '' }]);                setFolder(evalFolder || '');
             } catch (err) { showError("Erreur au chargement des détails du modèle."); }
             finally { setIsLoading(false); }
         };
@@ -179,8 +176,7 @@ const EvaluationModal = ({ isOpen, onClose, onSave, evaluation, evaluationToCopy
                         </div>
                         <h4>Critères de correction</h4>
                         {criteria.map((criterion, index) => (
-                            <div className="criterion-row form-group" key={index}>
-                                <TextField fullWidth multiline rows={1} placeholder={`Critère ${index + 1}`} value={criterion.label} onChange={(e) => handleCriterionChange(index, 'label', e.target.value)} />
+                            <div className="criterion-row form-group" key={criterion.id || index}>                                <TextField fullWidth multiline rows={1} placeholder={`Critère ${index + 1}`} value={criterion.label} onChange={(e) => handleCriterionChange(index, 'label', e.target.value)} />
                                 <input type="number" placeholder="Score" value={criterion.max_score} onChange={(e) => handleCriterionChange(index, 'max_score', e.target.value)} />
                                 <button type="button" className="btn-delete" onClick={() => removeCriterion(index)} disabled={criteria.length <= 1}>–</button>
                             </div>

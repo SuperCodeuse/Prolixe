@@ -178,6 +178,7 @@ exports.saveGrades = async (req, res) => {
 
 exports.updateEvaluation = async (req, res) => {
     const { id } = req.params;
+    // Les critères reçus doivent inclure l'ID si le critère existe déjà
     const { name, date, criteria, folder } = req.body;
     const user_id = req.user.id;
 
@@ -185,37 +186,97 @@ exports.updateEvaluation = async (req, res) => {
         return res.status(400).json({ success: false, message: "Les champs nom, date et critères sont requis." });
     }
 
+    // Assurez-vous que 'db' est correctement importé ou défini dans votre module
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Vérification de l'appartenance de l'évaluation à l'utilisateur
+        // 1. Vérification de l'appartenance de l'évaluation à l'utilisateur
         const [evaluationCheck] = await connection.query('SELECT user_id FROM EVALUATIONS WHERE id = ? AND user_id = ?', [id, user_id]);
         if (evaluationCheck.length === 0) {
             await connection.rollback();
             return res.status(403).json({ success: false, message: "Accès refusé. Évaluation non trouvée ou n'appartient pas à l'utilisateur." });
         }
 
+        // 2. Mise à jour de l'évaluation (nom, date, dossier)
         await connection.query(
             'UPDATE EVALUATIONS SET name = ?, evaluation_date = ?, folder = ? WHERE id = ? AND user_id = ?',
             [name, date, folder, id, user_id]
         );
 
-        await connection.query('DELETE FROM EVALUATION_CRITERIA WHERE evaluation_id = ?', [id]);
+        // 3. Récupération des critères existants
+        const [existingCriteria] = await connection.query(
+            'SELECT id, label, max_score FROM EVALUATION_CRITERIA WHERE evaluation_id = ?',
+            [id]
+        );
 
+        // Map des critères existants pour un lookup rapide
+        const existingCriteriaMap = new Map();
+        existingCriteria.forEach(c => {
+            existingCriteriaMap.set(c.id.toString(), c);
+        });
 
+        const idsOfCriteriaToKeep = new Set();
+        const criteriaToInsert = [];
+
+        // 4. Parcours des critères reçus: Update ou Insert
         for (const criterion of criteria) {
+            // Validation
             if (!criterion.label || criterion.max_score == null) {
                 throw new Error("Chaque critère doit avoir un label et un score maximum.");
             }
+
+            const criterionId = criterion.id ? criterion.id.toString() : null;
+            const existingCriterion = criterionId ? existingCriteriaMap.get(criterionId) : null;
+            const newMaxScore = parseFloat(criterion.max_score); // Assurer que le score est un nombre
+
+            if (existingCriterion) {
+                // Critère existant: Vérifier si une mise à jour est nécessaire
+                const existingMaxScore = parseFloat(existingCriterion.max_score);
+
+                // Vérifier si le label ou le score maximum a changé
+                if (existingCriterion.label !== criterion.label || existingMaxScore !== newMaxScore) {
+                    await connection.query(
+                        'UPDATE EVALUATION_CRITERIA SET label = ?, max_score = ? WHERE id = ?',
+                        [criterion.label, newMaxScore, criterionId]
+                    );
+                }
+
+                // Marquer l'ID comme conservé pour éviter la suppression
+                idsOfCriteriaToKeep.add(criterionId);
+            } else {
+                // Nouveau critère: l'ajouter à la liste d'insertion
+                criteriaToInsert.push([id, criterion.label, newMaxScore]);
+            }
+        }
+
+        // Insertion des nouveaux critères (bulk insert pour l'efficacité)
+        if (criteriaToInsert.length > 0) {
+            const placeholders = criteriaToInsert.map(() => '(?, ?, ?)').join(', ');
+            const flatValues = criteriaToInsert.flat();
+
             await connection.query(
-                'INSERT INTO EVALUATION_CRITERIA (evaluation_id, label, max_score) VALUES (?, ?, ?)',
-                [id, criterion.label, criterion.max_score]
+                `INSERT INTO EVALUATION_CRITERIA (evaluation_id, label, max_score) VALUES ${placeholders}`,
+                flatValues
+            );
+        }
+
+        // 5. Suppression des anciens critères qui ont été retirés
+        const idsToDelete = existingCriteria
+            .filter(c => !idsOfCriteriaToKeep.has(c.id.toString()))
+            .map(c => c.id);
+
+        if (idsToDelete.length > 0) {
+            // Suppression en masse pour les critères non présents dans la nouvelle liste
+            await connection.query(
+                'DELETE FROM EVALUATION_CRITERIA WHERE id IN (?)',
+                [idsToDelete]
             );
         }
 
         await connection.commit();
 
+        // 6. Récupérer et retourner l'évaluation mise à jour
         const [updatedEvaluation] = await connection.query(
             'SELECT e.id, e.name, e.evaluation_date, e.journal_id, c.name as class_name, e.folder FROM EVALUATIONS e JOIN CLASS c ON e.class_id = c.id WHERE e.id = ? AND e.user_id = ?',
             [id, user_id]
@@ -231,7 +292,6 @@ exports.updateEvaluation = async (req, res) => {
         connection.release();
     }
 };
-
 exports.deleteEvaluation = async (req, res) => {
     const { id } = req.params;
     const user_id = req.user.id;
