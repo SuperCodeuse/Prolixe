@@ -12,7 +12,8 @@ import html2canvas from 'html2canvas';
 
 const CorrectionList = () => {
     const { currentJournal, loading: loadingJournal } = useJournal();
-    const { success, error: showError } = useToast();
+    // MODIFICATION 1 : Destructurer 'info' et 'removeToast'
+    const { success, error: showError, info, removeToast } = useToast();
 
     const [evaluations, setEvaluations] = useState([]);
     const [loadingEvaluations, setLoadingEvaluations] = useState(true);
@@ -134,6 +135,9 @@ const CorrectionList = () => {
     };
 
     const handleExportPDF = async (evaluationId, evaluationName) => {
+        // MODIFICATION 2 : Afficher une notification de chargement et capturer son ID
+        const loadingToastId = info(`Exportation de "${evaluationName}" en cours... Cela peut prendre quelques instants.`, 60000); // 1 minute, on la retire manuellement
+
         try {
             let { data }= await getEvaluationForGrading(evaluationId);
             data = data.data;
@@ -514,10 +518,17 @@ const CorrectionList = () => {
             // Sauvegarder le PDF
             const fileName = `Evaluation-${evaluationName.replace(/[^a-zA-Z0-9\s]/g, '_').replace(/\s+/g, '_')}.pdf`;
             pdf.save(fileName);
+
+            // MODIFICATION 3a : Supprimer la notification de chargement
+            removeToast(loadingToastId);
+            // MODIFICATION 3b : Remplacer par le succès
             success('PDF exporté avec succès !');
 
         } catch (err) {
             console.error('Erreur lors de l\'exportation du PDF:', err);
+            // MODIFICATION 4a : Supprimer la notification de chargement
+            removeToast(loadingToastId);
+            // MODIFICATION 4b : Remplacer par l'erreur
             showError('Erreur lors de l\'exportation du PDF.');
         }
     };

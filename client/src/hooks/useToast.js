@@ -9,17 +9,21 @@ export const ToastProvider = ({ children }) => {
     const addToast = useCallback((type, message, duration = 3000) => {
         const id = idCounter.current++;
         setToasts(currentToasts => [...currentToasts, { id, message, type, duration }]);
+        // MODIFICATION : Retourner l'ID du toast
+        return id;
     }, []);
 
     const removeToast = useCallback((id) => {
         setToasts(currentToasts => currentToasts.filter(toast => toast.id !== id));
     }, []);
 
+    // MODIFICATION : Les fonctions de type retournent l'ID de addToast
     const success = useCallback((message, duration) => addToast('success', message, duration), [addToast]);
     const error = useCallback((message, duration) => addToast('error', message, duration), [addToast]);
     const warning = useCallback((message, duration) => addToast('warning', message, duration), [addToast]);
     const info = useCallback((message, duration) => addToast('info', message, duration), [addToast]);
 
+    // MODIFICATION : Exposer removeToast dans le contexte
     const value = { toasts, removeToast, success, error, warning, info };
 
     return (
