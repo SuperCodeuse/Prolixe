@@ -12,9 +12,11 @@ import './dashboard.scss';
 import './dashboard_mobile.scss';
 import NoteSection from './NoteSection';
 import TodayScheduleSection from './TodayScheduleSection';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [holidays, setHolidays] = useState([]);
     const [loadingHolidays, setLoadingHolidays] = useState(true);
 
@@ -137,18 +139,35 @@ const Dashboard = () => {
         return sortedCourses;
     }, [schedule, journalEntries, todayStr, classes, holidayInfo, getDayKeyFromDateFnsString]);
 
-    const { assignmentsToCorrect, upcomingAssignments } = useMemo(() => {
+    // REFONTE ICI: Combiner les calculs pour simplifier le JSX et les dépendances
+    const { assignmentsToCorrect, upcomingAssignments, earliestUpcomingDate } = useMemo(() => {
         const safeAssignments = Array.isArray(assignments) ? assignments : [];
-        if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [] };
+        if (!safeAssignments) return { assignmentsToCorrect: [], upcomingAssignments: [], earliestUpcomingDate: null };
 
-        const toCorrect = safeAssignments.filter(a => a.is_completed && !a.is_corrected);
+        // 1. Assignments à corriger (filtrés et triés)
+        const toCorrect = safeAssignments
+            .filter(a => a.is_completed && !a.is_corrected)
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
+        // 2. Assignments à venir (filtrés et triés)
         const upcoming = safeAssignments
             .filter(a => !a.is_completed)
-            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
-            .slice(0, 5);
-        return { assignmentsToCorrect: toCorrect, upcomingAssignments: upcoming };
-    }, [assignments]);
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
+        // 3. Date du premier à venir
+        const earliestDate = upcoming.length > 0 ? upcoming[0].due_date : null;
+
+        // Limiter le tableau "upcoming" pour le rendu (si nécessaire dans d'autres parties du Dashboard)
+        const limitedUpcoming = upcoming.slice(0, 5);
+
+        return {
+            assignmentsToCorrect: toCorrect,
+            upcomingAssignments: limitedUpcoming,
+            earliestUpcomingDate: earliestDate
+        };
+    }, [assignments]); // Dépend uniquement de 'assignments'
+
+    // REFONTE ICI: Utiliser les résultats des calculs précédents
     const stats = useMemo(() => {
         const safeAssignments = Array.isArray(assignments) ? assignments : [];
         if (!classes || !safeAssignments || !todaySchedule) {
@@ -156,15 +175,29 @@ const Dashboard = () => {
         }
 
         const programmedAssignments = safeAssignments.filter(a => !a.is_completed).length;
-        const pendingCorrections = safeAssignments.filter(a => a.is_completed && !a.is_corrected).length;
+        const pendingCorrections = assignmentsToCorrect.length; // Utilisation du tableau déjà calculé
 
         return [
-            { title: 'Total Classes', value: classes.length, icon: '🏫', color: 'primary' },
-            { title: 'Cours aujourd\'hui', value: todaySchedule.length, icon: '📚', color: 'info' },
-            { title: 'Devoirs programmés', value: programmedAssignments, icon: '📝', color: 'warning' },
-            { title: 'Corrections en attente', value: pendingCorrections, icon: '✍️', color: 'success' }
+            { title: 'Total Classes', value: classes.length, icon: '🏫', color: 'primary', action: null },
+            { title: 'Cours aujourd\'hui', value: todaySchedule.length, icon: '📚', color: 'info', action: 'journalToday' },
+            { title: 'Devoirs programmés', value: programmedAssignments, icon: '📝', color: 'warning', action: 'journalAssignment', data: earliestUpcomingDate },
+            { title: 'Corrections en attente', value: pendingCorrections, icon: '✍️', color: 'success', action: 'correctionList' }
         ];
-    }, [classes, todaySchedule, assignments]);
+    }, [classes, todaySchedule, assignmentsToCorrect, earliestUpcomingDate]); // Mise à jour des dépendances
+
+    // Fonction de gestion du clic pour les cartes stats
+    const handleStatClick = (stat) => {
+        if (stat.action === 'journalAssignment' && stat.data) {
+            // Redirige vers le journal sur la semaine du devoir le plus proche
+            navigate('/journal', { state: { weekDate: stat.data } });
+        } else if (stat.action === 'correctionList') {
+            // Redirige vers la page de correction (CorrectionList)
+            navigate('/correction');
+        } else if (stat.action === 'journalToday') {
+            // Redirige vers le journal sur la semaine en cours
+            navigate('/journal', { state: { weekDate: todayStr } });
+        }
+    };
 
 
     const isLoading = loadingClasses || loadingJournal || loadingSchedule || loadingHolidays || loadingHours || loadingSchedules;
@@ -201,7 +234,11 @@ const Dashboard = () => {
             </div>
             <div className="stats-grid">
                 {stats.map((stat, index) => (
-                    <div key={index} className={`stat-card ${stat.color}`}>
+                    <div
+                        key={index}
+                        className={`stat-card ${stat.color} ${stat.action ? 'clickable' : ''}`}
+                        onClick={stat.action ? () => handleStatClick(stat) : undefined}
+                    >
                         <div className="stat-header">
                             <div className="stat-icon">{stat.icon}</div>
                         </div>
