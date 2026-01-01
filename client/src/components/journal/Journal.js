@@ -22,7 +22,7 @@ const JournalView = () => {
     const journalId = currentJournal?.id;
     const { classes, getClassColor } = useClasses(journalId);
     const { hours, loading: loadingHours, error: errorHours } = useScheduleHours();
-    const { schedules, loading: loadingSchedules } = useScheduleModel();
+    const { schedules, loading: loadingSchedules } = useScheduleModel(journalId);
     const { success, error: showError } = useToast();
     const { getHolidayForDate, holidays, loading: loadingHolidays } = useHolidays();
 

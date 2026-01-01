@@ -59,8 +59,12 @@ class ScheduleModelController {
      * @param {object} req - L'objet de requête Express.
      * @param {object} res - L'objet de réponse Express.
      */
+
     static async getSchedules(req, res) {
         const userId = req.user.id; // L'ID de l'utilisateur est extrait du token JWT
+        const { journalId } = req.query;
+
+        //const journalId = req.journal.id; // L'ID du journal est extrait du token JWT
         let connection;
         try {
             connection = await pool.getConnection();
@@ -70,13 +74,13 @@ class ScheduleModelController {
             const [rows] = await connection.execute(
                 `SELECT id, name, start_date, end_date, type 
                  FROM SCHEDULE_SETS
-                 WHERE type = 'COMMON' OR (type = 'PERSONNAL' AND user_id = ?)`,
-                [userId] // Le userId est utilisé pour la condition PERSONNAL
+                 WHERE (type = 'COMMON' OR (type = 'PERSONNAL' AND user_id = ?)) AND journal_id = ?`,
+                [userId, journalId]
             );
 
             res.status(200).json({
                 success: true,
-                message: "Emplois du temps récupérés avec succès.",
+                message: "test",
                 schedules: rows
             });
         } catch (error) {

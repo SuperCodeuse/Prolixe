@@ -17,7 +17,7 @@ const Horaire = () => {
 
     const { hours, getSortedHours, loading: loadingHours, error: errorHours } = useScheduleHours();
     const { success, error: showError, toasts, removeToast } = useToast();
-    const { schedules, loading: loadingScheduleModels, error: errorScheduleModels, fetchSchedules } = useScheduleModel();
+    const { schedules, loading: loadingScheduleModels, error: errorScheduleModels, fetchSchedules } = useScheduleModel(journalId);
 
     const [selectedScheduleId, setSelectedScheduleId] = useState(null);
     const [newScheduleName, setNewScheduleName] = useState('');

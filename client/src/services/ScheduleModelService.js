@@ -17,8 +17,10 @@ const ScheduleModelService = {
      * Récupère tous les modèles d'emplois du temps.
      * @returns {Promise<object>} - L'objet de réponse de l'API contenant la liste des emplois du temps.
      */
-    getSchedules: () => {
-        return apiClient.get('/schedules/models');
+    getSchedules: (journalId) => {
+        return apiClient.get('/schedules/models', {
+            params: { journalId }
+        });
     }
 };
 

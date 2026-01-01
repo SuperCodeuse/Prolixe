@@ -33,7 +33,7 @@ const Dashboard = () => {
     const journalId = currentJournal?.id;
 
     const { classes, loading: loadingClasses, getClassColor } = useClasses(journalId);
-    const { schedules, loading: loadingSchedules } = useScheduleModel();
+    const { schedules, loading: loadingSchedules } = useScheduleModel(journalId);
     const { hours, loading: loadingHours } = useScheduleHours();
 
     const getDayKeyFromDateFnsString = useCallback((dayName) => ({'lundi':'monday','mardi':'tuesday','mercredi':'wednesday','jeudi':'thursday','vendredi':'friday'}[dayName]||dayName),[]);

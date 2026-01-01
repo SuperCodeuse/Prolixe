@@ -1,10 +1,11 @@
 // ScheduleCreator.js
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '../../../hooks/useToast';
+import React, {useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {useToast} from '../../../hooks/useToast';
 import useScheduleModel from '../../../hooks/useScheduleModel'; // Utilisation du nouveau hook
 import './ScheduleCreator.scss';
 import moment from 'moment';
+import * as currentJournal from "date-fns/locale";
 
 const ScheduleCreator = () => {
     const [scheduleForm, setScheduleForm] = useState({
@@ -13,7 +14,7 @@ const ScheduleCreator = () => {
         endDate: '',
     });
     const { success, error: showError } = useToast();
-    const { createSchedule, loading } = useScheduleModel(); // Utilisation du nouveau hook
+    const { createSchedule, loading } = useScheduleModel(currentJournal?.id); // Utilisation du nouveau hook
     const navigate = useNavigate();
 
     const handleChange = (e) => {

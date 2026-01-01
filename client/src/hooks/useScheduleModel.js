@@ -1,52 +1,56 @@
-    // client/src/hooks/useScheduleModel.js
-    import { useState, useEffect } from 'react';
-    import ScheduleModelService from '../services/ScheduleModelService';
+// client/src/hooks/useScheduleModel.js
+import { useState, useEffect, useCallback } from 'react';
+import ScheduleModelService from '../services/ScheduleModelService';
 
-    const useScheduleModel = () => {
-        const [schedules, setSchedules] = useState([]);
-        const [loading, setLoading] = useState(false);
-        const [error, setError] = useState(null);
+const useScheduleModel = (journalId) => { // On accepte journalId ici
+    const [schedules, setSchedules] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-        const fetchSchedules = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await ScheduleModelService.getSchedules();
-                setSchedules(response.data.schedules);
-                setLoading(false);
-            } catch (err) {
-                setLoading(false);
-                const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de la récupération des emplois du temps';
-                setError(errorMessage);
-            }
-        };
+    // Utilisation de useCallback pour éviter de recréer la fonction à chaque rendu
+    const fetchSchedules = useCallback(async () => {
+        if (!journalId) return; // Ne rien faire si journalId n'est pas encore défini
 
-        // La fonction pour créer un emploi du temps peut être gardée ici
-        const createSchedule = async (scheduleData) => {
-            setLoading(true);
-            setError(null);
-            try {
-                await ScheduleModelService.createSchedule(
-                    scheduleData.name,
-                    scheduleData.startDate,
-                    scheduleData.endDate
-                );
-                // Recharger la liste des emplois du temps après la création
-                await fetchSchedules();
-                setLoading(false);
-            } catch (err) {
-                setLoading(false);
-                const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de la création de l\'emploi du temps';
-                setError(errorMessage);
-                throw new Error(errorMessage);
-            }
-        };
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await ScheduleModelService.getSchedules(journalId);
+            setSchedules(response.data.schedules);
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de la récupération';
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    }, [journalId]); // Dépendance sur journalId
 
-        useEffect(() => {
-            fetchSchedules();
-        }, []);
-
-        return { schedules, loading, error, createSchedule, fetchSchedules };
+    const createSchedule = async (scheduleData) => {
+        setLoading(true);
+        setError(null);
+        try {
+            // On s'assure d'envoyer journalId aussi à la création si nécessaire
+            await ScheduleModelService.createSchedule(
+                scheduleData.name,
+                scheduleData.startDate,
+                scheduleData.endDate,
+                //journalId // Ajoutez-le si votre API de création en a besoin
+            );
+            await fetchSchedules();
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de la création';
+            setError(errorMessage);
+            throw new Error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    export default useScheduleModel;
+    // Le useEffect se déclenche maintenant dès que journalId change
+    useEffect(() => {
+        fetchSchedules();
+    }, [fetchSchedules]);
+
+    return { schedules, loading, error, createSchedule, fetchSchedules };
+};
+
+export default useScheduleModel;
